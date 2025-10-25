@@ -1,0 +1,25 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="512" cy="512" r="512" fill="#667eea"/>
+  
+  <!-- Wallet icon -->
+  <g transform="translate(256, 256)">
+    <!-- Wallet body -->
+    <rect x="0" y="80" width="512" height="320" rx="40" ry="40" fill="white"/>
+    
+    <!-- Wallet fold -->
+    <rect x="0" y="80" width="512" height="80" rx="40" ry="40" fill="#f8f9fa"/>
+    
+    <!-- Card inside wallet -->
+    <rect x="40" y="200" width="432" height="160" rx="20" ry="20" fill="#667eea"/>
+    
+    <!-- Card details -->
+    <rect x="80" y="240" width="200" height="20" rx="10" ry="10" fill="white"/>
+    <rect x="80" y="280" width="120" height="15" rx="7.5" ry="7.5" fill="white"/>
+    <rect x="80" y="310" width="80" height="15" rx="7.5" ry="7.5" fill="white"/>
+    
+    <!-- Wallet clasp -->
+    <circle cx="256" cy="120" r="30" fill="#667eea"/>
+    <circle cx="256" cy="120" r="20" fill="white"/>
+  </g>
+</svg>
