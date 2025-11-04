@@ -1,0 +1,485 @@
+import React, { useState } from "react";
+import { 
+  View, 
+  Text, 
+  TextInput, 
+  StyleSheet, 
+  Alert, 
+  TouchableOpacity, 
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  ActivityIndicator,
+  Dimensions
+} from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons } from "@expo/vector-icons";
+import { collection, addDoc } from "firebase/firestore";
+import { db, auth } from "../services/firebaseConfig";
+import { LightTheme } from "../theme";
+
+const { width, height } = Dimensions.get('window');
+
+export default function AddTransactionScreen({ navigation }) {
+  const [type, setType] = useState("expense");
+  const [amount, setAmount] = useState("");
+  const [category, setCategory] = useState("");
+  const [note, setNote] = useState("");
+  const [isOther, setIsOther] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+
+  const expenseCategories = [
+    { name: "Food & Dining", icon: "restaurant", color: "#FF6B6B" },
+    { name: "Transportation", icon: "car", color: "#4ECDC4" },
+    { name: "Shopping", icon: "bag", color: "#45B7D1" },
+    { name: "Entertainment", icon: "game-controller", color: "#96CEB4" },
+    { name: "Bills & Utilities", icon: "receipt", color: "#FFEAA7" },
+    { name: "Healthcare", icon: "medical", color: "#DDA0DD" },
+    { name: "Education", icon: "school", color: "#98D8C8" },
+    { name: "Other", icon: "ellipsis-horizontal", color: "#A0A0A0" }
+  ];
+
+  const incomeCategories = [
+    { name: "Salary", icon: "briefcase", color: "#4ECDC4" },
+    { name: "Freelance", icon: "laptop", color: "#45B7D1" },
+    { name: "Investment", icon: "trending-up", color: "#96CEB4" },
+    { name: "Gift", icon: "gift", color: "#FFEAA7" },
+    { name: "Bonus", icon: "trophy", color: "#DDA0DD" },
+    { name: "Other", icon: "ellipsis-horizontal", color: "#A0A0A0" }
+  ];
+
+  const currentCategories = type === "expense" ? expenseCategories : incomeCategories;
+
+  const handleCategorySelect = (item) => {
+    if (item.name === "Other") {
+      setIsOther(true);
+      setCategory("");
+    } else {
+      setIsOther(false);
+      setCategory(item.name);
+    }
+  };
+
+  const formatCurrency = (value) => {
+    const numericValue = parseFloat(value);
+    if (isNaN(numericValue)) return "";
+    return numericValue.toLocaleString('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    });
+  };
+
+  const handleAmountChange = (text) => {
+    // Remove non-numeric characters except decimal point
+    const numericText = text.replace(/[^0-9.]/g, '');
+    setAmount(numericText);
+  };
+
+  const handleAdd = async () => {
+    if (!amount || !category) {
+      Alert.alert("Error", "Please enter amount and select a category");
+      return;
+    }
+
+    const numericAmount = parseFloat(amount);
+    if (isNaN(numericAmount) || numericAmount <= 0) {
+      Alert.alert("Error", "Please enter a valid amount");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await addDoc(collection(db, "transactions"), {
+        type,
+        amount: numericAmount,
+        category,
+        note,
+        date: selectedDate.toISOString(),
+        userId: auth.currentUser.uid,
+        createdAt: new Date().toISOString(),
+      });
+      Alert.alert("Success", `${type === "expense" ? "Expense" : "Income"} added successfully!`);
+      navigation.goBack();
+    } catch (error) {
+      Alert.alert("Error", error.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <KeyboardAvoidingView 
+      style={styles.container} 
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <LinearGradient
+        colors={[LightTheme.colors.primary, LightTheme.colors.secondary]}
+        style={styles.gradient}
+      >
+        <ScrollView 
+          contentContainerStyle={styles.scrollContainer}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Header Section */}
+          <View style={styles.headerSection}>
+            <TouchableOpacity 
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+            >
+              <Ionicons name="arrow-back" size={24} color="white" />
+            </TouchableOpacity>
+            <Text style={styles.title}>Add Transaction</Text>
+            <View style={styles.placeholder} />
+          </View>
+
+          {/* Main Form Card */}
+          <View style={styles.formCard}>
+            {/* Transaction Type Toggle */}
+            <View style={styles.typeToggleContainer}>
+              <TouchableOpacity
+                style={[
+                  styles.typeButton,
+                  type === "expense" && styles.typeButtonActive,
+                  type === "expense" && styles.expenseButton
+                ]}
+          onPress={() => setType("expense")}
+              >
+                <Ionicons 
+                  name="remove-circle" 
+                  size={20} 
+                  color={type === "expense" ? "white" : "#FF6B6B"} 
+                />
+                <Text style={[
+                  styles.typeButtonText,
+                  type === "expense" && styles.typeButtonTextActive
+                ]}>
+                  Expense
+                </Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[
+                  styles.typeButton,
+                  type === "income" && styles.typeButtonActive,
+                  type === "income" && styles.incomeButton
+                ]}
+          onPress={() => setType("income")}
+              >
+                <Ionicons 
+                  name="add-circle" 
+                  size={20} 
+                  color={type === "income" ? "white" : "#4ECDC4"} 
+                />
+                <Text style={[
+                  styles.typeButtonText,
+                  type === "income" && styles.typeButtonTextActive
+                ]}>
+                  Income
+                </Text>
+              </TouchableOpacity>
+      </View>
+
+            {/* Amount Input */}
+            <View style={styles.inputContainer}>
+              <Ionicons name="cash" size={20} color={LightTheme.colors.primary} style={styles.inputIcon} />
+      <TextInput
+                style={styles.amountInput}
+                placeholder="0.00"
+                placeholderTextColor="#999"
+        keyboardType="numeric"
+        value={amount}
+                onChangeText={handleAmountChange}
+              />
+              <Text style={styles.currencySymbol}>₹</Text>
+            </View>
+
+            {/* Category Selection */}
+            <Text style={styles.sectionTitle}>Select Category</Text>
+            <View style={styles.categoriesGrid}>
+              {currentCategories.map((item, index) => (
+          <TouchableOpacity
+                  key={index}
+            style={[
+                    styles.categoryCard,
+                    category === item.name && styles.selectedCategoryCard,
+                    { borderColor: item.color }
+            ]}
+            onPress={() => handleCategorySelect(item)}
+          >
+                  <View style={[styles.categoryIcon, { backgroundColor: item.color }]}>
+                    <Ionicons name={item.icon} size={18} color="white" />
+                  </View>
+                  <Text style={[
+                    styles.categoryName,
+                    category === item.name && styles.selectedCategoryName
+                  ]}>
+                    {item.name}
+                  </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+            {/* Custom Category Input */}
+      {isOther && (
+              <View style={styles.inputContainer}>
+                <Ionicons name="create" size={20} color={LightTheme.colors.primary} style={styles.inputIcon} />
+        <TextInput
+          style={styles.input}
+          placeholder="Enter custom category"
+                  placeholderTextColor="#999"
+          value={category}
+          onChangeText={setCategory}
+        />
+              </View>
+      )}
+
+            {/* Note Input */}
+            <View style={styles.inputContainer}>
+              <Ionicons name="document-text" size={20} color={LightTheme.colors.primary} style={styles.inputIcon} />
+      <TextInput
+                style={[styles.input, styles.noteInput]}
+                placeholder="Add a note (optional)"
+                placeholderTextColor="#999"
+        value={note}
+        onChangeText={setNote}
+                multiline
+                numberOfLines={3}
+              />
+            </View>
+
+            {/* Save Button */}
+            <TouchableOpacity 
+              style={[styles.saveButton, isLoading && styles.saveButtonDisabled]} 
+              onPress={handleAdd}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <ActivityIndicator color="white" size="small" />
+              ) : (
+                <>
+                  <Ionicons name="checkmark-circle" size={20} color="white" />
+                  <Text style={styles.saveButtonText}>Save Transaction</Text>
+                </>
+              )}
+            </TouchableOpacity>
+    </View>
+        </ScrollView>
+      </LinearGradient>
+    </KeyboardAvoidingView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  gradient: {
+    flex: 1,
+  },
+  scrollContainer: {
+    flexGrow: 1,
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+  },
+  headerSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 30,
+    paddingTop: 10,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: 'white',
+    textAlign: 'center',
+  },
+  placeholder: {
+    width: 40,
+  },
+  formCard: {
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 10,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 15,
+  },
+  typeToggleContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    padding: 4,
+    marginBottom: 25,
+  },
+  typeButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+  },
+  typeButtonActive: {
+    backgroundColor: 'white',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  expenseButton: {
+    backgroundColor: '#FF6B6B',
+  },
+  incomeButton: {
+    backgroundColor: '#4ECDC4',
+  },
+  typeButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+    color: '#666',
+  },
+  typeButtonTextActive: {
+    color: 'white',
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    marginBottom: 20,
+    paddingHorizontal: 15,
+    borderWidth: 1,
+    borderColor: '#E9ECEF',
+  },
+  inputIcon: {
+    marginRight: 12,
+  },
+  input: {
+    flex: 1,
+    paddingVertical: 15,
+    fontSize: 16,
+    color: LightTheme.colors.text,
+  },
+  amountInput: {
+    flex: 1,
+    paddingVertical: 15,
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: LightTheme.colors.text,
+    textAlign: 'center',
+  },
+  currencySymbol: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: LightTheme.colors.primary,
+    marginLeft: 8,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: LightTheme.colors.text,
+    marginBottom: 15,
+  },
+  categoriesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+    paddingHorizontal: 5,
+  },
+  categoryCard: {
+    width: (width - 100) / 2,
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 10,
+    borderWidth: 2,
+    borderColor: '#E9ECEF',
+    alignItems: 'center',
+    minHeight: 80,
+    justifyContent: 'center',
+  },
+  selectedCategoryCard: {
+    backgroundColor: '#E3F2FD',
+    borderColor: LightTheme.colors.primary,
+    shadowColor: LightTheme.colors.primary,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  categoryIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  categoryName: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 14,
+  },
+  selectedCategoryName: {
+    color: LightTheme.colors.primary,
+    fontWeight: 'bold',
+  },
+  noteInput: {
+    minHeight: 80,
+    textAlignVertical: 'top',
+  },
+  saveButton: {
+    backgroundColor: LightTheme.colors.primary,
+    borderRadius: 12,
+    paddingVertical: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 10,
+    shadowColor: LightTheme.colors.primary,
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  saveButtonDisabled: {
+    backgroundColor: '#B0BEC5',
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  saveButtonText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginLeft: 8,
+  },
+});
