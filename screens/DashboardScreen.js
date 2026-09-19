@@ -422,6 +422,9 @@ export default function DashboardScreen({ navigation }) {
                 <TransactionItem
                   item={item}
                   onDelete={() => handleDelete(item.id)}
+                  onEdit={() =>
+                    navigation.navigate("AddTransaction", { transaction: item })
+                  }
                 />
               )}
               scrollEnabled={false}

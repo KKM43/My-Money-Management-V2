@@ -2,7 +2,7 @@ import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
-export default function TransactionItem({ item, onDelete }) {
+export default function TransactionItem({ item, onDelete, onEdit }) {
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat("en-IN", {
       style: "currency",
@@ -118,6 +118,10 @@ export default function TransactionItem({ item, onDelete }) {
           {item.type === "income" ? "+" : "-"}
           {formatCurrency(amountPaise / 100)}
         </Text>
+
+        <TouchableOpacity style={styles.editButton} onPress={onEdit}>
+          <Ionicons name="pencil-outline" size={16} color="#666" />
+        </TouchableOpacity>
         <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
           <Ionicons name="trash-outline" size={16} color="#999" />
         </TouchableOpacity>
@@ -176,6 +180,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
     marginBottom: 4,
+  },
+  editButton: {
+    padding: 4,
+    marginRight: 4,
   },
   deleteButton: {
     padding: 4,

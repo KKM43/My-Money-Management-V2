@@ -14,21 +14,53 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import {
+  addDoc,
+  collection,
+  doc,
+  serverTimestamp,
+  updateDoc,
+} from "firebase/firestore";
 import { db, auth } from "../services/firebaseConfig";
 import { LightTheme } from "../theme";
 import DateTimePicker from "@react-native-community/datetimepicker";
 
 const { width, height } = Dimensions.get("window");
 
-export default function AddTransactionScreen({ navigation }) {
-  const [type, setType] = useState("expense");
-  const [amount, setAmount] = useState("");
-  const [category, setCategory] = useState("");
-  const [note, setNote] = useState("");
+const getTransactionAmountPaise = (transaction) => {
+  if (!transaction) return 0;
+
+  return Number.isInteger(transaction.amountPaise)
+    ? transaction.amountPaise
+    : Math.round(Number(transaction.amount || 0) * 100);
+};
+
+const getTransactionDate = (transaction) => {
+  if (!transaction) return new Date();
+
+  if (transaction.occurredOn) {
+    return new Date(`${transaction.occurredOn}T12:00:00`);
+  }
+
+  return new Date(transaction.date);
+};
+
+export default function AddTransactionScreen({ navigation, route }) {
+  const editingTransaction = route?.params?.transaction;
+  const isEditing = Boolean(editingTransaction);
+
+  const [type, setType] = useState(editingTransaction?.type || "expense");
+  const [amount, setAmount] = useState(() => {
+    if (!editingTransaction) return "";
+    return (getTransactionAmountPaise(editingTransaction) / 100).toFixed(2);
+  });
+  const [category, setCategory] = useState(editingTransaction?.category || "");
+  const [note, setNote] = useState(editingTransaction?.note || "");
   const [isOther, setIsOther] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState(() =>
+    getTransactionDate(editingTransaction),
+  );
   const [showDatePicker, setShowDatePicker] = useState(false);
 
   const expenseCategories = [
@@ -72,20 +104,20 @@ export default function AddTransactionScreen({ navigation }) {
   };
 
   const formatDateForDisplay = (date) => {
-  return new Intl.DateTimeFormat("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(date);
-};
+    return new Intl.DateTimeFormat("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    }).format(date);
+  };
 
-const handleDateChange = (event, date) => {
-  setShowDatePicker(false);
+  const handleDateChange = (event, date) => {
+    setShowDatePicker(false);
 
-  if (date) {
-    setSelectedDate(date);
-  }
-};
+    if (date) {
+      setSelectedDate(date);
+    }
+  };
 
   const handleCategorySelect = (item) => {
     if (item.name === "Other") {
@@ -97,14 +129,14 @@ const handleDateChange = (event, date) => {
     }
   };
 
-  const formatCurrency = (value) => {
-    const numericValue = parseFloat(value);
-    if (isNaN(numericValue)) return "";
-    return numericValue.toLocaleString("en-US", {
-      style: "currency",
-      currency: "USD",
-    });
-  };
+  // const formatCurrency = (value) => {
+  //   const numericValue = parseFloat(value);
+  //   if (isNaN(numericValue)) return "";
+  //   return numericValue.toLocaleString("en-US", {
+  //     style: "currency",
+  //     currency: "USD",
+  //   });
+  // };
 
   const handleAmountChange = (text) => {
     const cleaned = text.replace(/[^0-9.]/g, "");
@@ -116,42 +148,64 @@ const handleDateChange = (event, date) => {
   };
 
   const handleAdd = async () => {
-    if (!amount || !category) {
-      Alert.alert("Error", "Please enter amount and select a category");
-      return;
-    }
+  if (!amount || !category) {
+    Alert.alert("Error", "Please enter amount and select a category");
+    return;
+  }
 
-    const amountPaise = parseAmountToPaise(amount);
-    if (!Number.isInteger(amountPaise) || amountPaise <= 0) {
-      Alert.alert("Error", "Please enter a valid amount");
-      return;
-    }
+  const amountPaise = parseAmountToPaise(amount);
+  if (!Number.isInteger(amountPaise) || amountPaise <= 0) {
+    Alert.alert("Error", "Please enter a valid amount");
+    return;
+  }
 
-    setIsLoading(true);
-    try {
+  const transactionData = {
+    type,
+    amountPaise,
+    category,
+    note: note.trim(),
+    occurredOn: formatLocalDate(selectedDate),
+    updatedAt: serverTimestamp(),
+  };
+
+  setIsLoading(true);
+
+  try {
+    if (isEditing) {
+      await updateDoc(
+        doc(
+          db,
+          "users",
+          auth.currentUser.uid,
+          "transactions",
+          editingTransaction.id
+        ),
+        transactionData
+      );
+
+      Alert.alert("Success", "Transaction updated successfully!");
+    } else {
       await addDoc(
         collection(db, "users", auth.currentUser.uid, "transactions"),
         {
-          type,
-          amountPaise,
-          category,
-          note: note.trim(),
-          occurredOn: formatLocalDate(selectedDate),
+          ...transactionData,
           createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        },
+        }
       );
+
       Alert.alert(
         "Success",
-        `${type === "expense" ? "Expense" : "Income"} added successfully!`,
+        `${type === "expense" ? "Expense" : "Income"} added successfully!`
       );
-      navigation.goBack();
-    } catch (error) {
-      Alert.alert("Error", error.message);
-    } finally {
-      setIsLoading(false);
     }
-  };
+
+    navigation.goBack();
+  } catch (error) {
+    Alert.alert("Error", error.message);
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   return (
     <KeyboardAvoidingView
@@ -174,7 +228,9 @@ const handleDateChange = (event, date) => {
             >
               <Ionicons name="arrow-back" size={24} color="white" />
             </TouchableOpacity>
-            <Text style={styles.title}>Add Transaction</Text>
+            <Text style={styles.title}>
+              {isEditing ? "Edit Transaction" : "Add Transaction"}
+            </Text>
             <View style={styles.placeholder} />
           </View>
 
@@ -250,29 +306,29 @@ const handleDateChange = (event, date) => {
 
             <Text style={styles.sectionTitle}>Transaction Date</Text>
 
-<TouchableOpacity
-  style={styles.dateSelector}
-  onPress={() => setShowDatePicker(true)}
->
-  <Ionicons
-    name="calendar-outline"
-    size={20}
-    color={LightTheme.colors.primary}
-  />
-  <Text style={styles.dateSelectorText}>
-    {formatDateForDisplay(selectedDate)}
-  </Text>
-  <Ionicons name="chevron-down-outline" size={20} color="#666" />
-</TouchableOpacity>
+            <TouchableOpacity
+              style={styles.dateSelector}
+              onPress={() => setShowDatePicker(true)}
+            >
+              <Ionicons
+                name="calendar-outline"
+                size={20}
+                color={LightTheme.colors.primary}
+              />
+              <Text style={styles.dateSelectorText}>
+                {formatDateForDisplay(selectedDate)}
+              </Text>
+              <Ionicons name="chevron-down-outline" size={20} color="#666" />
+            </TouchableOpacity>
 
-{showDatePicker && (
-  <DateTimePicker
-    value={selectedDate}
-    mode="date"
-    display="default"
-    onChange={handleDateChange}
-  />
-)}
+            {showDatePicker && (
+              <DateTimePicker
+                value={selectedDate}
+                mode="date"
+                display="default"
+                onChange={handleDateChange}
+              />
+            )}
 
             {/* Category Selection */}
             <Text style={styles.sectionTitle}>Select Category</Text>
@@ -359,7 +415,13 @@ const handleDateChange = (event, date) => {
               ) : (
                 <>
                   <Ionicons name="checkmark-circle" size={20} color="white" />
-                  <Text style={styles.saveButtonText}>Save Transaction</Text>
+                  <Text style={styles.saveButtonText}>
+                    {isLoading
+                      ? "Saving..."
+                      : isEditing
+                        ? "Update Transaction"
+                        : "Save Transaction"}
+                  </Text>
                 </>
               )}
             </TouchableOpacity>
@@ -584,20 +646,20 @@ const styles = StyleSheet.create({
   },
 
   dateSelector: {
-  flexDirection: "row",
-  alignItems: "center",
-  backgroundColor: "#F8F9FA",
-  borderRadius: 12,
-  marginBottom: 20,
-  paddingHorizontal: 15,
-  paddingVertical: 15,
-  borderWidth: 1,
-  borderColor: "#E9ECEF",
-},
-dateSelectorText: {
-  flex: 1,
-  fontSize: 16,
-  color: LightTheme.colors.text,
-  marginLeft: 12,
-},
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F8F9FA",
+    borderRadius: 12,
+    marginBottom: 20,
+    paddingHorizontal: 15,
+    paddingVertical: 15,
+    borderWidth: 1,
+    borderColor: "#E9ECEF",
+  },
+  dateSelectorText: {
+    flex: 1,
+    fontSize: 16,
+    color: LightTheme.colors.text,
+    marginLeft: 12,
+  },
 });
