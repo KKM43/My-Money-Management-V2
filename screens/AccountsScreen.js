@@ -20,6 +20,7 @@ import {
 } from "firebase/firestore";
 import { auth, db } from "../services/firebaseConfig";
 import { LightTheme } from "../theme";
+import { useTheme } from "../ThemeContext";
 
 const ACCOUNT_TYPES = [
   { value: "bank", label: "Bank", icon: "business-outline" },
@@ -45,6 +46,7 @@ const formatCurrency = (amountPaise) =>
   }).format(amountPaise / 100);
 
 export default function AccountsScreen({ navigation }) {
+  const { colors, isDark } = useTheme();
   const [accounts, setAccounts] = useState([]);
   const [transactions, setTransactions] = useState([]);
   const [name, setName] = useState("");
@@ -207,26 +209,30 @@ export default function AccountsScreen({ navigation }) {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView
+      contentContainerStyle={[styles.container, { backgroundColor: colors.background }]}
+    >
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color={LightTheme.colors.text} />
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.title}>Accounts</Text>
+        <Text style={[styles.title, { color: colors.text }]}>Accounts</Text>
         <View style={styles.headerSpacer} />
       </View>
 
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Create account</Text>
+      <View style={[styles.card, { backgroundColor: colors.surface }]}>
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>
+        Create account
+      </Text>
         <TextInput
-          style={styles.input}
+          style={[styles.input, { color: colors.text, borderColor: isDark ? "#444" : "#E0E0E0" }]}
           placeholder="Account name"
           placeholderTextColor="#999"
           value={name}
           onChangeText={setName}
         />
 
-        <Text style={styles.label}>Account type</Text>
+        <Text style={[styles.label, { color: colors.text }]}>Account type</Text>
         <View style={styles.typeGrid}>
           {ACCOUNT_TYPES.map((accountType) => (
             <TouchableOpacity
@@ -255,7 +261,7 @@ export default function AccountsScreen({ navigation }) {
         </View>
 
         <TextInput
-          style={styles.input}
+          style={[styles.input, { color: colors.text, borderColor: isDark ? "#444" : "#E0E0E0" }]}
           placeholder="Opening balance (optional)"
           placeholderTextColor="#999"
           keyboardType="numeric"
@@ -278,12 +284,16 @@ export default function AccountsScreen({ navigation }) {
         </TouchableOpacity>
       </View>
 
-      <Text style={styles.sectionTitle}>Your accounts</Text>
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>
+        Your accounts
+      </Text>
       {editingAccountId && (
-        <View style={styles.editCard}>
-          <Text style={styles.sectionTitle}>Edit account</Text>
+        <View style={[styles.editCard, { backgroundColor: colors.surface }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+            Edit account
+          </Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, { color: colors.text, borderColor: isDark ? "#444" : "#E0E0E0" }]}
             value={editName}
             onChangeText={setEditName}
             placeholder="Account name"
@@ -326,7 +336,9 @@ export default function AccountsScreen({ navigation }) {
         </View>
       )}
       {accounts.length === 0 ? (
-        <Text style={styles.emptyText}>No accounts created yet.</Text>
+        <Text style={[styles.emptyText, { color: colors.text }]}>
+          No accounts created yet.
+        </Text>
       ) : (
         accounts.map((account) => {
           const accountType = ACCOUNT_TYPES.find(
@@ -363,7 +375,11 @@ export default function AccountsScreen({ navigation }) {
           return (
             <TouchableOpacity
               key={account.id}
-              style={[styles.accountRow, account.isArchived && styles.archivedRow]}
+              style={[
+                styles.accountRow,
+                { backgroundColor: colors.surface },
+                account.isArchived && styles.archivedRow,
+              ]}
               onPress={() => navigation.navigate("AccountActivity", { account })}
             >
               <View style={styles.accountIcon}>
@@ -374,13 +390,15 @@ export default function AccountsScreen({ navigation }) {
                 />
               </View>
               <View style={styles.accountDetails}>
-                <Text style={styles.accountName}>{account.name}</Text>
-                <Text style={styles.accountType}>
+                <Text style={[styles.accountName, { color: colors.text }]}>
+                  {account.name}
+                </Text>
+                <Text style={[styles.accountType, { color: colors.text }]}>
                   {accountType?.label || "Account"}
                   {account.isArchived ? " • Archived" : ""}
                 </Text>
               </View>
-              <Text style={styles.accountBalance}>
+              <Text style={[styles.accountBalance, { color: colors.text }]}>
                 {formatCurrency(balancePaise)}
               </Text>
               <TouchableOpacity

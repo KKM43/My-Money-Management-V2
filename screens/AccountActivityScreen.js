@@ -12,8 +12,10 @@ import { collection, onSnapshot } from "firebase/firestore";
 import { auth, db } from "../services/firebaseConfig";
 import { LightTheme } from "../theme";
 import TransactionItem from "../components/TransactionItem";
+import { useTheme } from "../ThemeContext";
 
 export default function AccountActivityScreen({ navigation, route }) {
+  const { colors } = useTheme();
   const account = route.params.account;
   const [transactions, setTransactions] = useState([]);
 
@@ -51,20 +53,26 @@ export default function AccountActivityScreen({ navigation, route }) {
   }, [account.id]);
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView
+      contentContainerStyle={[styles.container, { backgroundColor: colors.background }]}
+    >
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color={LightTheme.colors.text} />
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
         <View style={styles.headerText}>
-          <Text style={styles.title}>{account.name}</Text>
-          <Text style={styles.subtitle}>Account activity</Text>
+          <Text style={[styles.title, { color: colors.text }]}>{account.name}</Text>
+          <Text style={[styles.subtitle, { color: colors.text }]}>
+            Account activity
+          </Text>
         </View>
         <View style={styles.headerSpacer} />
       </View>
 
       {transactions.length === 0 ? (
-        <Text style={styles.emptyText}>No activity for this account yet.</Text>
+        <Text style={[styles.emptyText, { color: colors.text }]}>
+          No activity for this account yet.
+        </Text>
       ) : (
         transactions.map((transaction) => (
           <TransactionItem
