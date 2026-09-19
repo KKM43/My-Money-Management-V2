@@ -107,7 +107,7 @@ export default function DashboardScreen({ navigation }) {
           style: "destructive",
           onPress: async () => {
     await signOut(auth);
-    navigation.replace("Login");
+    // navigation.replace("Login");
           }
         }
       ]
