@@ -9,6 +9,7 @@ import {
   ScrollView,
   RefreshControl,
   Dimensions,
+  TextInput,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
@@ -39,6 +40,7 @@ export default function DashboardScreen({ navigation }) {
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [refreshing, setRefreshing] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState("all"); // all, income, expense
+  const [searchQuery, setSearchQuery] = useState("");
   const [monthlyBudget, setMonthlyBudget] = useState(20000); // Default budget
   const [showMonthPicker, setShowMonthPicker] = useState(false);
 
@@ -145,9 +147,22 @@ export default function DashboardScreen({ navigation }) {
     setTimeout(() => setRefreshing(false), 1000);
   };
 
+  const clearSearchAndFilters = () => {
+    setSearchQuery("");
+    setSelectedFilter("all");
+  };
+
   const filteredTransactions = transactions.filter((transaction) => {
-    if (selectedFilter === "all") return true;
-    return transaction.type === selectedFilter;
+    const matchesType =
+      selectedFilter === "all" || transaction.type === selectedFilter;
+
+    const searchText = searchQuery.trim().toLowerCase();
+    const matchesSearch =
+      !searchText ||
+      transaction.category?.toLowerCase().includes(searchText) ||
+      transaction.note?.toLowerCase().includes(searchText);
+
+    return matchesType && matchesSearch;
   });
 
   const remainingBudget = monthlyBudget - expenseTotal;
@@ -345,6 +360,31 @@ export default function DashboardScreen({ navigation }) {
               <Text style={styles.quickActionText}>Add Transaction</Text>
             </LinearGradient>
           </TouchableOpacity>
+        </View>
+
+        <View style={styles.searchContainer}>
+          <Ionicons
+            name="search-outline"
+            size={20}
+            color="#666"
+            style={styles.searchIcon}
+          />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search category or note"
+            placeholderTextColor="#999"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            autoCapitalize="none"
+          />
+          {searchQuery || selectedFilter !== "all" ? (
+            <TouchableOpacity
+              style={styles.clearSearchButton}
+              onPress={clearSearchAndFilters}
+            >
+              <Ionicons name="close-circle" size={20} color="#999" />
+            </TouchableOpacity>
+          ) : null}
         </View>
 
         {/* Filter Tabs */}
@@ -713,4 +753,26 @@ const styles = StyleSheet.create({
     color: "#999",
     textAlign: "center",
   },
+  searchContainer: {
+  flexDirection: "row",
+  alignItems: "center",
+  backgroundColor: "white",
+  borderRadius: 12,
+  paddingHorizontal: 14,
+  marginBottom: 12,
+  borderWidth: 1,
+  borderColor: "#E9ECEF",
+},
+searchIcon: {
+  marginRight: 10,
+},
+searchInput: {
+  flex: 1,
+  paddingVertical: 13,
+  fontSize: 16,
+  color: LightTheme.colors.text,
+},
+clearSearchButton: {
+  paddingLeft: 8,
+},
 });
