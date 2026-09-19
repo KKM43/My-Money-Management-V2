@@ -44,5 +44,8 @@ The previous V1-style top-level `transactions` and `userSettings` paths are not 
 
 - Review the Expo New Architecture warning before creating a production build.
 - Define the final V2 transaction data model before adding editing, accounts, or transfers.
-- Standardize all currency formatting to INR; the Add Transaction screen still contains legacy USD formatting code.
 - Plan tests for Firestore access isolation between two V2 users.
+
+## Transaction decisions
+
+- Future-dated transactions are allowed for planned transactions.

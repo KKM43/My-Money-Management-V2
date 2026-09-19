@@ -129,15 +129,6 @@ export default function AddTransactionScreen({ navigation, route }) {
     }
   };
 
-  // const formatCurrency = (value) => {
-  //   const numericValue = parseFloat(value);
-  //   if (isNaN(numericValue)) return "";
-  //   return numericValue.toLocaleString("en-US", {
-  //     style: "currency",
-  //     currency: "USD",
-  //   });
-  // };
-
   const handleAmountChange = (text) => {
     const cleaned = text.replace(/[^0-9.]/g, "");
     const [rupees, paise = ""] = cleaned.split(".");
