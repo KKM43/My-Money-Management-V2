@@ -1,24 +1,24 @@
 import React, { useState } from "react";
-import { 
-  View, 
-  Text, 
-  TextInput, 
-  StyleSheet, 
-  Alert, 
-  TouchableOpacity, 
+import {
+  View,
+  Text,
+  TextInput,
+  StyleSheet,
+  Alert,
+  TouchableOpacity,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
-  Dimensions
+  Dimensions,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import { collection, addDoc } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db, auth } from "../services/firebaseConfig";
 import { LightTheme } from "../theme";
 
-const { width, height } = Dimensions.get('window');
+const { width, height } = Dimensions.get("window");
 
 export default function AddTransactionScreen({ navigation }) {
   const [type, setType] = useState("expense");
@@ -37,7 +37,7 @@ export default function AddTransactionScreen({ navigation }) {
     { name: "Bills & Utilities", icon: "receipt", color: "#FFEAA7" },
     { name: "Healthcare", icon: "medical", color: "#DDA0DD" },
     { name: "Education", icon: "school", color: "#98D8C8" },
-    { name: "Other", icon: "ellipsis-horizontal", color: "#A0A0A0" }
+    { name: "Other", icon: "ellipsis-horizontal", color: "#A0A0A0" },
   ];
 
   const incomeCategories = [
@@ -46,10 +46,28 @@ export default function AddTransactionScreen({ navigation }) {
     { name: "Investment", icon: "trending-up", color: "#96CEB4" },
     { name: "Gift", icon: "gift", color: "#FFEAA7" },
     { name: "Bonus", icon: "trophy", color: "#DDA0DD" },
-    { name: "Other", icon: "ellipsis-horizontal", color: "#A0A0A0" }
+    { name: "Other", icon: "ellipsis-horizontal", color: "#A0A0A0" },
   ];
 
-  const currentCategories = type === "expense" ? expenseCategories : incomeCategories;
+  const currentCategories =
+    type === "expense" ? expenseCategories : incomeCategories;
+
+  const parseAmountToPaise = (value) => {
+    if (!/^\d+(\.\d{1,2})?$/.test(value)) {
+      return null;
+    }
+
+    const [rupees, paise = ""] = value.split(".");
+    return Number(rupees) * 100 + Number(paise.padEnd(2, "0"));
+  };
+
+  const formatLocalDate = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+  };
 
   const handleCategorySelect = (item) => {
     if (item.name === "Other") {
@@ -64,16 +82,19 @@ export default function AddTransactionScreen({ navigation }) {
   const formatCurrency = (value) => {
     const numericValue = parseFloat(value);
     if (isNaN(numericValue)) return "";
-    return numericValue.toLocaleString('en-US', {
-      style: 'currency',
-      currency: 'USD'
+    return numericValue.toLocaleString("en-US", {
+      style: "currency",
+      currency: "USD",
     });
   };
 
   const handleAmountChange = (text) => {
-    // Remove non-numeric characters except decimal point
-    const numericText = text.replace(/[^0-9.]/g, '');
-    setAmount(numericText);
+    const cleaned = text.replace(/[^0-9.]/g, "");
+    const [rupees, paise = ""] = cleaned.split(".");
+
+    setAmount(
+      cleaned.includes(".") ? `${rupees || "0"}.${paise.slice(0, 2)}` : rupees,
+    );
   };
 
   const handleAdd = async () => {
@@ -82,24 +103,30 @@ export default function AddTransactionScreen({ navigation }) {
       return;
     }
 
-    const numericAmount = parseFloat(amount);
-    if (isNaN(numericAmount) || numericAmount <= 0) {
+    const amountPaise = parseAmountToPaise(amount);
+    if (!Number.isInteger(amountPaise) || amountPaise <= 0) {
       Alert.alert("Error", "Please enter a valid amount");
       return;
     }
 
     setIsLoading(true);
     try {
-      await addDoc(collection(db, "users", auth.currentUser.uid, "transactions"), {
-        type,
-        amount: numericAmount,
-        category,
-        note,
-        date: selectedDate.toISOString(),
-        userId: auth.currentUser.uid,
-        createdAt: new Date().toISOString(),
-      });
-      Alert.alert("Success", `${type === "expense" ? "Expense" : "Income"} added successfully!`);
+      await addDoc(
+        collection(db, "users", auth.currentUser.uid, "transactions"),
+        {
+          type,
+          amountPaise,
+          category,
+          note: note.trim(),
+          occurredOn: formatLocalDate(selectedDate),
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        },
+      );
+      Alert.alert(
+        "Success",
+        `${type === "expense" ? "Expense" : "Income"} added successfully!`,
+      );
       navigation.goBack();
     } catch (error) {
       Alert.alert("Error", error.message);
@@ -109,21 +136,21 @@ export default function AddTransactionScreen({ navigation }) {
   };
 
   return (
-    <KeyboardAvoidingView 
-      style={styles.container} 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <LinearGradient
         colors={[LightTheme.colors.primary, LightTheme.colors.secondary]}
         style={styles.gradient}
       >
-        <ScrollView 
+        <ScrollView
           contentContainerStyle={styles.scrollContainer}
           showsVerticalScrollIndicator={false}
         >
           {/* Header Section */}
           <View style={styles.headerSection}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.backButton}
               onPress={() => navigation.goBack()}
             >
@@ -141,54 +168,63 @@ export default function AddTransactionScreen({ navigation }) {
                 style={[
                   styles.typeButton,
                   type === "expense" && styles.typeButtonActive,
-                  type === "expense" && styles.expenseButton
+                  type === "expense" && styles.expenseButton,
                 ]}
-          onPress={() => setType("expense")}
+                onPress={() => setType("expense")}
               >
-                <Ionicons 
-                  name="remove-circle" 
-                  size={20} 
-                  color={type === "expense" ? "white" : "#FF6B6B"} 
+                <Ionicons
+                  name="remove-circle"
+                  size={20}
+                  color={type === "expense" ? "white" : "#FF6B6B"}
                 />
-                <Text style={[
-                  styles.typeButtonText,
-                  type === "expense" && styles.typeButtonTextActive
-                ]}>
+                <Text
+                  style={[
+                    styles.typeButtonText,
+                    type === "expense" && styles.typeButtonTextActive,
+                  ]}
+                >
                   Expense
                 </Text>
               </TouchableOpacity>
-              
+
               <TouchableOpacity
                 style={[
                   styles.typeButton,
                   type === "income" && styles.typeButtonActive,
-                  type === "income" && styles.incomeButton
+                  type === "income" && styles.incomeButton,
                 ]}
-          onPress={() => setType("income")}
+                onPress={() => setType("income")}
               >
-                <Ionicons 
-                  name="add-circle" 
-                  size={20} 
-                  color={type === "income" ? "white" : "#4ECDC4"} 
+                <Ionicons
+                  name="add-circle"
+                  size={20}
+                  color={type === "income" ? "white" : "#4ECDC4"}
                 />
-                <Text style={[
-                  styles.typeButtonText,
-                  type === "income" && styles.typeButtonTextActive
-                ]}>
+                <Text
+                  style={[
+                    styles.typeButtonText,
+                    type === "income" && styles.typeButtonTextActive,
+                  ]}
+                >
                   Income
                 </Text>
               </TouchableOpacity>
-      </View>
+            </View>
 
             {/* Amount Input */}
             <View style={styles.inputContainer}>
-              <Ionicons name="cash" size={20} color={LightTheme.colors.primary} style={styles.inputIcon} />
-      <TextInput
+              <Ionicons
+                name="cash"
+                size={20}
+                color={LightTheme.colors.primary}
+                style={styles.inputIcon}
+              />
+              <TextInput
                 style={styles.amountInput}
                 placeholder="0.00"
                 placeholderTextColor="#999"
-        keyboardType="numeric"
-        value={amount}
+                keyboardType="numeric"
+                value={amount}
                 onChangeText={handleAmountChange}
               />
               <Text style={styles.currencySymbol}>₹</Text>
@@ -198,59 +234,79 @@ export default function AddTransactionScreen({ navigation }) {
             <Text style={styles.sectionTitle}>Select Category</Text>
             <View style={styles.categoriesGrid}>
               {currentCategories.map((item, index) => (
-          <TouchableOpacity
+                <TouchableOpacity
                   key={index}
-            style={[
+                  style={[
                     styles.categoryCard,
                     category === item.name && styles.selectedCategoryCard,
-                    { borderColor: item.color }
-            ]}
-            onPress={() => handleCategorySelect(item)}
-          >
-                  <View style={[styles.categoryIcon, { backgroundColor: item.color }]}>
+                    { borderColor: item.color },
+                  ]}
+                  onPress={() => handleCategorySelect(item)}
+                >
+                  <View
+                    style={[
+                      styles.categoryIcon,
+                      { backgroundColor: item.color },
+                    ]}
+                  >
                     <Ionicons name={item.icon} size={18} color="white" />
                   </View>
-                  <Text style={[
-                    styles.categoryName,
-                    category === item.name && styles.selectedCategoryName
-                  ]}>
+                  <Text
+                    style={[
+                      styles.categoryName,
+                      category === item.name && styles.selectedCategoryName,
+                    ]}
+                  >
                     {item.name}
                   </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+                </TouchableOpacity>
+              ))}
+            </View>
 
             {/* Custom Category Input */}
-      {isOther && (
+            {isOther && (
               <View style={styles.inputContainer}>
-                <Ionicons name="create" size={20} color={LightTheme.colors.primary} style={styles.inputIcon} />
-        <TextInput
-          style={styles.input}
-          placeholder="Enter custom category"
+                <Ionicons
+                  name="create"
+                  size={20}
+                  color={LightTheme.colors.primary}
+                  style={styles.inputIcon}
+                />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter custom category"
                   placeholderTextColor="#999"
-          value={category}
-          onChangeText={setCategory}
-        />
+                  value={category}
+                  onChangeText={setCategory}
+                />
               </View>
-      )}
+            )}
 
             {/* Note Input */}
             <View style={styles.inputContainer}>
-              <Ionicons name="document-text" size={20} color={LightTheme.colors.primary} style={styles.inputIcon} />
-      <TextInput
+              <Ionicons
+                name="document-text"
+                size={20}
+                color={LightTheme.colors.primary}
+                style={styles.inputIcon}
+              />
+              <TextInput
                 style={[styles.input, styles.noteInput]}
                 placeholder="Add a note (optional)"
                 placeholderTextColor="#999"
-        value={note}
-        onChangeText={setNote}
+                value={note}
+                onChangeText={setNote}
                 multiline
                 numberOfLines={3}
               />
             </View>
 
             {/* Save Button */}
-            <TouchableOpacity 
-              style={[styles.saveButton, isLoading && styles.saveButtonDisabled]} 
+            <TouchableOpacity
+              style={[
+                styles.saveButton,
+                isLoading && styles.saveButtonDisabled,
+              ]}
               onPress={handleAdd}
               disabled={isLoading}
             >
@@ -263,7 +319,7 @@ export default function AddTransactionScreen({ navigation }) {
                 </>
               )}
             </TouchableOpacity>
-    </View>
+          </View>
         </ScrollView>
       </LinearGradient>
     </KeyboardAvoidingView>
@@ -283,9 +339,9 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
   },
   headerSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: 30,
     paddingTop: 10,
   },
@@ -293,24 +349,24 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    justifyContent: "center",
+    alignItems: "center",
   },
   title: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: 'white',
-    textAlign: 'center',
+    fontWeight: "bold",
+    color: "white",
+    textAlign: "center",
   },
   placeholder: {
     width: 40,
   },
   formCard: {
-    backgroundColor: 'white',
+    backgroundColor: "white",
     borderRadius: 20,
     padding: 20,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: 10,
@@ -320,24 +376,24 @@ const styles = StyleSheet.create({
     elevation: 15,
   },
   typeToggleContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#F8F9FA',
+    flexDirection: "row",
+    backgroundColor: "#F8F9FA",
     borderRadius: 12,
     padding: 4,
     marginBottom: 25,
   },
   typeButton: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 8,
   },
   typeButtonActive: {
-    backgroundColor: 'white',
-    shadowColor: '#000',
+    backgroundColor: "white",
+    shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: 2,
@@ -347,29 +403,29 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   expenseButton: {
-    backgroundColor: '#FF6B6B',
+    backgroundColor: "#FF6B6B",
   },
   incomeButton: {
-    backgroundColor: '#4ECDC4',
+    backgroundColor: "#4ECDC4",
   },
   typeButtonText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
     marginLeft: 8,
-    color: '#666',
+    color: "#666",
   },
   typeButtonTextActive: {
-    color: 'white',
+    color: "white",
   },
   inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F8F9FA',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F8F9FA",
     borderRadius: 12,
     marginBottom: 20,
     paddingHorizontal: 15,
     borderWidth: 1,
-    borderColor: '#E9ECEF',
+    borderColor: "#E9ECEF",
   },
   inputIcon: {
     marginRight: 12,
@@ -384,43 +440,43 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 15,
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     color: LightTheme.colors.text,
-    textAlign: 'center',
+    textAlign: "center",
   },
   currencySymbol: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     color: LightTheme.colors.primary,
     marginLeft: 8,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     color: LightTheme.colors.text,
     marginBottom: 15,
   },
   categoriesGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
     marginBottom: 20,
     paddingHorizontal: 5,
   },
   categoryCard: {
     width: (width - 100) / 2,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: "#F8F9FA",
     borderRadius: 12,
     padding: 12,
     marginBottom: 10,
     borderWidth: 2,
-    borderColor: '#E9ECEF',
-    alignItems: 'center',
+    borderColor: "#E9ECEF",
+    alignItems: "center",
     minHeight: 80,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   selectedCategoryCard: {
-    backgroundColor: '#E3F2FD',
+    backgroundColor: "#E3F2FD",
     borderColor: LightTheme.colors.primary,
     shadowColor: LightTheme.colors.primary,
     shadowOffset: {
@@ -435,32 +491,32 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: 6,
   },
   categoryName: {
     fontSize: 11,
-    fontWeight: '600',
-    color: '#666',
-    textAlign: 'center',
+    fontWeight: "600",
+    color: "#666",
+    textAlign: "center",
     lineHeight: 14,
   },
   selectedCategoryName: {
     color: LightTheme.colors.primary,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   noteInput: {
     minHeight: 80,
-    textAlignVertical: 'top',
+    textAlignVertical: "top",
   },
   saveButton: {
     backgroundColor: LightTheme.colors.primary,
     borderRadius: 12,
     paddingVertical: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     marginTop: 10,
     shadowColor: LightTheme.colors.primary,
     shadowOffset: {
@@ -472,14 +528,14 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   saveButtonDisabled: {
-    backgroundColor: '#B0BEC5',
+    backgroundColor: "#B0BEC5",
     shadowOpacity: 0,
     elevation: 0,
   },
   saveButtonText: {
-    color: 'white',
+    color: "white",
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginLeft: 8,
   },
 });

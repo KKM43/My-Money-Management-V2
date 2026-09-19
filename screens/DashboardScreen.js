@@ -43,30 +43,30 @@ export default function DashboardScreen({ navigation }) {
   const [showMonthPicker, setShowMonthPicker] = useState(false);
 
   useEffect(() => {
-  const budgetRef = doc(
-    db,
-    "users",
-    auth.currentUser.uid,
-    "settings",
-    "budget"
-  );
+    const budgetRef = doc(
+      db,
+      "users",
+      auth.currentUser.uid,
+      "settings",
+      "budget",
+    );
 
-  const unsubscribe = onSnapshot(
-    budgetRef,
-    (budgetSnapshot) => {
-      if (budgetSnapshot.exists()) {
-        setMonthlyBudget(budgetSnapshot.data().monthlyBudget || 20000);
-      } else {
-        setMonthlyBudget(20000);
-      }
-    },
-    (error) => {
-      console.error("Error loading budget:", error);
-    }
-  );
+    const unsubscribe = onSnapshot(
+      budgetRef,
+      (budgetSnapshot) => {
+        if (budgetSnapshot.exists()) {
+          setMonthlyBudget(budgetSnapshot.data().monthlyBudget || 20000);
+        } else {
+          setMonthlyBudget(20000);
+        }
+      },
+      (error) => {
+        console.error("Error loading budget:", error);
+      },
+    );
 
-  return unsubscribe;
-}, []);
+    return unsubscribe;
+  }, []);
 
   useEffect(() => {
     const q = collection(db, "users", auth.currentUser.uid, "transactions");
@@ -76,7 +76,10 @@ export default function DashboardScreen({ navigation }) {
 
       // 🔹 Filter selected month and year
       const selectedMonthData = data.filter((item) => {
-        const date = new Date(item.date);
+        const dateValue = item.occurredOn || item.date;
+        const date = item.occurredOn
+          ? new Date(`${dateValue}T00:00:00`)
+          : new Date(dateValue);
         return (
           date.getMonth() === currentMonth && date.getFullYear() === currentYear
         );
@@ -88,8 +91,12 @@ export default function DashboardScreen({ navigation }) {
       let totalExpense = 0;
 
       selectedMonthData.forEach((item) => {
-        if (item.type === "income") totalIncome += item.amount;
-        else totalExpense += item.amount;
+        const amountPaise = Number.isInteger(item.amountPaise)
+          ? item.amountPaise
+          : Math.round(Number(item.amount || 0) * 100);
+
+        if (item.type === "income") totalIncome += amountPaise / 100;
+        else totalExpense += amountPaise / 100;
       });
 
       setIncomeTotal(totalIncome);
@@ -190,7 +197,8 @@ export default function DashboardScreen({ navigation }) {
     return new Intl.NumberFormat("en-IN", {
       style: "currency",
       currency: "INR",
-      minimumFractionDigits: 0,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
     }).format(amount);
   };
 

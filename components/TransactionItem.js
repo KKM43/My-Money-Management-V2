@@ -4,10 +4,11 @@ import { Ionicons } from "@expo/vector-icons";
 
 export default function TransactionItem({ item, onDelete }) {
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      minimumFractionDigits: 0,
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
     }).format(amount);
   };
 
@@ -16,15 +17,15 @@ export default function TransactionItem({ item, onDelete }) {
     const today = new Date();
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
-    
+
     if (date.toDateString() === today.toDateString()) {
-      return 'Today';
+      return "Today";
     } else if (date.toDateString() === yesterday.toDateString()) {
-      return 'Yesterday';
+      return "Yesterday";
     } else {
-      return date.toLocaleDateString('en-US', { 
-        month: 'short', 
-        day: 'numeric' 
+      return date.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
       });
     }
   };
@@ -35,69 +36,87 @@ export default function TransactionItem({ item, onDelete }) {
       "Are you sure you want to delete this transaction?",
       [
         { text: "Cancel", style: "cancel" },
-        { 
-          text: "Delete", 
+        {
+          text: "Delete",
           style: "destructive",
-          onPress: onDelete
-        }
-      ]
+          onPress: onDelete,
+        },
+      ],
     );
   };
 
   const getCategoryIcon = (category) => {
     const iconMap = {
-      'Food & Dining': 'restaurant',
-      'Transportation': 'car',
-      'Shopping': 'bag',
-      'Entertainment': 'game-controller',
-      'Bills & Utilities': 'receipt',
-      'Healthcare': 'medical',
-      'Education': 'school',
-      'Salary': 'briefcase',
-      'Freelance': 'laptop',
-      'Investment': 'trending-up',
-      'Gift': 'gift',
-      'Bonus': 'trophy',
+      "Food & Dining": "restaurant",
+      Transportation: "car",
+      Shopping: "bag",
+      Entertainment: "game-controller",
+      "Bills & Utilities": "receipt",
+      Healthcare: "medical",
+      Education: "school",
+      Salary: "briefcase",
+      Freelance: "laptop",
+      Investment: "trending-up",
+      Gift: "gift",
+      Bonus: "trophy",
     };
-    return iconMap[category] || 'ellipsis-horizontal';
+    return iconMap[category] || "ellipsis-horizontal";
   };
 
   const getCategoryColor = (category) => {
     const colorMap = {
-      'Food & Dining': '#FF6B6B',
-      'Transportation': '#4ECDC4',
-      'Shopping': '#45B7D1',
-      'Entertainment': '#96CEB4',
-      'Bills & Utilities': '#FFEAA7',
-      'Healthcare': '#DDA0DD',
-      'Education': '#98D8C8',
-      'Salary': '#4ECDC4',
-      'Freelance': '#45B7D1',
-      'Investment': '#96CEB4',
-      'Gift': '#FFEAA7',
-      'Bonus': '#DDA0DD',
+      "Food & Dining": "#FF6B6B",
+      Transportation: "#4ECDC4",
+      Shopping: "#45B7D1",
+      Entertainment: "#96CEB4",
+      "Bills & Utilities": "#FFEAA7",
+      Healthcare: "#DDA0DD",
+      Education: "#98D8C8",
+      Salary: "#4ECDC4",
+      Freelance: "#45B7D1",
+      Investment: "#96CEB4",
+      Gift: "#FFEAA7",
+      Bonus: "#DDA0DD",
     };
-    return colorMap[category] || '#A0A0A0';
+    return colorMap[category] || "#A0A0A0";
   };
+
+  const amountPaise = Number.isInteger(item.amountPaise)
+    ? item.amountPaise
+    : Math.round(Number(item.amount || 0) * 100);
+
+  const occurredOn = item.occurredOn || item.date;
 
   return (
     <View style={styles.card}>
       <View style={styles.leftSection}>
-        <View style={[styles.iconContainer, { backgroundColor: getCategoryColor(item.category) }]}>
-          <Ionicons name={getCategoryIcon(item.category)} size={20} color="white" />
+        <View
+          style={[
+            styles.iconContainer,
+            { backgroundColor: getCategoryColor(item.category) },
+          ]}
+        >
+          <Ionicons
+            name={getCategoryIcon(item.category)}
+            size={20}
+            color="white"
+          />
         </View>
         <View style={styles.details}>
           <Text style={styles.category}>{item.category}</Text>
           {item.note && <Text style={styles.note}>{item.note}</Text>}
-          <Text style={styles.date}>{formatDate(item.date)}</Text>
+          <Text style={styles.date}>{formatDate(occurredOn)}</Text>
         </View>
       </View>
       <View style={styles.rightSection}>
-        <Text style={[
-          styles.amount,
-          { color: item.type === 'income' ? '#4ECDC4' : '#FF6B6B' }
-        ]}>
-          {item.type === 'income' ? '+' : '-'}{formatCurrency(item.amount)}
+        <Text
+          style={[
+            styles.amount,
+            { color: item.type === "income" ? "#4ECDC4" : "#FF6B6B" },
+          ]}
+        >
+          {item.type === "income" ? "+" : "-"}
+          {formatCurrency(amountPaise / 100)}
         </Text>
         <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
           <Ionicons name="trash-outline" size={16} color="#999" />
