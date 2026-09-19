@@ -105,6 +105,14 @@ export default function AddTransactionScreen({ navigation, route }) {
     );
   }, []);
 
+  const selectableAccounts = accounts.filter(
+    (account) =>
+      !account.isArchived ||
+      account.id === selectedAccountId ||
+      account.id === fromAccountId ||
+      account.id === toAccountId,
+  );
+
   const expenseCategories = [
     { name: "Food & Dining", icon: "restaurant", color: "#FF6B6B" },
     { name: "Transportation", icon: "car", color: "#4ECDC4" },
@@ -400,7 +408,7 @@ export default function AddTransactionScreen({ navigation, route }) {
               <>
                 <Text style={styles.accountLabel}>From account</Text>
                 <View style={styles.accountsGrid}>
-                  {accounts.map((account) => (
+                  {selectableAccounts.map((account) => (
                     <TouchableOpacity
                       key={`from-${account.id}`}
                       style={[
@@ -423,7 +431,7 @@ export default function AddTransactionScreen({ navigation, route }) {
                 </View>
                 <Text style={styles.accountLabel}>To account</Text>
                 <View style={styles.accountsGrid}>
-                  {accounts.map((account) => (
+                  {selectableAccounts.map((account) => (
                     <TouchableOpacity
                       key={`to-${account.id}`}
                       style={[
@@ -447,7 +455,7 @@ export default function AddTransactionScreen({ navigation, route }) {
               </>
             ) : (
               <View style={styles.accountsGrid}>
-                {accounts.map((account) => (
+                {selectableAccounts.map((account) => (
                   <TouchableOpacity
                     key={account.id}
                     style={[

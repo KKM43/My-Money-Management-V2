@@ -13,8 +13,10 @@ import { Ionicons } from "@expo/vector-icons";
 import {
   addDoc,
   collection,
+  doc,
   onSnapshot,
   serverTimestamp,
+  updateDoc,
 } from "firebase/firestore";
 import { auth, db } from "../services/firebaseConfig";
 import { LightTheme } from "../theme";
@@ -49,6 +51,9 @@ export default function AccountsScreen({ navigation }) {
   const [type, setType] = useState("bank");
   const [openingBalance, setOpeningBalance] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [editingAccountId, setEditingAccountId] = useState(null);
+  const [editName, setEditName] = useState("");
+  const [editType, setEditType] = useState("bank");
 
   useEffect(() => {
     const accountsRef = collection(
@@ -137,6 +142,70 @@ export default function AccountsScreen({ navigation }) {
     }
   };
 
+  const startEditing = (account) => {
+    setEditingAccountId(account.id);
+    setEditName(account.name);
+    setEditType(account.type);
+  };
+
+  const cancelEditing = () => {
+    setEditingAccountId(null);
+    setEditName("");
+  };
+
+  const handleUpdateAccount = async () => {
+    const trimmedName = editName.trim();
+    if (!trimmedName) {
+      Alert.alert("Error", "Please enter an account name");
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      await updateDoc(
+        doc(db, "users", auth.currentUser.uid, "accounts", editingAccountId),
+        {
+          name: trimmedName,
+          type: editType,
+          updatedAt: serverTimestamp(),
+        },
+      );
+      cancelEditing();
+      Alert.alert("Success", "Account updated successfully");
+    } catch (error) {
+      Alert.alert("Error", error.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const toggleArchive = (account) => {
+    const action = account.isArchived ? "unarchive" : "archive";
+    Alert.alert(
+      `${account.isArchived ? "Unarchive" : "Archive"} account`,
+      `Are you sure you want to ${action} ${account.name}?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: account.isArchived ? "Unarchive" : "Archive",
+          onPress: async () => {
+            try {
+              await updateDoc(
+                doc(db, "users", auth.currentUser.uid, "accounts", account.id),
+                {
+                  isArchived: !account.isArchived,
+                  updatedAt: serverTimestamp(),
+                },
+              );
+            } catch (error) {
+              Alert.alert("Error", error.message);
+            }
+          },
+        },
+      ],
+    );
+  };
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.header}>
@@ -210,6 +279,52 @@ export default function AccountsScreen({ navigation }) {
       </View>
 
       <Text style={styles.sectionTitle}>Your accounts</Text>
+      {editingAccountId && (
+        <View style={styles.editCard}>
+          <Text style={styles.sectionTitle}>Edit account</Text>
+          <TextInput
+            style={styles.input}
+            value={editName}
+            onChangeText={setEditName}
+            placeholder="Account name"
+            placeholderTextColor="#999"
+          />
+          <View style={styles.typeGrid}>
+            {ACCOUNT_TYPES.map((accountType) => (
+              <TouchableOpacity
+                key={accountType.value}
+                style={[
+                  styles.typeButton,
+                  editType === accountType.value && styles.typeButtonActive,
+                ]}
+                onPress={() => setEditType(accountType.value)}
+              >
+                <Text
+                  style={[
+                    styles.typeButtonText,
+                    editType === accountType.value &&
+                      styles.typeButtonTextActive,
+                  ]}
+                >
+                  {accountType.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          <View style={styles.editActions}>
+            <TouchableOpacity style={styles.cancelButton} onPress={cancelEditing}>
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.saveButton}
+              onPress={handleUpdateAccount}
+              disabled={isSaving}
+            >
+              <Text style={styles.saveButtonText}>Save changes</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
       {accounts.length === 0 ? (
         <Text style={styles.emptyText}>No accounts created yet.</Text>
       ) : (
@@ -248,7 +363,7 @@ export default function AccountsScreen({ navigation }) {
           return (
             <TouchableOpacity
               key={account.id}
-              style={styles.accountRow}
+              style={[styles.accountRow, account.isArchived && styles.archivedRow]}
               onPress={() => navigation.navigate("AccountActivity", { account })}
             >
               <View style={styles.accountIcon}>
@@ -262,11 +377,28 @@ export default function AccountsScreen({ navigation }) {
                 <Text style={styles.accountName}>{account.name}</Text>
                 <Text style={styles.accountType}>
                   {accountType?.label || "Account"}
+                  {account.isArchived ? " • Archived" : ""}
                 </Text>
               </View>
               <Text style={styles.accountBalance}>
                 {formatCurrency(balancePaise)}
               </Text>
+              <TouchableOpacity
+                style={styles.rowAction}
+                onPress={() => startEditing(account)}
+              >
+                <Ionicons name="pencil-outline" size={18} color="#666" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.rowAction}
+                onPress={() => toggleArchive(account)}
+              >
+                <Ionicons
+                  name={account.isArchived ? "arrow-undo-outline" : "archive-outline"}
+                  size={18}
+                  color="#666"
+                />
+              </TouchableOpacity>
             </TouchableOpacity>
           );
         })
@@ -300,6 +432,12 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     marginBottom: 24,
+  },
+  editCard: {
+    backgroundColor: "white",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
   },
   sectionTitle: {
     fontSize: 18,
@@ -374,6 +512,9 @@ const styles = StyleSheet.create({
     padding: 14,
     marginBottom: 10,
   },
+  archivedRow: {
+    opacity: 0.65,
+  },
   accountIcon: {
     width: 42,
     height: 42,
@@ -400,5 +541,26 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "bold",
     color: LightTheme.colors.text,
+  },
+  rowAction: {
+    padding: 6,
+    marginLeft: 4,
+  },
+  editActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  cancelButton: {
+    flex: 1,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#D0D0D0",
+    borderRadius: 10,
+    padding: 14,
+  },
+  cancelButtonText: {
+    color: "#666",
+    fontWeight: "bold",
   },
 });
