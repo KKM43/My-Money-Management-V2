@@ -219,11 +219,21 @@ export default function AccountsScreen({ navigation }) {
           );
           const transactionBalancePaise = transactions.reduce(
             (balance, transaction) => {
-              if (transaction.accountId !== account.id) return balance;
-
               const amountPaise = Number.isInteger(transaction.amountPaise)
                 ? transaction.amountPaise
                 : Math.round(Number(transaction.amount || 0) * 100);
+
+              if (transaction.type === "transfer") {
+                if (transaction.fromAccountId === account.id) {
+                  return balance - amountPaise;
+                }
+                if (transaction.toAccountId === account.id) {
+                  return balance + amountPaise;
+                }
+                return balance;
+              }
+
+              if (transaction.accountId !== account.id) return balance;
 
               return transaction.type === "income"
                 ? balance + amountPaise

@@ -80,6 +80,10 @@ Phase 3 accounts are stored at:
 
 The initial account types are `bank`, `cash`, `wallet`, and `creditCard`.
 
+Transfers are stored as one transaction with `type: "transfer"`,
+`fromAccountId`, and `toAccountId`. They decrease the source account and
+increase the destination account without affecting net worth.
+
 An account may be created with an optional `openingBalancePaise`. This opening
 balance is a starting value, not income. Users may also create an account with
 a zero opening balance and record the initial money separately as a normal

@@ -53,3 +53,4 @@ The previous V1-style top-level `transactions` and `userSettings` paths are not 
 - Accounts support either a non-income opening balance or a zero balance followed by a normal transaction.
 - New income and expense transactions will require an account; existing transactions without an account remain unchanged until migration is planned.
 - Existing unassigned transactions will be excluded from account balances in the first account-enabled release.
+- Transfers use one transaction record with source and destination account IDs and do not affect dashboard net worth.

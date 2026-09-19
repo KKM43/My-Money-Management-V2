@@ -74,6 +74,12 @@ export default function AddTransactionScreen({ navigation, route }) {
   const [selectedAccountId, setSelectedAccountId] = useState(
     editingTransaction?.accountId || "",
   );
+  const [fromAccountId, setFromAccountId] = useState(
+    editingTransaction?.fromAccountId || "",
+  );
+  const [toAccountId, setToAccountId] = useState(
+    editingTransaction?.toAccountId || "",
+  );
 
   useEffect(() => {
     const accountsRef = collection(
@@ -175,8 +181,8 @@ export default function AddTransactionScreen({ navigation, route }) {
   };
 
   const handleAdd = async () => {
-    if (!amount || !category) {
-      Alert.alert("Error", "Please enter amount and select a category");
+    if (!amount || (type !== "transfer" && !category)) {
+      Alert.alert("Error", "Please enter an amount and complete the details");
       return;
     }
 
@@ -186,19 +192,33 @@ export default function AddTransactionScreen({ navigation, route }) {
       return;
     }
 
-    if (!isEditing && !selectedAccountId) {
+    if (type !== "transfer" && !isEditing && !selectedAccountId) {
       Alert.alert("Error", "Please select an account");
+      return;
+    }
+
+    if (type === "transfer" && (!fromAccountId || !toAccountId)) {
+      Alert.alert("Error", "Please select both accounts");
+      return;
+    }
+
+    if (type === "transfer" && fromAccountId === toAccountId) {
+      Alert.alert("Error", "Source and destination accounts must be different");
       return;
     }
 
     const transactionData = {
       type,
       amountPaise,
-      category,
+      category: type === "transfer" ? "Transfer" : category,
       note: note.trim(),
       occurredOn: formatLocalDate(selectedDate),
       updatedAt: serverTimestamp(),
-      ...(selectedAccountId ? { accountId: selectedAccountId } : {}),
+      ...(type === "transfer"
+        ? { fromAccountId, toAccountId }
+        : selectedAccountId
+          ? { accountId: selectedAccountId }
+          : {}),
     };
 
     setIsLoading(true);
@@ -228,7 +248,7 @@ export default function AddTransactionScreen({ navigation, route }) {
 
         Alert.alert(
           "Success",
-          `${type === "expense" ? "Expense" : "Income"} added successfully!`,
+          `${type === "expense" ? "Expense" : type === "income" ? "Income" : "Transfer"} added successfully!`,
         );
       }
 
@@ -316,6 +336,28 @@ export default function AddTransactionScreen({ navigation, route }) {
                   Income
                 </Text>
               </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.typeButton,
+                  type === "transfer" && styles.typeButtonActive,
+                  type === "transfer" && styles.transferButton,
+                ]}
+                onPress={() => setType("transfer")}
+              >
+                <Ionicons
+                  name="swap-horizontal"
+                  size={20}
+                  color={type === "transfer" ? "white" : "#4D96FF"}
+                />
+                <Text
+                  style={[
+                    styles.typeButtonText,
+                    type === "transfer" && styles.typeButtonTextActive,
+                  ]}
+                >
+                  Transfer
+                </Text>
+              </TouchableOpacity>
             </View>
 
             {/* Amount Input */}
@@ -337,11 +379,62 @@ export default function AddTransactionScreen({ navigation, route }) {
               <Text style={styles.currencySymbol}>₹</Text>
             </View>
 
-            <Text style={styles.sectionTitle}>Select Account</Text>
+            <Text style={styles.sectionTitle}>
+              {type === "transfer" ? "Transfer Between Accounts" : "Select Account"}
+            </Text>
             {accounts.length === 0 ? (
               <Text style={styles.accountHint}>
                 Create an account before adding a new transaction.
               </Text>
+            ) : type === "transfer" ? (
+              <>
+                <Text style={styles.accountLabel}>From account</Text>
+                <View style={styles.accountsGrid}>
+                  {accounts.map((account) => (
+                    <TouchableOpacity
+                      key={`from-${account.id}`}
+                      style={[
+                        styles.accountCard,
+                        fromAccountId === account.id && styles.selectedAccountCard,
+                      ]}
+                      onPress={() => setFromAccountId(account.id)}
+                    >
+                      <Text
+                        style={[
+                          styles.accountName,
+                          fromAccountId === account.id && styles.selectedAccountText,
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {account.name}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                <Text style={styles.accountLabel}>To account</Text>
+                <View style={styles.accountsGrid}>
+                  {accounts.map((account) => (
+                    <TouchableOpacity
+                      key={`to-${account.id}`}
+                      style={[
+                        styles.accountCard,
+                        toAccountId === account.id && styles.selectedAccountCard,
+                      ]}
+                      onPress={() => setToAccountId(account.id)}
+                    >
+                      <Text
+                        style={[
+                          styles.accountName,
+                          toAccountId === account.id && styles.selectedAccountText,
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {account.name}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </>
             ) : (
               <View style={styles.accountsGrid}>
                 {accounts.map((account) => (
@@ -413,38 +506,42 @@ export default function AddTransactionScreen({ navigation, route }) {
               />
             )}
 
-            {/* Category Selection */}
-            <Text style={styles.sectionTitle}>Select Category</Text>
-            <View style={styles.categoriesGrid}>
-              {currentCategories.map((item, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={[
-                    styles.categoryCard,
-                    category === item.name && styles.selectedCategoryCard,
-                    { borderColor: item.color },
-                  ]}
-                  onPress={() => handleCategorySelect(item)}
-                >
-                  <View
-                    style={[
-                      styles.categoryIcon,
-                      { backgroundColor: item.color },
-                    ]}
-                  >
-                    <Ionicons name={item.icon} size={18} color="white" />
-                  </View>
-                  <Text
-                    style={[
-                      styles.categoryName,
-                      category === item.name && styles.selectedCategoryName,
-                    ]}
-                  >
-                    {item.name}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+            {type !== "transfer" && (
+              <>
+                {/* Category Selection */}
+                <Text style={styles.sectionTitle}>Select Category</Text>
+                <View style={styles.categoriesGrid}>
+                  {currentCategories.map((item, index) => (
+                    <TouchableOpacity
+                      key={index}
+                      style={[
+                        styles.categoryCard,
+                        category === item.name && styles.selectedCategoryCard,
+                        { borderColor: item.color },
+                      ]}
+                      onPress={() => handleCategorySelect(item)}
+                    >
+                      <View
+                        style={[
+                          styles.categoryIcon,
+                          { backgroundColor: item.color },
+                        ]}
+                      >
+                        <Ionicons name={item.icon} size={18} color="white" />
+                      </View>
+                      <Text
+                        style={[
+                          styles.categoryName,
+                          category === item.name && styles.selectedCategoryName,
+                        ]}
+                      >
+                        {item.name}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </>
+            )}
 
             {/* Custom Category Input */}
             {isOther && (
@@ -597,6 +694,9 @@ const styles = StyleSheet.create({
   incomeButton: {
     backgroundColor: "#4ECDC4",
   },
+  transferButton: {
+    backgroundColor: LightTheme.colors.primary,
+  },
   typeButtonText: {
     fontSize: 16,
     fontWeight: "600",
@@ -642,6 +742,12 @@ const styles = StyleSheet.create({
   accountHint: {
     color: "#777",
     marginBottom: 20,
+  },
+  accountLabel: {
+    color: "#666",
+    fontSize: 14,
+    fontWeight: "600",
+    marginBottom: 8,
   },
   accountsGrid: {
     flexDirection: "row",

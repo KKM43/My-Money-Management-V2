@@ -93,6 +93,8 @@ export default function DashboardScreen({ navigation }) {
       let totalExpense = 0;
 
       selectedMonthData.forEach((item) => {
+        if (item.type === "transfer") return;
+
         const amountPaise = Number.isInteger(item.amountPaise)
           ? item.amountPaise
           : Math.round(Number(item.amount || 0) * 100);

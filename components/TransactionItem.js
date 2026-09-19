@@ -86,6 +86,7 @@ export default function TransactionItem({ item, onDelete, onEdit }) {
     : Math.round(Number(item.amount || 0) * 100);
 
   const occurredOn = item.occurredOn || item.date;
+  const isTransfer = item.type === "transfer";
 
   return (
     <View style={styles.card}>
@@ -103,7 +104,9 @@ export default function TransactionItem({ item, onDelete, onEdit }) {
           />
         </View>
         <View style={styles.details}>
-          <Text style={styles.category}>{item.category}</Text>
+          <Text style={styles.category}>
+            {isTransfer ? "Transfer" : item.category}
+          </Text>
           {item.note && <Text style={styles.note}>{item.note}</Text>}
           <Text style={styles.date}>{formatDate(occurredOn)}</Text>
         </View>
@@ -112,10 +115,10 @@ export default function TransactionItem({ item, onDelete, onEdit }) {
         <Text
           style={[
             styles.amount,
-            { color: item.type === "income" ? "#4ECDC4" : "#FF6B6B" },
+            { color: isTransfer ? "#4D96FF" : item.type === "income" ? "#4ECDC4" : "#FF6B6B" },
           ]}
         >
-          {item.type === "income" ? "+" : "-"}
+          {isTransfer ? "" : item.type === "income" ? "+" : "-"}
           {formatCurrency(amountPaise / 100)}
         </Text>
 
