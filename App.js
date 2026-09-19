@@ -10,6 +10,7 @@ import DashboardScreen from "./screens/DashboardScreen";
 import AddTransactionScreen from "./screens/AddTransactionScreen";
 import BudgetSettingsScreen from "./screens/BudgetSettingsScreen";
 import AccountsScreen from "./screens/AccountsScreen";
+import AccountActivityScreen from "./screens/AccountActivityScreen";
 import { auth } from "./services/firebaseConfig";
 
 const Stack = createNativeStackNavigator();
@@ -53,6 +54,10 @@ export default function App() {
               component={BudgetSettingsScreen}
             />
             <Stack.Screen name="Accounts" component={AccountsScreen} />
+            <Stack.Screen
+              name="AccountActivity"
+              component={AccountActivityScreen}
+            />
           </>
         ) : (
           <>

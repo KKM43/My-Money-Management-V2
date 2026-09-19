@@ -246,7 +246,11 @@ export default function AccountsScreen({ navigation }) {
             transactionBalancePaise;
 
           return (
-            <View key={account.id} style={styles.accountRow}>
+            <TouchableOpacity
+              key={account.id}
+              style={styles.accountRow}
+              onPress={() => navigation.navigate("AccountActivity", { account })}
+            >
               <View style={styles.accountIcon}>
                 <Ionicons
                   name={accountType?.icon || "wallet-outline"}
@@ -263,7 +267,7 @@ export default function AccountsScreen({ navigation }) {
               <Text style={styles.accountBalance}>
                 {formatCurrency(balancePaise)}
               </Text>
-            </View>
+            </TouchableOpacity>
           );
         })
       )}
