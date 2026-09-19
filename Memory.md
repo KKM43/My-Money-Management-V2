@@ -36,12 +36,13 @@ The previous V1-style top-level `transactions` and `userSettings` paths are not 
   - Signing out returns users to Login.
 - Migrated transaction and budget reads/writes to the V2 user-owned paths.
 - Updated the dashboard to listen for live budget changes.
+- Transactions use integer paise and local `YYYY-MM-DD` calendar dates.
+- Add Transaction includes a native date picker.
+- Existing transactions can be edited without creating duplicates.
 
 ## Known follow-up work
 
 - Review the Expo New Architecture warning before creating a production build.
 - Define the final V2 transaction data model before adding editing, accounts, or transfers.
-- Add a real transaction date picker.
 - Standardize all currency formatting to INR; the Add Transaction screen still contains legacy USD formatting code.
-- Implement transaction editing.
 - Plan tests for Firestore access isolation between two V2 users.
