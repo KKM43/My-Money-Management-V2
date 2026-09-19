@@ -27,11 +27,13 @@ import { signOut } from "firebase/auth";
 import { ProgressBar } from "react-native-paper";
 import TransactionItem from "../components/TransactionItem";
 import { LightTheme } from "../theme";
+import { useTheme } from "../ThemeContext";
 
 const MONTHLY_BUDGET = 20000;
 const { width, height } = Dimensions.get("window");
 
 export default function DashboardScreen({ navigation }) {
+  const { colors, isDark, themeMode, cycleThemeMode } = useTheme();
   const [transactions, setTransactions] = useState([]);
   const [balance, setBalance] = useState(0);
   const [expenseTotal, setExpenseTotal] = useState(0);
@@ -220,9 +222,9 @@ export default function DashboardScreen({ navigation }) {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <LinearGradient
-        colors={[LightTheme.colors.primary, LightTheme.colors.secondary]}
+        colors={[colors.primary, colors.secondary]}
         style={styles.headerGradient}
       >
         {/* Header Section */}
@@ -235,6 +237,17 @@ export default function DashboardScreen({ navigation }) {
               </Text>
             </View>
             <View style={styles.headerActions}>
+              <TouchableOpacity
+                style={styles.settingsButton}
+                onPress={cycleThemeMode}
+                accessibilityLabel={`Theme mode: ${themeMode}`}
+              >
+                <Ionicons
+                  name={themeMode === "system" ? "contrast-outline" : isDark ? "moon-outline" : "sunny-outline"}
+                  size={20}
+                  color="white"
+                />
+              </TouchableOpacity>
               <TouchableOpacity
                 style={styles.settingsButton}
                 onPress={() => navigation.navigate("BudgetSettings")}
@@ -282,7 +295,7 @@ export default function DashboardScreen({ navigation }) {
           </View>
 
           {/* Balance Card */}
-          <View style={styles.balanceCard}>
+          <View style={[styles.balanceCard, { backgroundColor: colors.surface }]}>
             <Text style={styles.balanceLabel}>Total Balance</Text>
             <Text
               style={[
@@ -319,7 +332,7 @@ export default function DashboardScreen({ navigation }) {
         }
       >
         {/* Budget Card */}
-        <View style={styles.budgetCard}>
+        <View style={[styles.budgetCard, { backgroundColor: colors.surface }]}>
           <View style={styles.budgetHeader}>
             <Text style={styles.budgetTitle}>Monthly Budget</Text>
             <Text style={styles.budgetPercentage}>{budgetPercentage}%</Text>
@@ -351,11 +364,11 @@ export default function DashboardScreen({ navigation }) {
         {/* Quick Actions */}
         <View style={styles.quickActions}>
           <TouchableOpacity
-            style={styles.quickActionButton}
+            style={[styles.quickActionButton, styles.quickActionHalf]}
             onPress={() => navigation.navigate("AddTransaction")}
           >
             <LinearGradient
-              colors={[LightTheme.colors.primary, LightTheme.colors.secondary]}
+              colors={[colors.primary, colors.secondary]}
               style={styles.quickActionGradient}
             >
               <Ionicons name="add" size={24} color="white" />
@@ -363,15 +376,15 @@ export default function DashboardScreen({ navigation }) {
             </LinearGradient>
           </TouchableOpacity>
           <TouchableOpacity
-            style={styles.accountsButton}
+            style={[styles.accountsButton, styles.quickActionHalf, { backgroundColor: colors.surface }]}
             onPress={() => navigation.navigate("Accounts")}
           >
-            <Ionicons name="wallet-outline" size={20} color={LightTheme.colors.primary} />
+            <Ionicons name="wallet-outline" size={20} color={colors.primary} />
             <Text style={styles.accountsButtonText}>Accounts</Text>
           </TouchableOpacity>
         </View>
 
-        <View style={styles.searchContainer}>
+        <View style={[styles.searchContainer, { backgroundColor: colors.surface }]}>
           <Ionicons
             name="search-outline"
             size={20}
@@ -379,7 +392,7 @@ export default function DashboardScreen({ navigation }) {
             style={styles.searchIcon}
           />
           <TextInput
-            style={styles.searchInput}
+            style={[styles.searchInput, { color: colors.text }]}
             placeholder="Search category or note"
             placeholderTextColor="#999"
             value={searchQuery}
@@ -397,7 +410,7 @@ export default function DashboardScreen({ navigation }) {
         </View>
 
         {/* Filter Tabs */}
-        <View style={styles.filterContainer}>
+        <View style={[styles.filterContainer, { backgroundColor: colors.surface }]}>
           <TouchableOpacity
             style={[
               styles.filterTab,
@@ -449,7 +462,7 @@ export default function DashboardScreen({ navigation }) {
         </View>
 
         {/* Transactions List */}
-        <View style={styles.transactionsContainer}>
+        <View style={[styles.transactionsContainer, { backgroundColor: colors.surface }]}>
           <Text style={styles.transactionsTitle}>
             Recent Transactions ({filteredTransactions.length})
           </Text>
@@ -674,7 +687,12 @@ const styles = StyleSheet.create({
     color: "#4ECDC4",
   },
   quickActions: {
+    flexDirection: "row",
+    gap: 10,
     marginBottom: 20,
+  },
+  quickActionHalf: {
+    flex: 1,
   },
   quickActionButton: {
     borderRadius: 15,
@@ -700,7 +718,6 @@ const styles = StyleSheet.create({
     backgroundColor: "white",
     borderRadius: 15,
     paddingVertical: 14,
-    marginTop: 10,
     borderWidth: 1,
     borderColor: LightTheme.colors.primary,
   },
@@ -780,25 +797,23 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   searchContainer: {
-  flexDirection: "row",
-  alignItems: "center",
-  backgroundColor: "white",
-  borderRadius: 12,
-  paddingHorizontal: 14,
-  marginBottom: 12,
-  borderWidth: 1,
-  borderColor: "#E9ECEF",
-},
-searchIcon: {
-  marginRight: 10,
-},
-searchInput: {
-  flex: 1,
-  paddingVertical: 13,
-  fontSize: 16,
-  color: LightTheme.colors.text,
-},
-clearSearchButton: {
-  paddingLeft: 8,
-},
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#E9ECEF",
+  },
+  searchIcon: {
+    marginRight: 10,
+  },
+  searchInput: {
+    flex: 1,
+    paddingVertical: 13,
+    fontSize: 16,
+  },
+  clearSearchButton: {
+    paddingLeft: 8,
+  },
 });

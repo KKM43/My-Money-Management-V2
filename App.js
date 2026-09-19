@@ -12,6 +12,7 @@ import BudgetSettingsScreen from "./screens/BudgetSettingsScreen";
 import AccountsScreen from "./screens/AccountsScreen";
 import AccountActivityScreen from "./screens/AccountActivityScreen";
 import { auth } from "./services/firebaseConfig";
+import { ThemeProvider } from "./ThemeContext";
 
 const Stack = createNativeStackNavigator();
 
@@ -37,7 +38,8 @@ export default function App() {
   }
 
   return (
-    <NavigationContainer>
+    <ThemeProvider>
+      <NavigationContainer>
       <Stack.Navigator
         key={user ? "authenticated" : "unauthenticated"}
         screenOptions={{ headerShown: false }}
@@ -66,7 +68,8 @@ export default function App() {
           </>
         )}
       </Stack.Navigator>
-    </NavigationContainer>
+      </NavigationContainer>
+    </ThemeProvider>
   );
 }
 
