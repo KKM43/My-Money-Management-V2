@@ -62,6 +62,17 @@ V2 will evolve the current structure incrementally rather than undergo an untest
 5. Define the Firestore collections, document ownership, and indexes before implementing multi-account and transfer features.
 6. Move to TypeScript only as a planned milestone, with a safe incremental migration strategy.
 
+## V2 transaction model
+
+Phase 2 supports `income` and `expense` transactions. Transfers and credit-card payments will be added later as distinct transaction behaviors.
+
+Transactions are stored at:
+
+```text
+/users/{uid}/transactions/{transactionId}
+
+
+
 ## Key technical decisions
 
 | Decision | Status |
