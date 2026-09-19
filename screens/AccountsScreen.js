@@ -44,6 +44,7 @@ const formatCurrency = (amountPaise) =>
 
 export default function AccountsScreen({ navigation }) {
   const [accounts, setAccounts] = useState([]);
+  const [transactions, setTransactions] = useState([]);
   const [name, setName] = useState("");
   const [type, setType] = useState("bank");
   const [openingBalance, setOpeningBalance] = useState("");
@@ -69,6 +70,27 @@ export default function AccountsScreen({ navigation }) {
       },
       (error) => {
         Alert.alert("Error", `Could not load accounts: ${error.message}`);
+      },
+    );
+  }, []);
+
+  useEffect(() => {
+    const transactionsRef = collection(
+      db,
+      "users",
+      auth.currentUser.uid,
+      "transactions",
+    );
+
+    return onSnapshot(
+      transactionsRef,
+      (snapshot) => {
+        setTransactions(
+          snapshot.docs.map((transaction) => transaction.data()),
+        );
+      },
+      (error) => {
+        Alert.alert("Error", `Could not load transactions: ${error.message}`);
       },
     );
   }, []);
@@ -195,6 +217,23 @@ export default function AccountsScreen({ navigation }) {
           const accountType = ACCOUNT_TYPES.find(
             (item) => item.value === account.type,
           );
+          const transactionBalancePaise = transactions.reduce(
+            (balance, transaction) => {
+              if (transaction.accountId !== account.id) return balance;
+
+              const amountPaise = Number.isInteger(transaction.amountPaise)
+                ? transaction.amountPaise
+                : Math.round(Number(transaction.amount || 0) * 100);
+
+              return transaction.type === "income"
+                ? balance + amountPaise
+                : balance - amountPaise;
+            },
+            0,
+          );
+          const balancePaise =
+            Number(account.openingBalancePaise || 0) +
+            transactionBalancePaise;
 
           return (
             <View key={account.id} style={styles.accountRow}>
@@ -212,7 +251,7 @@ export default function AccountsScreen({ navigation }) {
                 </Text>
               </View>
               <Text style={styles.accountBalance}>
-                {formatCurrency(account.openingBalancePaise || 0)}
+                {formatCurrency(balancePaise)}
               </Text>
             </View>
           );
