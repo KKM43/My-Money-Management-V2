@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -20,12 +20,20 @@ import {
   doc,
   serverTimestamp,
   updateDoc,
+  onSnapshot,
 } from "firebase/firestore";
 import { db, auth } from "../services/firebaseConfig";
 import { LightTheme } from "../theme";
 import DateTimePicker from "@react-native-community/datetimepicker";
 
 const { width, height } = Dimensions.get("window");
+
+const ACCOUNT_TYPE_LABELS = {
+  bank: "Bank",
+  cash: "Cash",
+  wallet: "Wallet",
+  creditCard: "Credit card",
+};
 
 const getTransactionAmountPaise = (transaction) => {
   if (!transaction) return 0;
@@ -62,6 +70,34 @@ export default function AddTransactionScreen({ navigation, route }) {
     getTransactionDate(editingTransaction),
   );
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [accounts, setAccounts] = useState([]);
+  const [selectedAccountId, setSelectedAccountId] = useState(
+    editingTransaction?.accountId || "",
+  );
+
+  useEffect(() => {
+    const accountsRef = collection(
+      db,
+      "users",
+      auth.currentUser.uid,
+      "accounts",
+    );
+
+    return onSnapshot(
+      accountsRef,
+      (snapshot) => {
+        setAccounts(
+          snapshot.docs.map((account) => ({
+            id: account.id,
+            ...account.data(),
+          })),
+        );
+      },
+      (error) => {
+        Alert.alert("Error", `Could not load accounts: ${error.message}`);
+      },
+    );
+  }, []);
 
   const expenseCategories = [
     { name: "Food & Dining", icon: "restaurant", color: "#FF6B6B" },
@@ -139,64 +175,70 @@ export default function AddTransactionScreen({ navigation, route }) {
   };
 
   const handleAdd = async () => {
-  if (!amount || !category) {
-    Alert.alert("Error", "Please enter amount and select a category");
-    return;
-  }
-
-  const amountPaise = parseAmountToPaise(amount);
-  if (!Number.isInteger(amountPaise) || amountPaise <= 0) {
-    Alert.alert("Error", "Please enter a valid amount");
-    return;
-  }
-
-  const transactionData = {
-    type,
-    amountPaise,
-    category,
-    note: note.trim(),
-    occurredOn: formatLocalDate(selectedDate),
-    updatedAt: serverTimestamp(),
-  };
-
-  setIsLoading(true);
-
-  try {
-    if (isEditing) {
-      await updateDoc(
-        doc(
-          db,
-          "users",
-          auth.currentUser.uid,
-          "transactions",
-          editingTransaction.id
-        ),
-        transactionData
-      );
-
-      Alert.alert("Success", "Transaction updated successfully!");
-    } else {
-      await addDoc(
-        collection(db, "users", auth.currentUser.uid, "transactions"),
-        {
-          ...transactionData,
-          createdAt: serverTimestamp(),
-        }
-      );
-
-      Alert.alert(
-        "Success",
-        `${type === "expense" ? "Expense" : "Income"} added successfully!`
-      );
+    if (!amount || !category) {
+      Alert.alert("Error", "Please enter amount and select a category");
+      return;
     }
 
-    navigation.goBack();
-  } catch (error) {
-    Alert.alert("Error", error.message);
-  } finally {
-    setIsLoading(false);
-  }
-};
+    const amountPaise = parseAmountToPaise(amount);
+    if (!Number.isInteger(amountPaise) || amountPaise <= 0) {
+      Alert.alert("Error", "Please enter a valid amount");
+      return;
+    }
+
+    if (!isEditing && !selectedAccountId) {
+      Alert.alert("Error", "Please select an account");
+      return;
+    }
+
+    const transactionData = {
+      type,
+      amountPaise,
+      category,
+      note: note.trim(),
+      occurredOn: formatLocalDate(selectedDate),
+      updatedAt: serverTimestamp(),
+      ...(selectedAccountId ? { accountId: selectedAccountId } : {}),
+    };
+
+    setIsLoading(true);
+
+    try {
+      if (isEditing) {
+        await updateDoc(
+          doc(
+            db,
+            "users",
+            auth.currentUser.uid,
+            "transactions",
+            editingTransaction.id,
+          ),
+          transactionData,
+        );
+
+        Alert.alert("Success", "Transaction updated successfully!");
+      } else {
+        await addDoc(
+          collection(db, "users", auth.currentUser.uid, "transactions"),
+          {
+            ...transactionData,
+            createdAt: serverTimestamp(),
+          },
+        );
+
+        Alert.alert(
+          "Success",
+          `${type === "expense" ? "Expense" : "Income"} added successfully!`,
+        );
+      }
+
+      navigation.goBack();
+    } catch (error) {
+      Alert.alert("Error", error.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <KeyboardAvoidingView
@@ -294,6 +336,56 @@ export default function AddTransactionScreen({ navigation, route }) {
               />
               <Text style={styles.currencySymbol}>₹</Text>
             </View>
+
+            <Text style={styles.sectionTitle}>Select Account</Text>
+            {accounts.length === 0 ? (
+              <Text style={styles.accountHint}>
+                Create an account before adding a new transaction.
+              </Text>
+            ) : (
+              <View style={styles.accountsGrid}>
+                {accounts.map((account) => (
+                  <TouchableOpacity
+                    key={account.id}
+                    style={[
+                      styles.accountCard,
+                      selectedAccountId === account.id &&
+                        styles.selectedAccountCard,
+                    ]}
+                    onPress={() => setSelectedAccountId(account.id)}
+                  >
+                    <Ionicons
+                      name="wallet-outline"
+                      size={18}
+                      color={
+                        selectedAccountId === account.id
+                          ? "white"
+                          : LightTheme.colors.primary
+                      }
+                    />
+                    <Text
+                      style={[
+                        styles.accountName,
+                        selectedAccountId === account.id &&
+                          styles.selectedAccountText,
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {account.name}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.accountType,
+                        selectedAccountId === account.id &&
+                          styles.selectedAccountText,
+                      ]}
+                    >
+                      {ACCOUNT_TYPE_LABELS[account.type] || "Account"}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
 
             <Text style={styles.sectionTitle}>Transaction Date</Text>
 
@@ -546,6 +638,43 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: LightTheme.colors.primary,
     marginLeft: 8,
+  },
+  accountHint: {
+    color: "#777",
+    marginBottom: 20,
+  },
+  accountsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    marginBottom: 20,
+  },
+  accountCard: {
+    width: "48%",
+    backgroundColor: "#F8F9FA",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E9ECEF",
+    padding: 12,
+    marginBottom: 10,
+  },
+  selectedAccountCard: {
+    backgroundColor: LightTheme.colors.primary,
+    borderColor: LightTheme.colors.primary,
+  },
+  accountName: {
+    color: LightTheme.colors.text,
+    fontSize: 15,
+    fontWeight: "bold",
+    marginTop: 6,
+  },
+  accountType: {
+    color: "#777",
+    fontSize: 12,
+    marginTop: 2,
+  },
+  selectedAccountText: {
+    color: "white",
   },
   sectionTitle: {
     fontSize: 18,
