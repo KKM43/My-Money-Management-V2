@@ -360,6 +360,13 @@ export default function DashboardScreen({ navigation }) {
               <Text style={styles.quickActionText}>Add Transaction</Text>
             </LinearGradient>
           </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.accountsButton}
+            onPress={() => navigation.navigate("Accounts")}
+          >
+            <Ionicons name="wallet-outline" size={20} color={LightTheme.colors.primary} />
+            <Text style={styles.accountsButtonText}>Accounts</Text>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.searchContainer}>
@@ -680,6 +687,23 @@ const styles = StyleSheet.create({
   },
   quickActionText: {
     color: "white",
+    fontSize: 16,
+    fontWeight: "bold",
+    marginLeft: 8,
+  },
+  accountsButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "white",
+    borderRadius: 15,
+    paddingVertical: 14,
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: LightTheme.colors.primary,
+  },
+  accountsButtonText: {
+    color: LightTheme.colors.primary,
     fontSize: 16,
     fontWeight: "bold",
     marginLeft: 8,

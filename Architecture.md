@@ -70,6 +70,27 @@ Transactions are stored at:
 
 ```text
 /users/{uid}/transactions/{transactionId}
+```
+
+Phase 3 accounts are stored at:
+
+```text
+/users/{uid}/accounts/{accountId}
+```
+
+The initial account types are `bank`, `cash`, `wallet`, and `creditCard`.
+
+An account may be created with an optional `openingBalancePaise`. This opening
+balance is a starting value, not income. Users may also create an account with
+a zero opening balance and record the initial money separately as a normal
+transaction.
+
+New income and expense transactions require an `accountId`. Existing
+transactions without an account reference remain valid until an explicit
+migration strategy is applied.
+
+For the first account-enabled release, existing unassigned transactions are
+excluded from account balances rather than being assigned automatically.
 
 
 

@@ -49,3 +49,7 @@ The previous V1-style top-level `transactions` and `userSettings` paths are not 
 ## Transaction decisions
 
 - Future-dated transactions are allowed for planned transactions.
+- Phase 3 initially supports bank, cash, wallet, and credit-card accounts.
+- Accounts support either a non-income opening balance or a zero balance followed by a normal transaction.
+- New income and expense transactions will require an account; existing transactions without an account remain unchanged until migration is planned.
+- Existing unassigned transactions will be excluded from account balances in the first account-enabled release.
