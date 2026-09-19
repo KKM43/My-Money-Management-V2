@@ -107,8 +107,6 @@ export default function DashboardScreen({ navigation }) {
     return unsubscribe;
   }, [currentMonth, currentYear, monthlyBudget]);
 
-  
-
   const handleDelete = async (id) => {
     try {
       await deleteDoc(
