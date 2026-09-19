@@ -207,6 +207,12 @@ export default function AddTransactionScreen({ navigation, route }) {
       return;
     }
 
+    const toAccount = accounts.find((account) => account.id === toAccountId);
+    const paymentKind =
+      type === "transfer" && toAccount?.type === "creditCard"
+        ? "cardPayment"
+        : undefined;
+
     const transactionData = {
       type,
       amountPaise,
@@ -215,7 +221,11 @@ export default function AddTransactionScreen({ navigation, route }) {
       occurredOn: formatLocalDate(selectedDate),
       updatedAt: serverTimestamp(),
       ...(type === "transfer"
-        ? { fromAccountId, toAccountId }
+        ? {
+            fromAccountId,
+            toAccountId,
+            ...(paymentKind ? { paymentKind } : {}),
+          }
         : selectedAccountId
           ? { accountId: selectedAccountId }
           : {}),
@@ -248,7 +258,7 @@ export default function AddTransactionScreen({ navigation, route }) {
 
         Alert.alert(
           "Success",
-          `${type === "expense" ? "Expense" : type === "income" ? "Income" : "Transfer"} added successfully!`,
+          `${type === "expense" ? "Expense" : type === "income" ? "Income" : paymentKind === "cardPayment" ? "Card payment" : "Transfer"} added successfully!`,
         );
       }
 

@@ -87,6 +87,7 @@ export default function TransactionItem({ item, onDelete, onEdit }) {
 
   const occurredOn = item.occurredOn || item.date;
   const isTransfer = item.type === "transfer";
+  const isCardPayment = item.paymentKind === "cardPayment";
 
   return (
     <View style={styles.card}>
@@ -105,7 +106,7 @@ export default function TransactionItem({ item, onDelete, onEdit }) {
         </View>
         <View style={styles.details}>
           <Text style={styles.category}>
-            {isTransfer ? "Transfer" : item.category}
+            {isCardPayment ? "Card payment" : isTransfer ? "Transfer" : item.category}
           </Text>
           {item.note && <Text style={styles.note}>{item.note}</Text>}
           <Text style={styles.date}>{formatDate(occurredOn)}</Text>

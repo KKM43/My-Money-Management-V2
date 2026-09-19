@@ -84,6 +84,10 @@ Transfers are stored as one transaction with `type: "transfer"`,
 `fromAccountId`, and `toAccountId`. They decrease the source account and
 increase the destination account without affecting net worth.
 
+When the destination account is a credit card, the transfer also stores
+`paymentKind: "cardPayment"` and is displayed as a card payment. It remains a
+transfer and is not counted as an expense.
+
 An account may be created with an optional `openingBalancePaise`. This opening
 balance is a starting value, not income. Users may also create an account with
 a zero opening balance and record the initial money separately as a normal
