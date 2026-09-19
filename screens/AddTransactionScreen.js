@@ -90,7 +90,7 @@ export default function AddTransactionScreen({ navigation }) {
 
     setIsLoading(true);
     try {
-      await addDoc(collection(db, "transactions"), {
+      await addDoc(collection(db, "users", auth.currentUser.uid, "transactions"), {
         type,
         amount: numericAmount,
         category,
