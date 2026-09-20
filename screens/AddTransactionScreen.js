@@ -203,7 +203,12 @@ export default function AddTransactionScreen({ navigation, route }) {
     }
 
     if (type !== "transfer" && !isEditing && !selectedAccountId) {
-      Alert.alert("Error", "Please select an account");
+      Alert.alert(
+        "Account required",
+        selectableAccounts.length === 0
+          ? "Create an active account before adding a transaction."
+          : "Please select an account.",
+      );
       return;
     }
 
@@ -415,10 +420,33 @@ export default function AddTransactionScreen({ navigation, route }) {
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
               {type === "transfer" ? "Transfer Between Accounts" : "Select Account"}
             </Text>
-            {accounts.length === 0 ? (
-              <Text style={[styles.accountHint, { color: colors.text }]}>
-                Create an account before adding a new transaction.
-              </Text>
+            {selectableAccounts.length === 0 ? (
+              <View
+                style={[
+                  styles.noAccountCard,
+                  {
+                    backgroundColor: isDark ? "#252525" : "#F8F9FA",
+                    borderColor: isDark ? "#444" : "#E9ECEF",
+                  },
+                ]}
+              >
+                <Ionicons
+                  name="wallet-outline"
+                  size={24}
+                  color={LightTheme.colors.primary}
+                />
+                <Text style={[styles.accountHint, { color: colors.text }]}>
+                  Create an active account before adding a new transaction.
+                </Text>
+                <TouchableOpacity
+                  style={styles.createAccountButton}
+                  onPress={() => navigation.navigate("Accounts")}
+                >
+                  <Text style={styles.createAccountButtonText}>
+                    Create account
+                  </Text>
+                </TouchableOpacity>
+              </View>
             ) : type === "transfer" ? (
               <>
                 <Text style={[styles.accountLabel, { color: colors.text }]}>From account</Text>
@@ -817,7 +845,28 @@ const styles = StyleSheet.create({
   },
   accountHint: {
     color: "#777",
+    flex: 1,
+    marginLeft: 10,
+    marginBottom: 0,
+    lineHeight: 20,
+  },
+  noAccountCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 14,
     marginBottom: 20,
+  },
+  createAccountButton: {
+    backgroundColor: LightTheme.colors.primary,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  createAccountButtonText: {
+    color: "white",
+    fontWeight: "bold",
   },
   accountLabel: {
     color: "#666",
