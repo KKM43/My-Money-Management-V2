@@ -11,6 +11,7 @@ import AddTransactionScreen from "./screens/AddTransactionScreen";
 import BudgetSettingsScreen from "./screens/BudgetSettingsScreen";
 import AccountsScreen from "./screens/AccountsScreen";
 import AccountActivityScreen from "./screens/AccountActivityScreen";
+import ProfileScreen from "./screens/ProfileScreen";
 import { auth } from "./services/firebaseConfig";
 import { ThemeProvider } from "./ThemeContext";
 
@@ -60,6 +61,7 @@ export default function App() {
               name="AccountActivity"
               component={AccountActivityScreen}
             />
+            <Stack.Screen name="Profile" component={ProfileScreen} />
           </>
         ) : (
           <>

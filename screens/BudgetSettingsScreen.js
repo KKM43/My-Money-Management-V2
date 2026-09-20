@@ -72,6 +72,7 @@ export default function BudgetSettingsScreen({ navigation }) {
         ...categoryBudgets,
         [`${currentMonthKey}|${category}`]: parseFloat(categoryBudget),
       };
+
       await setDoc(
         doc(db, "users", auth.currentUser.uid, "settings", "budget"),
         {
@@ -88,6 +89,50 @@ export default function BudgetSettingsScreen({ navigation }) {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleDeleteCategoryBudget = () => {
+    const categoryKey = `${currentMonthKey}|${category}`;
+    const hasCurrentBudget = categoryBudgets[categoryKey] != null;
+    const hasLegacyBudget = categoryBudgets[category] != null;
+    if (!hasCurrentBudget && !hasLegacyBudget) {
+      return;
+    }
+
+    Alert.alert(
+      "Remove category budget?",
+      `This will remove the ${category} budget for this month.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Remove",
+          style: "destructive",
+          onPress: async () => {
+            setIsLoading(true);
+            try {
+              const nextCategoryBudgets = { ...categoryBudgets };
+              delete nextCategoryBudgets[categoryKey];
+              delete nextCategoryBudgets[category];
+              await setDoc(
+                doc(db, "users", auth.currentUser.uid, "settings", "budget"),
+                {
+                  categoryBudgets: nextCategoryBudgets,
+                  updatedAt: new Date().toISOString(),
+                },
+                { merge: true },
+              );
+              setCategoryBudgets(nextCategoryBudgets);
+              setCategoryBudget("");
+              Alert.alert("Success", `${category} budget removed.`);
+            } catch (error) {
+              Alert.alert("Error", error.message);
+            } finally {
+              setIsLoading(false);
+            }
+          },
+        },
+      ],
+    );
   };
 
   const handleSaveBudget = async () => {
@@ -236,6 +281,17 @@ export default function BudgetSettingsScreen({ navigation }) {
                 Save {category} Budget
               </Text>
             </TouchableOpacity>
+            {!!categoryBudgets[`${currentMonthKey}|${category}`] && (
+              <TouchableOpacity
+                style={styles.removeButton}
+                onPress={handleDeleteCategoryBudget}
+                disabled={isLoading}
+              >
+                <Text style={styles.removeButtonText}>
+                  Remove {category} Budget
+                </Text>
+              </TouchableOpacity>
+            )}
 
             {/* Budget Tips */}
             <View style={styles.tipsContainer}>
@@ -365,6 +421,14 @@ const styles = StyleSheet.create({
   },
   secondaryButtonText: {
     color: LightTheme.colors.primary,
+    fontWeight: "bold",
+  },
+  removeButton: {
+    alignItems: "center",
+    marginBottom: 18,
+  },
+  removeButtonText: {
+    color: "#D32F2F",
     fontWeight: "bold",
   },
   currentBudgetCard: {

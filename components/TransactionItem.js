@@ -1,5 +1,15 @@
-import React from "react";
-import { View, Text, TouchableOpacity, StyleSheet, Alert } from "react-native";
+import React, { useRef } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Alert,
+  Animated,
+  Modal,
+  PanResponder,
+  TouchableWithoutFeedback,
+  TouchableOpacity,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../ThemeContext";
 
@@ -10,6 +20,7 @@ export default function TransactionItem({
   showActions = true,
 }) {
   const { colors, isDark } = useTheme();
+  const [showOptions, setShowOptions] = React.useState(false);
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat("en-IN", {
       style: "currency",
@@ -51,6 +62,40 @@ export default function TransactionItem({
       ],
     );
   };
+
+  const handleLongPress = () => {
+    setShowOptions(true);
+  };
+
+  const translateX = useRef(new Animated.Value(0)).current;
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, gestureState) =>
+        showActions &&
+        Math.abs(gestureState.dx) > 10 &&
+        Math.abs(gestureState.dx) > Math.abs(gestureState.dy),
+      onPanResponderMove: (_, gestureState) => {
+        translateX.setValue(Math.max(-140, Math.min(140, gestureState.dx)));
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        if (gestureState.dx <= -80) {
+          handleDelete();
+        } else if (gestureState.dx >= 80) {
+          onEdit();
+        }
+        Animated.spring(translateX, {
+          toValue: 0,
+          useNativeDriver: true,
+        }).start();
+      },
+      onPanResponderTerminate: () => {
+        Animated.spring(translateX, {
+          toValue: 0,
+          useNativeDriver: true,
+        }).start();
+      },
+    }),
+  ).current;
 
   const getCategoryIcon = (category) => {
     const iconMap = {
@@ -97,15 +142,30 @@ export default function TransactionItem({
   const isCardPayment = item.paymentKind === "cardPayment";
 
   return (
-    <View
-      style={[
-        styles.card,
-        {
-          backgroundColor: colors.surface,
-          borderColor: isDark ? "#444" : "#E9ECEF",
-        },
-      ]}
-    >
+    <View style={styles.swipeContainer}>
+      {showActions && (
+        <View style={styles.swipeActions}>
+          <View style={styles.editAction}>
+            <Text style={styles.actionText}>Edit</Text>
+          </View>
+          <View style={styles.deleteAction}>
+            <Text style={styles.actionText}>Delete</Text>
+          </View>
+        </View>
+      )}
+      <Animated.View
+        {...panResponder.panHandlers}
+        style={[
+          styles.card,
+          {
+            backgroundColor: colors.surface,
+            borderColor: isDark ? "#444" : "#E9ECEF",
+            transform: [{ translateX }],
+          },
+        ]}
+      >
+        <TouchableWithoutFeedback onLongPress={showActions ? handleLongPress : undefined}>
+          <View style={styles.cardContent}>
       <View style={styles.leftSection}>
         <View
           style={[
@@ -142,30 +202,129 @@ export default function TransactionItem({
           {formatCurrency(amountPaise / 100)}
         </Text>
 
-        {showActions && (
-          <>
-            <TouchableOpacity style={styles.editButton} onPress={onEdit}>
-              <Ionicons name="pencil-outline" size={16} color={colors.text} />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
-              <Ionicons name="trash-outline" size={16} color={colors.text} />
-            </TouchableOpacity>
-          </>
-        )}
       </View>
+          </View>
+        </TouchableWithoutFeedback>
+      </Animated.View>
+      <Modal
+        visible={showOptions}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowOptions(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.optionsModal, { backgroundColor: colors.surface }]}>
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => setShowOptions(false)}
+              accessibilityLabel="Close transaction options"
+            >
+              <Ionicons name="close" size={22} color={colors.text} />
+            </TouchableOpacity>
+            <Text style={[styles.optionsTitle, { color: colors.text }]}>
+              Transaction options
+            </Text>
+            <TouchableOpacity
+              style={styles.optionButton}
+              onPress={() => {
+                setShowOptions(false);
+                onEdit();
+              }}
+            >
+              <Ionicons name="pencil-outline" size={20} color={colors.text} />
+              <Text style={[styles.optionText, { color: colors.text }]}>Edit</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.optionButton}
+              onPress={() => {
+                setShowOptions(false);
+                handleDelete();
+              }}
+            >
+              <Ionicons name="trash-outline" size={20} color="#D32F2F" />
+              <Text style={[styles.optionText, { color: "#D32F2F" }]}>Delete</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
+    zIndex: 1,
+  },
+  swipeContainer: {
+    position: "relative",
+    marginBottom: 8,
+  },
+  swipeActions: {
+    ...StyleSheet.absoluteFillObject,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    borderRadius: 12,
+    overflow: "hidden",
+  },
+  editAction: {
+    width: "50%",
+    backgroundColor: "#4D96FF",
+    justifyContent: "center",
+    paddingLeft: 18,
+  },
+  deleteAction: {
+    width: "50%",
+    backgroundColor: "#FF6B6B",
+    alignItems: "flex-end",
+    justifyContent: "center",
+    paddingRight: 18,
+  },
+  actionText: {
+    color: "white",
+    fontWeight: "bold",
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.45)",
+    padding: 24,
+  },
+  optionsModal: {
+    width: "100%",
+    maxWidth: 360,
+    borderRadius: 16,
+    padding: 22,
+    paddingTop: 30,
+  },
+  closeButton: {
+    position: "absolute",
+    top: 10,
+    right: 10,
+    padding: 4,
+  },
+  optionsTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 14,
+  },
+  optionButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 14,
+    gap: 12,
+  },
+  optionText: {
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  cardContent: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     padding: 16,
     backgroundColor: "#F8F9FA",
     borderRadius: 12,
-    marginBottom: 8,
     borderWidth: 1,
     borderColor: "#E9ECEF",
   },
@@ -207,12 +366,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
     marginBottom: 4,
-  },
-  editButton: {
-    padding: 4,
-    marginRight: 4,
-  },
-  deleteButton: {
-    padding: 4,
   },
 });

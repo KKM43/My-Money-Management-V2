@@ -135,7 +135,6 @@ export default function DashboardScreen({ navigation }) {
         }
 
         if (!item.accountId) return;
-
         if (item.type === "income") netWorthPaise += amountPaise;
         else netWorthPaise -= amountPaise;
       });
@@ -328,6 +327,13 @@ export default function DashboardScreen({ navigation }) {
                 onPress={() => navigation.navigate("BudgetSettings")}
               >
                 <Ionicons name="settings-outline" size={20} color="white" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.settingsButton}
+                onPress={() => navigation.navigate("Profile")}
+                accessibilityLabel="Profile"
+              >
+                <Ionicons name="person-outline" size={20} color="white" />
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.logoutButton}

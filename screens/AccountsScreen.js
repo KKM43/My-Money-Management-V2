@@ -1,12 +1,16 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Animated,
   Alert,
+  Modal,
+  PanResponder,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -36,6 +40,136 @@ const parseOpeningBalance = (value) => {
   const [rupees, paise = ""] = value.split(".");
   return Number(rupees) * 100 + Number(paise.padEnd(2, "0"));
 };
+
+function SwipeableAccountRow({
+  account,
+  accountType,
+  balancePaise,
+  colors,
+  onOpen,
+  onEdit,
+  onArchive,
+}) {
+  const formatCurrency = (paise) =>
+    new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+      minimumFractionDigits: 2,
+    }).format(paise / 100);
+  const [showOptions, setShowOptions] = useState(false);
+  const translateX = useRef(new Animated.Value(0)).current;
+  const resetPosition = () =>
+    Animated.spring(translateX, { toValue: 0, useNativeDriver: true }).start();
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, gestureState) =>
+        Math.abs(gestureState.dx) > 10 &&
+        Math.abs(gestureState.dx) > Math.abs(gestureState.dy),
+      onPanResponderMove: (_, gestureState) =>
+        translateX.setValue(Math.max(-140, Math.min(140, gestureState.dx))),
+      onPanResponderRelease: (_, gestureState) => {
+        if (gestureState.dx <= -80) {
+          onArchive();
+        } else if (gestureState.dx >= 80) {
+          onEdit();
+        }
+        resetPosition();
+      },
+      onPanResponderTerminate: resetPosition,
+    }),
+  ).current;
+
+  return (
+    <View style={styles.swipeContainer}>
+      <View style={styles.swipeActions}>
+        <View style={styles.editAction}>
+          <Text style={styles.actionText}>Edit</Text>
+        </View>
+        <View style={styles.archiveAction}>
+          <Text style={styles.actionText}>
+            {account.isArchived ? "Unarchive" : "Archive"}
+          </Text>
+        </View>
+      </View>
+      <Animated.View
+        {...panResponder.panHandlers}
+        style={[
+          styles.accountRow,
+          { backgroundColor: colors.surface, transform: [{ translateX }] },
+          account.isArchived && styles.archivedRow,
+        ]}
+      >
+        <TouchableWithoutFeedback
+          onPress={onOpen}
+          onLongPress={() => setShowOptions(true)}
+        >
+          <View style={styles.accountContent}>
+            <View style={styles.accountIcon}>
+              <Ionicons
+                name={accountType?.icon || "wallet-outline"}
+                size={22}
+                color={LightTheme.colors.primary}
+              />
+            </View>
+            <View style={styles.accountDetails}>
+              <Text style={[styles.accountName, { color: colors.text }]}>
+                {account.name}
+              </Text>
+              <Text style={[styles.accountType, { color: colors.text }]}>
+                {accountType?.label || "Account"}
+                {account.isArchived ? " • Archived" : ""}
+              </Text>
+            </View>
+            <Text style={[styles.accountBalance, { color: colors.text }]}>
+              {formatCurrency(balancePaise)}
+            </Text>
+          </View>
+        </TouchableWithoutFeedback>
+      </Animated.View>
+      <Modal
+        visible={showOptions}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowOptions(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.optionsModal, { backgroundColor: colors.surface }]}>
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => setShowOptions(false)}
+              accessibilityLabel="Close account options"
+            >
+              <Ionicons name="close" size={22} color={colors.text} />
+            </TouchableOpacity>
+            <Text style={[styles.optionsTitle, { color: colors.text }]}>
+              Account options
+            </Text>
+            <TouchableOpacity
+              style={styles.optionButton}
+              onPress={() => {
+                setShowOptions(false);
+                onEdit();
+              }}
+            >
+              <Text style={[styles.optionText, { color: colors.text }]}>Edit</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.optionButton}
+              onPress={() => {
+                setShowOptions(false);
+                onArchive();
+              }}
+            >
+              <Text style={[styles.optionText, { color: colors.text }]}>
+                {account.isArchived ? "Unarchive" : "Archive"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    </View>
+  );
+}
 
 const formatCurrency = (amountPaise) =>
   new Intl.NumberFormat("en-IN", {
@@ -373,51 +507,16 @@ export default function AccountsScreen({ navigation }) {
             transactionBalancePaise;
 
           return (
-            <TouchableOpacity
+            <SwipeableAccountRow
               key={account.id}
-              style={[
-                styles.accountRow,
-                { backgroundColor: colors.surface },
-                account.isArchived && styles.archivedRow,
-              ]}
-              onPress={() => navigation.navigate("AccountActivity", { account })}
-            >
-              <View style={styles.accountIcon}>
-                <Ionicons
-                  name={accountType?.icon || "wallet-outline"}
-                  size={22}
-                  color={LightTheme.colors.primary}
-                />
-              </View>
-              <View style={styles.accountDetails}>
-                <Text style={[styles.accountName, { color: colors.text }]}>
-                  {account.name}
-                </Text>
-                <Text style={[styles.accountType, { color: colors.text }]}>
-                  {accountType?.label || "Account"}
-                  {account.isArchived ? " • Archived" : ""}
-                </Text>
-              </View>
-              <Text style={[styles.accountBalance, { color: colors.text }]}>
-                {formatCurrency(balancePaise)}
-              </Text>
-              <TouchableOpacity
-                style={styles.rowAction}
-                onPress={() => startEditing(account)}
-              >
-                <Ionicons name="pencil-outline" size={18} color="#666" />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.rowAction}
-                onPress={() => toggleArchive(account)}
-              >
-                <Ionicons
-                  name={account.isArchived ? "arrow-undo-outline" : "archive-outline"}
-                  size={18}
-                  color="#666"
-                />
-              </TouchableOpacity>
-            </TouchableOpacity>
+              account={account}
+              accountType={accountType}
+              balancePaise={balancePaise}
+              colors={colors}
+              onOpen={() => navigation.navigate("AccountActivity", { account })}
+              onEdit={() => startEditing(account)}
+              onArchive={() => toggleArchive(account)}
+            />
           );
         })
       )}
@@ -523,12 +622,74 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   accountRow: {
-    flexDirection: "row",
-    alignItems: "center",
     backgroundColor: "white",
     borderRadius: 12,
-    padding: 14,
+    zIndex: 1,
+  },
+  swipeContainer: {
+    position: "relative",
     marginBottom: 10,
+    borderRadius: 12,
+    overflow: "hidden",
+  },
+  accountContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 14,
+  },
+  swipeActions: {
+    ...StyleSheet.absoluteFillObject,
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  editAction: {
+    width: "50%",
+    backgroundColor: "#4D96FF",
+    justifyContent: "center",
+    paddingLeft: 18,
+  },
+  archiveAction: {
+    width: "50%",
+    backgroundColor: "#777",
+    alignItems: "flex-end",
+    justifyContent: "center",
+    paddingRight: 18,
+  },
+  actionText: {
+    color: "white",
+    fontWeight: "bold",
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.45)",
+    padding: 24,
+  },
+  optionsModal: {
+    width: "100%",
+    maxWidth: 360,
+    borderRadius: 16,
+    padding: 22,
+    paddingTop: 30,
+  },
+  closeButton: {
+    position: "absolute",
+    top: 10,
+    right: 10,
+    padding: 4,
+  },
+  optionsTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 14,
+  },
+  optionButton: {
+    paddingVertical: 14,
+  },
+  optionText: {
+    fontSize: 16,
+    fontWeight: "600",
   },
   archivedRow: {
     opacity: 0.65,
