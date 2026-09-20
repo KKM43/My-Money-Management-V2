@@ -18,11 +18,27 @@ import { db, auth } from "../services/firebaseConfig";
 import { LightTheme } from "../theme";
 
 const { width, height } = Dimensions.get("window");
+const EXPENSE_CATEGORIES = [
+  "Food & Dining",
+  "Transportation",
+  "Shopping",
+  "Entertainment",
+  "Bills & Utilities",
+  "Healthcare",
+  "Education",
+  "Other",
+];
+const currentMonthKey = `${new Date().getFullYear()}-${String(
+  new Date().getMonth() + 1,
+).padStart(2, "0")}`;
 
 export default function BudgetSettingsScreen({ navigation }) {
   const [budget, setBudget] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [currentBudget, setCurrentBudget] = useState(0);
+  const [category, setCategory] = useState(EXPENSE_CATEGORIES[0]);
+  const [categoryBudget, setCategoryBudget] = useState("");
+  const [categoryBudgets, setCategoryBudgets] = useState({});
 
   useEffect(() => {
     loadCurrentBudget();
@@ -37,9 +53,40 @@ export default function BudgetSettingsScreen({ navigation }) {
         const userData = userDoc.data();
         setCurrentBudget(userData.monthlyBudget || 0);
         setBudget(userData.monthlyBudget?.toString() || "");
+        setCategoryBudgets(userData.categoryBudgets || {});
       }
     } catch (error) {
       console.log("Error loading budget:", error);
+    }
+  };
+
+  const handleSaveCategoryBudget = async () => {
+    if (!categoryBudget || parseFloat(categoryBudget) <= 0) {
+      Alert.alert("Error", "Please enter a valid category budget");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const nextCategoryBudgets = {
+        ...categoryBudgets,
+        [`${currentMonthKey}|${category}`]: parseFloat(categoryBudget),
+      };
+      await setDoc(
+        doc(db, "users", auth.currentUser.uid, "settings", "budget"),
+        {
+          categoryBudgets: nextCategoryBudgets,
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true },
+      );
+      setCategoryBudgets(nextCategoryBudgets);
+      setCategoryBudget("");
+      Alert.alert("Success", `${category} budget updated successfully!`);
+    } catch (error) {
+      Alert.alert("Error", error.message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -134,6 +181,62 @@ export default function BudgetSettingsScreen({ navigation }) {
               <Text style={styles.currencySymbol}>₹</Text>
             </View>
 
+            <Text style={styles.sectionTitle}>Category Budget</Text>
+            <View style={styles.categoryGrid}>
+              {EXPENSE_CATEGORIES.map((item) => (
+                <TouchableOpacity
+                  key={item}
+                  style={[
+                    styles.categoryButton,
+                    category === item && styles.categoryButtonActive,
+                  ]}
+                  onPress={() => {
+                    setCategory(item);
+                    setCategoryBudget(
+                      categoryBudgets[`${currentMonthKey}|${item}`]?.toString() ||
+                        categoryBudgets[item]?.toString() ||
+                        "",
+                    );
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.categoryButtonText,
+                      category === item && styles.categoryButtonTextActive,
+                    ]}
+                  >
+                    {item}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <View style={styles.inputContainer}>
+              <Ionicons
+                name="pricetag-outline"
+                size={20}
+                color={LightTheme.colors.primary}
+                style={styles.inputIcon}
+              />
+              <TextInput
+                style={styles.budgetInput}
+                placeholder="Category budget"
+                placeholderTextColor="#999"
+                keyboardType="numeric"
+                value={categoryBudget}
+                onChangeText={setCategoryBudget}
+              />
+              <Text style={styles.currencySymbol}>₹</Text>
+            </View>
+            <TouchableOpacity
+              style={styles.secondaryButton}
+              onPress={handleSaveCategoryBudget}
+              disabled={isLoading}
+            >
+              <Text style={styles.secondaryButtonText}>
+                Save {category} Budget
+              </Text>
+            </TouchableOpacity>
+
             {/* Budget Tips */}
             <View style={styles.tipsContainer}>
               <Text style={styles.tipsTitle}>💡 Budget Tips</Text>
@@ -218,6 +321,51 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 20,
     elevation: 15,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: LightTheme.colors.text,
+    marginBottom: 12,
+  },
+  categoryGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    marginBottom: 14,
+  },
+  categoryButton: {
+    width: "48%",
+    borderWidth: 1,
+    borderColor: "#E9ECEF",
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 8,
+  },
+  categoryButtonActive: {
+    backgroundColor: LightTheme.colors.primary,
+    borderColor: LightTheme.colors.primary,
+  },
+  categoryButtonText: {
+    color: "#666",
+    fontSize: 13,
+    textAlign: "center",
+  },
+  categoryButtonTextActive: {
+    color: "white",
+    fontWeight: "bold",
+  },
+  secondaryButton: {
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: LightTheme.colors.primary,
+    borderRadius: 12,
+    paddingVertical: 14,
+    marginBottom: 18,
+  },
+  secondaryButtonText: {
+    color: LightTheme.colors.primary,
+    fontWeight: "bold",
   },
   currentBudgetCard: {
     backgroundColor: "#F8F9FA",

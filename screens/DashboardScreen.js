@@ -45,6 +45,7 @@ export default function DashboardScreen({ navigation }) {
   const [selectedFilter, setSelectedFilter] = useState("all"); // all, income, expense
   const [searchQuery, setSearchQuery] = useState("");
   const [monthlyBudget, setMonthlyBudget] = useState(20000); // Default budget
+  const [categoryBudgets, setCategoryBudgets] = useState({});
   const [showMonthPicker, setShowMonthPicker] = useState(false);
 
   useEffect(() => {
@@ -85,6 +86,7 @@ export default function DashboardScreen({ navigation }) {
       (budgetSnapshot) => {
         if (budgetSnapshot.exists()) {
           setMonthlyBudget(budgetSnapshot.data().monthlyBudget || 20000);
+          setCategoryBudgets(budgetSnapshot.data().categoryBudgets || {});
         } else {
           setMonthlyBudget(20000);
         }
@@ -215,6 +217,36 @@ export default function DashboardScreen({ navigation }) {
   const remainingBudget = monthlyBudget - expenseTotal;
   const progress = Math.min(expenseTotal / monthlyBudget, 1);
   const budgetPercentage = Math.round((expenseTotal / monthlyBudget) * 100);
+  const categorySpending = transactions.reduce((totals, transaction) => {
+    if (transaction.type === "expense" && transaction.category) {
+      const amountPaise = Number.isInteger(transaction.amountPaise)
+        ? transaction.amountPaise
+        : Math.round(Number(transaction.amount || 0) * 100);
+      totals[transaction.category] =
+        (totals[transaction.category] || 0) + amountPaise / 100;
+    }
+    return totals;
+  }, {});
+  const selectedMonthKey = `${currentYear}-${String(currentMonth + 1).padStart(
+    2,
+    "0",
+  )}`;
+  const selectedCategoryBudgets = Object.entries(categoryBudgets).reduce(
+    (budgets, [key, amount]) => {
+      if (key.includes("|")) {
+        const [monthKey, category] = key.split("|");
+        if (monthKey === selectedMonthKey) {
+          budgets[category] = amount;
+        }
+      } else if (selectedMonthKey === `${new Date().getFullYear()}-${String(
+        new Date().getMonth() + 1,
+      ).padStart(2, "0")}`) {
+        budgets[key] = amount;
+      }
+      return budgets;
+    },
+    {},
+  );
 
   const monthNames = [
     "January",
@@ -380,6 +412,35 @@ export default function DashboardScreen({ navigation }) {
             <Text style={styles.budgetTitle}>Monthly Budget</Text>
             <Text style={styles.budgetPercentage}>{budgetPercentage}%</Text>
           </View>
+
+          {Object.keys(selectedCategoryBudgets).length > 0 && (
+            <View style={[styles.budgetCard, { backgroundColor: colors.surface }]}>
+              <Text style={[styles.budgetTitle, { color: colors.text }]}>
+                Category Budgets
+              </Text>
+              {Object.entries(selectedCategoryBudgets).map(([category, budget]) => {
+                const spent = categorySpending[category] || 0;
+                const percentage = Math.round((spent / budget) * 100);
+                return (
+                  <View key={category} style={styles.categoryBudgetRow}>
+                    <View style={styles.categoryBudgetHeader}>
+                      <Text style={[styles.categoryBudgetName, { color: colors.text }]}>
+                        {category}
+                      </Text>
+                      <Text style={[styles.categoryBudgetAmount, { color: colors.text }]}>
+                        {formatCurrency(spent)} / {formatCurrency(budget)}
+                      </Text>
+                    </View>
+                    <ProgressBar
+                      progress={Math.min(spent / budget, 1)}
+                      color={percentage > 100 ? "#FF6B6B" : colors.primary}
+                      style={styles.categoryProgressBar}
+                    />
+                  </View>
+                );
+              })}
+            </View>
+          )}
           <View style={styles.budgetProgress}>
             <ProgressBar
               progress={progress}
@@ -714,6 +775,26 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+  },
+  categoryBudgetRow: {
+    marginTop: 14,
+  },
+  categoryBudgetHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 6,
+  },
+  categoryBudgetName: {
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  categoryBudgetAmount: {
+    fontSize: 12,
+  },
+  categoryProgressBar: {
+    height: 6,
+    borderRadius: 3,
   },
   budgetSpent: {
     fontSize: 14,
