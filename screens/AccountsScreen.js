@@ -533,14 +533,14 @@ export default function AccountsScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
-    padding: 20,
+    padding: 16,
     backgroundColor: "#F8F9FA",
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 24,
+    marginBottom: 16,
   },
   headerSpacer: {
     width: 24,
@@ -554,12 +554,12 @@ const styles = StyleSheet.create({
     backgroundColor: "white",
     borderRadius: 16,
     padding: 16,
-    marginBottom: 24,
+    marginBottom: 16,
   },
   editCard: {
     backgroundColor: "white",
     borderRadius: 16,
-    padding: 16,
+    padding: 14,
     marginBottom: 16,
   },
   sectionTitle: {

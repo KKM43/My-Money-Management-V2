@@ -124,23 +124,23 @@ export default function ProfileScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  content: { padding: 20 },
+  content: { padding: 16 },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 24,
+    marginBottom: 16,
   },
   title: { fontSize: 24, fontWeight: "bold" },
   headerSpacer: { width: 24 },
-  card: { borderRadius: 16, padding: 20 },
+  card: { borderRadius: 16, padding: 16 },
   sectionTitle: { fontSize: 18, fontWeight: "bold", marginBottom: 10 },
-  description: { fontSize: 14, lineHeight: 21, marginBottom: 18 },
+  description: { fontSize: 14, lineHeight: 20, marginBottom: 14 },
   input: {
     borderWidth: 1,
     borderRadius: 10,
-    padding: 14,
-    marginBottom: 14,
+    padding: 12,
+    marginBottom: 12,
   },
   deleteButton: {
     alignItems: "center",

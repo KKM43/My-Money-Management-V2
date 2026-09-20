@@ -8,6 +8,7 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Modal,
   ScrollView,
   Dimensions,
 } from "react-native";
@@ -41,6 +42,7 @@ export default function BudgetSettingsScreen({ navigation }) {
   const [category, setCategory] = useState(EXPENSE_CATEGORIES[0]);
   const [categoryBudget, setCategoryBudget] = useState("");
   const [categoryBudgets, setCategoryBudgets] = useState({});
+  const [showCategoryPicker, setShowCategoryPicker] = useState(false);
 
   useEffect(() => {
     loadCurrentBudget();
@@ -244,38 +246,82 @@ export default function BudgetSettingsScreen({ navigation }) {
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
               Category Budget
             </Text>
-            <View style={styles.categoryGrid}>
-              {EXPENSE_CATEGORIES.map((item) => (
-                <TouchableOpacity
-                  key={item}
+            <TouchableOpacity
+              style={[
+                styles.categorySelector,
+                {
+                  backgroundColor: isDark ? "#252525" : "#F8F9FA",
+                  borderColor: isDark ? "#444" : "#E9ECEF",
+                },
+              ]}
+              onPress={() => setShowCategoryPicker(true)}
+            >
+              <Ionicons name="pricetag-outline" size={20} color={colors.primary} />
+              <Text style={[styles.categorySelectorText, { color: colors.text }]}>
+                {category}
+              </Text>
+              <Ionicons name="chevron-down" size={20} color={colors.text} />
+            </TouchableOpacity>
+            <Modal
+              visible={showCategoryPicker}
+              transparent
+              animationType="slide"
+              onRequestClose={() => setShowCategoryPicker(false)}
+            >
+              <View style={styles.categoryModalOverlay}>
+                <View
                   style={[
-                    styles.categoryButton,
-                    {
-                      borderColor: isDark ? "#444" : "#E9ECEF",
-                    },
-                    category === item && styles.categoryButtonActive,
+                    styles.categoryModal,
+                    { backgroundColor: colors.surface },
                   ]}
-                  onPress={() => {
-                    setCategory(item);
-                    setCategoryBudget(
-                      categoryBudgets[`${currentMonthKey}|${item}`]?.toString() ||
-                        categoryBudgets[item]?.toString() ||
-                        "",
-                    );
-                  }}
                 >
-                  <Text
-                    style={[
-                      styles.categoryButtonText,
-                      { color: category === item ? "white" : colors.text },
-                      category === item && styles.categoryButtonTextActive,
-                    ]}
-                  >
-                    {item}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+                  <View style={styles.categoryModalHeader}>
+                    <Text style={[styles.categoryModalTitle, { color: colors.text }]}>
+                      Choose budget category
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() => setShowCategoryPicker(false)}
+                      accessibilityLabel="Close category selector"
+                    >
+                      <Ionicons name="close" size={24} color={colors.text} />
+                    </TouchableOpacity>
+                  </View>
+                  <View style={styles.categoryGrid}>
+                    {EXPENSE_CATEGORIES.map((item) => (
+                      <TouchableOpacity
+                        key={item}
+                        style={[
+                          styles.categoryButton,
+                          {
+                            borderColor: isDark ? "#444" : "#E9ECEF",
+                            backgroundColor:
+                              category === item ? colors.primary : colors.surface,
+                          },
+                        ]}
+                        onPress={() => {
+                          setCategory(item);
+                          setCategoryBudget(
+                            categoryBudgets[`${currentMonthKey}|${item}`]?.toString() ||
+                              categoryBudgets[item]?.toString() ||
+                              "",
+                          );
+                          setShowCategoryPicker(false);
+                        }}
+                      >
+                        <Text
+                          style={[
+                            styles.categoryButtonText,
+                            { color: category === item ? "white" : colors.text },
+                          ]}
+                        >
+                          {item}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              </View>
+            </Modal>
             <View
               style={[
                 styles.inputContainer,
@@ -368,13 +414,13 @@ const styles = StyleSheet.create({
   scrollContainer: {
     flexGrow: 1,
     paddingHorizontal: 20,
-    paddingVertical: 20,
+    paddingVertical: 14,
   },
   headerSection: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 30,
+    marginBottom: 18,
     paddingTop: 10,
   },
   backButton: {
@@ -397,7 +443,7 @@ const styles = StyleSheet.create({
   formCard: {
     backgroundColor: "white",
     borderRadius: 20,
-    padding: 25,
+    padding: 18,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
@@ -440,6 +486,40 @@ const styles = StyleSheet.create({
     color: "white",
     fontWeight: "bold",
   },
+  categorySelector: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    marginBottom: 16,
+  },
+  categorySelectorText: {
+    flex: 1,
+    fontSize: 16,
+    marginLeft: 10,
+  },
+  categoryModalOverlay: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+  },
+  categoryModal: {
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    padding: 20,
+  },
+  categoryModalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 16,
+  },
+  categoryModalTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+  },
   secondaryButton: {
     alignItems: "center",
     borderWidth: 1,
@@ -463,8 +543,8 @@ const styles = StyleSheet.create({
   currentBudgetCard: {
     backgroundColor: "#F8F9FA",
     borderRadius: 12,
-    padding: 20,
-    marginBottom: 25,
+    padding: 14,
+    marginBottom: 16,
     alignItems: "center",
   },
   currentBudgetLabel: {
@@ -482,7 +562,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#F8F9FA",
     borderRadius: 12,
-    marginBottom: 25,
+    marginBottom: 16,
     paddingHorizontal: 15,
     borderWidth: 1,
     borderColor: "#E9ECEF",
@@ -492,7 +572,7 @@ const styles = StyleSheet.create({
   },
   budgetInput: {
     flex: 1,
-    paddingVertical: 15,
+    paddingVertical: 12,
     fontSize: 18,
     fontWeight: "bold",
     color: LightTheme.colors.text,
@@ -508,7 +588,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#E3F2FD",
     borderRadius: 12,
     padding: 16,
-    marginBottom: 25,
+    marginBottom: 16,
   },
   tipsTitle: {
     fontSize: 16,
