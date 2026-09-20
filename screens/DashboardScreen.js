@@ -155,12 +155,6 @@ export default function DashboardScreen({ navigation }) {
       setExpenseTotal(totalExpense);
       setBalance(netWorthPaise / 100);
 
-      if (totalExpense > monthlyBudget) {
-        Alert.alert(
-          "⚠️ Budget Exceeded!",
-          `You have crossed your ${formatCurrency(monthlyBudget)} monthly budget!`,
-        );
-      }
     });
 
     return unsubscribe;
@@ -218,6 +212,7 @@ export default function DashboardScreen({ navigation }) {
   const remainingBudget = monthlyBudget - expenseTotal;
   const progress = Math.min(expenseTotal / monthlyBudget, 1);
   const budgetPercentage = Math.round((expenseTotal / monthlyBudget) * 100);
+  const isOverBudget = remainingBudget < 0;
   const categorySpending = transactions.reduce((totals, transaction) => {
     if (transaction.type === "expense" && transaction.category) {
       const amountPaise = Number.isInteger(transaction.amountPaise)
@@ -470,6 +465,29 @@ export default function DashboardScreen({ navigation }) {
               {formatCurrency(Math.abs(remainingBudget))}
             </Text>
           </View>
+          {isOverBudget && (
+            <View
+              style={[
+                styles.budgetWarning,
+                { backgroundColor: isDark ? "#3A2020" : "#FDECEC" },
+              ]}
+            >
+              <Ionicons
+                name="warning-outline"
+                size={18}
+                color={isDark ? "#FF8A80" : "#B42318"}
+              />
+              <Text
+                style={[
+                  styles.budgetWarningText,
+                  { color: isDark ? "#FFB4AB" : "#B42318" },
+                ]}
+              >
+                Spending is {formatCurrency(Math.abs(remainingBudget))} over
+                your monthly budget.
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* Spending Summary */}
@@ -934,6 +952,21 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+  },
+  budgetWarning: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 14,
+    padding: 10,
+    borderRadius: 10,
+    backgroundColor: "#FDECEC",
+  },
+  budgetWarningText: {
+    flex: 1,
+    marginLeft: 8,
+    color: "#B42318",
+    fontSize: 13,
+    fontWeight: "600",
   },
   categoryBudgetRow: {
     marginTop: 14,
