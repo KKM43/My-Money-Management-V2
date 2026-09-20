@@ -159,13 +159,22 @@ export default function TransactionItem({
           styles.card,
           {
             backgroundColor: colors.surface,
+            opacity: 1,
             borderColor: isDark ? "#444" : "#E9ECEF",
             transform: [{ translateX }],
           },
         ]}
       >
         <TouchableWithoutFeedback onLongPress={showActions ? handleLongPress : undefined}>
-          <View style={styles.cardContent}>
+          <View
+            style={[
+              styles.cardContent,
+              {
+                backgroundColor: colors.surface,
+                borderColor: isDark ? "#444" : "#E9ECEF",
+              },
+            ]}
+          >
       <View style={styles.leftSection}>
         <View
           style={[

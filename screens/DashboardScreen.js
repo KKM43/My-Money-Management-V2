@@ -9,6 +9,7 @@ import {
   ScrollView,
   RefreshControl,
   Dimensions,
+  Modal,
   TextInput,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
@@ -47,6 +48,7 @@ export default function DashboardScreen({ navigation }) {
   const [monthlyBudget, setMonthlyBudget] = useState(20000); // Default budget
   const [categoryBudgets, setCategoryBudgets] = useState({});
   const [showMonthPicker, setShowMonthPicker] = useState(false);
+  const [showDrawer, setShowDrawer] = useState(false);
 
   useEffect(() => {
     const accountsRef = collection(
@@ -312,34 +314,11 @@ export default function DashboardScreen({ navigation }) {
             </View>
             <View style={styles.headerActions}>
               <TouchableOpacity
-                style={styles.settingsButton}
-                onPress={cycleThemeMode}
-                accessibilityLabel={`Theme mode: ${themeMode}`}
+                style={styles.menuButton}
+                onPress={() => setShowDrawer(true)}
+                accessibilityLabel="Open navigation menu"
               >
-                <Ionicons
-                  name={themeMode === "system" ? "contrast-outline" : isDark ? "moon-outline" : "sunny-outline"}
-                  size={20}
-                  color="white"
-                />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.settingsButton}
-                onPress={() => navigation.navigate("BudgetSettings")}
-              >
-                <Ionicons name="settings-outline" size={20} color="white" />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.settingsButton}
-                onPress={() => navigation.navigate("Profile")}
-                accessibilityLabel="Profile"
-              >
-                <Ionicons name="person-outline" size={20} color="white" />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.logoutButton}
-                onPress={handleLogout}
-              >
-                <Ionicons name="log-out-outline" size={24} color="white" />
+                <Ionicons name="menu-outline" size={28} color="white" />
               </TouchableOpacity>
             </View>
           </View>
@@ -389,15 +368,15 @@ export default function DashboardScreen({ navigation }) {
             <View style={styles.balanceStats}>
               <View style={styles.statItem}>
                 <Ionicons name="trending-up" size={16} color="#4ECDC4" />
-                <Text style={styles.statLabel}>Income</Text>
-                <Text style={styles.statValue}>
+                <Text style={[styles.statLabel, { color: colors.text }]}>Income</Text>
+                <Text style={[styles.statValue, { color: colors.text }]}>
                   {formatCurrency(incomeTotal)}
                 </Text>
               </View>
               <View style={styles.statItem}>
                 <Ionicons name="trending-down" size={16} color="#FF6B6B" />
-                <Text style={styles.statLabel}>Expenses</Text>
-                <Text style={styles.statValue}>
+                <Text style={[styles.statLabel, { color: colors.text }]}>Expenses</Text>
+                <Text style={[styles.statValue, { color: colors.text }]}>
                   {formatCurrency(expenseTotal)}
                 </Text>
               </View>
@@ -415,12 +394,30 @@ export default function DashboardScreen({ navigation }) {
         {/* Budget Card */}
         <View style={[styles.budgetCard, { backgroundColor: colors.surface }]}>
           <View style={styles.budgetHeader}>
-            <Text style={styles.budgetTitle}>Monthly Budget</Text>
-            <Text style={styles.budgetPercentage}>{budgetPercentage}%</Text>
+            <View>
+              <Text style={[styles.budgetTitle, { color: colors.text }]}>
+                Monthly Budget
+              </Text>
+              <Text style={[styles.budgetSubtitle, { color: colors.text }]}>
+                {monthNames[currentMonth]} {currentYear}
+              </Text>
+            </View>
+            <View style={styles.budgetHeaderActions}>
+              <Text style={[styles.budgetPercentage, { color: colors.primary }]}>
+                {budgetPercentage}%
+              </Text>
+              <TouchableOpacity
+                style={styles.budgetSettingsButton}
+                onPress={() => navigation.navigate("BudgetSettings")}
+                accessibilityLabel="Open budget settings"
+              >
+                <Ionicons name="settings-outline" size={18} color={colors.primary} />
+              </TouchableOpacity>
+            </View>
           </View>
 
           {Object.keys(selectedCategoryBudgets).length > 0 && (
-            <View style={[styles.budgetCard, { backgroundColor: colors.surface }]}>
+            <View style={styles.categoryBudgetSection}>
               <Text style={[styles.budgetTitle, { color: colors.text }]}>
                 Category Budgets
               </Text>
@@ -455,7 +452,7 @@ export default function DashboardScreen({ navigation }) {
             />
           </View>
           <View style={styles.budgetDetails}>
-            <Text style={styles.budgetSpent}>
+            <Text style={[styles.budgetSpent, { color: colors.text }]}>
               Spent: {formatCurrency(expenseTotal)} /{" "}
               {formatCurrency(monthlyBudget)}
             </Text>
@@ -471,10 +468,10 @@ export default function DashboardScreen({ navigation }) {
           </View>
         </View>
 
-        {/* Quick Actions */}
+        {/* Primary Action */}
         <View style={styles.quickActions}>
           <TouchableOpacity
-            style={[styles.quickActionButton, styles.quickActionHalf]}
+            style={styles.quickActionButton}
             onPress={() => navigation.navigate("AddTransaction")}
           >
             <LinearGradient
@@ -484,13 +481,6 @@ export default function DashboardScreen({ navigation }) {
               <Ionicons name="add" size={24} color="white" />
               <Text style={styles.quickActionText}>Add Transaction</Text>
             </LinearGradient>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.accountsButton, styles.quickActionHalf, { backgroundColor: colors.surface }]}
-            onPress={() => navigation.navigate("Accounts")}
-          >
-            <Ionicons name="wallet-outline" size={20} color={colors.primary} />
-            <Text style={styles.accountsButtonText}>Accounts</Text>
           </TouchableOpacity>
         </View>
 
@@ -531,6 +521,7 @@ export default function DashboardScreen({ navigation }) {
             <Text
               style={[
                 styles.filterText,
+                { color: colors.text },
                 selectedFilter === "all" && styles.filterTextActive,
               ]}
             >
@@ -547,6 +538,7 @@ export default function DashboardScreen({ navigation }) {
             <Text
               style={[
                 styles.filterText,
+                { color: colors.text },
                 selectedFilter === "income" && styles.filterTextActive,
               ]}
             >
@@ -563,6 +555,7 @@ export default function DashboardScreen({ navigation }) {
             <Text
               style={[
                 styles.filterText,
+                { color: colors.text },
                 selectedFilter === "expense" && styles.filterTextActive,
               ]}
             >
@@ -573,14 +566,16 @@ export default function DashboardScreen({ navigation }) {
 
         {/* Transactions List */}
         <View style={[styles.transactionsContainer, { backgroundColor: colors.surface }]}>
-          <Text style={styles.transactionsTitle}>
+          <Text style={[styles.transactionsTitle, { color: colors.text }]}>
             Recent Transactions ({filteredTransactions.length})
           </Text>
           {filteredTransactions.length === 0 ? (
             <View style={styles.emptyState}>
               <Ionicons name="receipt-outline" size={64} color="#ccc" />
-              <Text style={styles.emptyText}>No transactions found</Text>
-              <Text style={styles.emptySubtext}>
+              <Text style={[styles.emptyText, { color: colors.text }]}>
+                No transactions found
+              </Text>
+              <Text style={[styles.emptySubtext, { color: colors.text }]}>
                 {selectedFilter === "all"
                   ? "Add your first transaction to get started"
                   : `No ${selectedFilter} transactions this month`}
@@ -592,6 +587,7 @@ export default function DashboardScreen({ navigation }) {
               keyExtractor={(item) => item.id}
               renderItem={({ item }) => (
                 <TransactionItem
+                  key={`${item.id}-${isDark ? "dark" : "light"}`}
                   item={item}
                   onDelete={() => handleDelete(item.id)}
                   onEdit={() =>
@@ -604,6 +600,84 @@ export default function DashboardScreen({ navigation }) {
           )}
         </View>
       </ScrollView>
+      <Modal
+        visible={showDrawer}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowDrawer(false)}
+      >
+        <View style={styles.drawerOverlay}>
+          <View style={[styles.drawer, { backgroundColor: colors.surface }]}>
+            <View style={styles.drawerHeader}>
+              <View>
+                <Text style={[styles.drawerTitle, { color: colors.text }]}>
+                  My Money
+                </Text>
+                <Text style={[styles.drawerSubtitle, { color: colors.text }]}>
+                  Manage your finances
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setShowDrawer(false)}
+                accessibilityLabel="Close navigation menu"
+              >
+                <Ionicons name="close" size={24} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+            {[
+              ["person-outline", "Profile", "Profile"],
+              ["wallet-outline", "Accounts", "Accounts"],
+              ["settings-outline", "Budget Settings", "BudgetSettings"],
+            ].map(([icon, label, routeName]) => (
+              <TouchableOpacity
+                key={routeName}
+                style={styles.drawerItem}
+                onPress={() => {
+                  setShowDrawer(false);
+                  navigation.navigate(routeName);
+                }}
+              >
+                <Ionicons name={icon} size={21} color={colors.primary} />
+                <Text style={[styles.drawerItemText, { color: colors.text }]}>
+                  {label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity
+              style={styles.drawerItem}
+              onPress={cycleThemeMode}
+              accessibilityLabel={`Theme mode: ${themeMode}`}
+            >
+              <Ionicons
+                name={themeMode === "system" ? "contrast-outline" : isDark ? "moon-outline" : "sunny-outline"}
+                size={21}
+                color={colors.primary}
+              />
+              <Text style={[styles.drawerItemText, { color: colors.text }]}>
+                Theme: {themeMode}
+              </Text>
+            </TouchableOpacity>
+            <View style={styles.drawerDivider} />
+            <TouchableOpacity
+              style={styles.drawerItem}
+              onPress={() => {
+                setShowDrawer(false);
+                handleLogout();
+              }}
+            >
+              <Ionicons name="log-out-outline" size={21} color="#D32F2F" />
+              <Text style={[styles.drawerItemText, { color: "#D32F2F" }]}>
+                Sign out
+              </Text>
+            </TouchableOpacity>
+          </View>
+          <TouchableOpacity
+            style={styles.drawerBackdrop}
+            onPress={() => setShowDrawer(false)}
+            accessibilityLabel="Close navigation menu"
+          />
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -632,6 +706,14 @@ const styles = StyleSheet.create({
   },
   headerActions: {
     flexDirection: "row",
+    alignItems: "center",
+  },
+  menuButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    justifyContent: "center",
     alignItems: "center",
   },
   settingsButton: {
@@ -760,6 +842,24 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 15,
   },
+  budgetHeaderActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  budgetSettingsButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: "rgba(77, 150, 255, 0.12)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  budgetSubtitle: {
+    fontSize: 12,
+    opacity: 0.65,
+    marginTop: 3,
+  },
   budgetTitle: {
     fontSize: 18,
     fontWeight: "bold",
@@ -810,6 +910,54 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "bold",
   },
+  drawerOverlay: {
+    flex: 1,
+    flexDirection: "row",
+    backgroundColor: "rgba(0, 0, 0, 0.45)",
+  },
+  drawer: {
+    width: "78%",
+    paddingTop: 54,
+    paddingHorizontal: 22,
+    elevation: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 4, height: 0 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+  },
+  drawerBackdrop: {
+    flex: 1,
+  },
+  drawerHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    paddingBottom: 24,
+  },
+  drawerTitle: {
+    fontSize: 24,
+    fontWeight: "bold",
+  },
+  drawerSubtitle: {
+    fontSize: 13,
+    opacity: 0.65,
+    marginTop: 4,
+  },
+  drawerItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 16,
+    gap: 14,
+  },
+  drawerItemText: {
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  drawerDivider: {
+    height: 1,
+    backgroundColor: "#E0E0E0",
+    marginVertical: 10,
+  },
   overBudget: {
     color: "#FF6B6B",
   },
@@ -818,13 +966,10 @@ const styles = StyleSheet.create({
   },
   quickActions: {
     flexDirection: "row",
-    gap: 10,
-    marginBottom: 20,
-  },
-  quickActionHalf: {
-    flex: 1,
+    marginBottom: 12,
   },
   quickActionButton: {
+    flex: 1,
     borderRadius: 15,
     overflow: "hidden",
   },
@@ -832,7 +977,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 16,
+    paddingVertical: 13,
     paddingHorizontal: 20,
   },
   quickActionText: {
@@ -850,6 +995,10 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderWidth: 1,
     borderColor: LightTheme.colors.primary,
+  },
+  categoryBudgetSection: {
+    marginTop: 8,
+    marginBottom: 6,
   },
   accountsButtonText: {
     color: LightTheme.colors.primary,

@@ -11,6 +11,7 @@ import {
   Platform,
   ActivityIndicator,
   Dimensions,
+  Modal,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
@@ -25,7 +26,6 @@ import {
 import { db, auth } from "../services/firebaseConfig";
 import { LightTheme } from "../theme";
 import { useTheme } from "../ThemeContext";
-import DateTimePicker from "@react-native-community/datetimepicker";
 
 const { width, height } = Dimensions.get("window");
 
@@ -163,12 +163,10 @@ export default function AddTransactionScreen({ navigation, route }) {
     }).format(date);
   };
 
-  const handleDateChange = (event, date) => {
-    setShowDatePicker(false);
-
-    if (date) {
-      setSelectedDate(date);
-    }
+  const adjustSelectedDate = (days) => {
+    const nextDate = new Date(selectedDate);
+    nextDate.setDate(nextDate.getDate() + days);
+    setSelectedDate(nextDate);
   };
 
   const handleCategorySelect = (item) => {
@@ -578,14 +576,64 @@ export default function AddTransactionScreen({ navigation, route }) {
               <Ionicons name="chevron-down-outline" size={20} color="#666" />
             </TouchableOpacity>
 
-            {showDatePicker && (
-              <DateTimePicker
-                value={selectedDate}
-                mode="date"
-                display="default"
-                onChange={handleDateChange}
-              />
-            )}
+            <Modal
+              visible={showDatePicker}
+              transparent
+              animationType="fade"
+              onRequestClose={() => setShowDatePicker(false)}
+            >
+              <View style={styles.dateModalOverlay}>
+                <View
+                  style={[
+                    styles.dateModal,
+                    { backgroundColor: colors.surface },
+                  ]}
+                >
+                  <View style={styles.dateModalHeader}>
+                    <Text style={[styles.dateModalTitle, { color: colors.text }]}>
+                      Select transaction date
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() => setShowDatePicker(false)}
+                      accessibilityLabel="Close date selector"
+                    >
+                      <Ionicons name="close" size={24} color={colors.text} />
+                    </TouchableOpacity>
+                  </View>
+                  <Text style={[styles.dateModalValue, { color: colors.primary }]}>
+                    {formatDateForDisplay(selectedDate)}
+                  </Text>
+                  <View style={styles.dateAdjustRow}>
+                    <TouchableOpacity
+                      style={styles.dateAdjustButton}
+                      onPress={() => adjustSelectedDate(-1)}
+                      accessibilityLabel="Previous day"
+                    >
+                      <Ionicons name="chevron-back" size={22} color="white" />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.todayButton}
+                      onPress={() => setSelectedDate(new Date())}
+                    >
+                      <Text style={styles.todayButtonText}>Today</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.dateAdjustButton}
+                      onPress={() => adjustSelectedDate(1)}
+                      accessibilityLabel="Next day"
+                    >
+                      <Ionicons name="chevron-forward" size={22} color="white" />
+                    </TouchableOpacity>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.dateDoneButton}
+                    onPress={() => setShowDatePicker(false)}
+                  >
+                    <Text style={styles.dateDoneButtonText}>Use this date</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </Modal>
 
             {type !== "transfer" && (
               <>
@@ -1012,5 +1060,69 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: LightTheme.colors.text,
     marginLeft: 12,
+  },
+  dateModalOverlay: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    padding: 24,
+  },
+  dateModal: {
+    width: "100%",
+    maxWidth: 380,
+    borderRadius: 18,
+    padding: 22,
+  },
+  dateModalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  dateModalTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+  dateModalValue: {
+    fontSize: 28,
+    fontWeight: "bold",
+    textAlign: "center",
+    marginVertical: 26,
+  },
+  dateAdjustRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  dateAdjustButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: LightTheme.colors.primary,
+  },
+  todayButton: {
+    borderWidth: 1,
+    borderColor: LightTheme.colors.primary,
+    borderRadius: 10,
+    paddingHorizontal: 22,
+    paddingVertical: 12,
+  },
+  todayButtonText: {
+    color: LightTheme.colors.primary,
+    fontWeight: "bold",
+  },
+  dateDoneButton: {
+    alignItems: "center",
+    backgroundColor: LightTheme.colors.primary,
+    borderRadius: 10,
+    paddingVertical: 14,
+    marginTop: 24,
+  },
+  dateDoneButtonText: {
+    color: "white",
+    fontWeight: "bold",
+    fontSize: 16,
   },
 });
