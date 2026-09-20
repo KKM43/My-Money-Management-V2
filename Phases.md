@@ -21,6 +21,8 @@
 
 ## Phase 1 — Secure V2 foundation
 
+**Status:** Complete
+
 ### Goals
 
 - Create and configure a separate Firebase project for V2 development.
@@ -40,6 +42,8 @@
 
 ## Phase 2 — Transaction foundation
 
+**Status:** Complete
+
 ### Goals
 
 - Define the V2 transaction data model.
@@ -57,6 +61,8 @@
 
 ## Phase 3 — Accounts and transfers
 
+**Status:** Complete
+
 ### Goals
 
 - Add accounts and wallets.
@@ -72,6 +78,8 @@
 - Users can view account-level activity and balances.
 
 ## Phase 4 — Budgets and dashboard insights
+
+**Status:** Complete
 
 ### Goals
 
@@ -104,4 +112,6 @@
 
 ## Next active phase
 
-Phase 1 is the next phase. Its first task is to plan and create the separate V2 Firebase project before changing authentication code.
+Phase 5 is the next phase. Begin with a focused decision on recurring
+transactions, savings goals, or credit-card due dates before implementing
+automation.

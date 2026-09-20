@@ -1,6 +1,6 @@
 # My Money Management V2 — Architecture
 
-## Current baseline
+## Current implementation
 
 The current codebase is a React Native application built with Expo and JavaScript.
 
@@ -10,6 +10,7 @@ The current codebase is a React Native application built with Expo and JavaScrip
 - Backend services: Firebase Authentication, Cloud Firestore, and Cloud Storage
 - Local Firebase configuration: `.env`, loaded through `react-native-dotenv`
 - Target platforms: Android first; iOS and web remain Expo-supported targets
+- Theme support: persistent system, light, and dark modes through `ThemeContext.js`
 
 ## Current project structure
 
@@ -23,7 +24,12 @@ screens/                Screen-level UI and feature logic
   SignupScreen.js
   DashboardScreen.js
   AddTransactionScreen.js
+  AccountsScreen.js
+  AccountActivityScreen.js
   BudgetSettingsScreen.js
+  ProfileScreen.js
+ThemeContext.js            Persistent theme mode and active colors
+theme.js                   Light and dark theme palettes
 services/
   firebaseConfig.js     Firebase initialization and exported services
 App.js                  Navigation container and stack definitions
@@ -37,9 +43,12 @@ App.js                  Navigation container and stack definitions
 - Signup
 - Dashboard
 - AddTransaction
+- Accounts
+- AccountActivity
 - BudgetSettings
+- Profile
 
-The app currently starts at `Login`. Individual screens control navigation after authentication. This works as a baseline, but V2 should introduce a central authentication gate so the displayed navigation tree follows the actual Firebase session state.
+The app uses an authentication-aware root. Signed-out users see Login and Signup; signed-in users see the protected finance screens. The Dashboard provides a navigation drawer for Profile, Accounts, Budget Settings, theme switching, and sign out.
 
 ## Current Firebase boundary
 
@@ -51,20 +60,18 @@ The app currently starts at `Login`. Individual screens control navigation after
 
 Firebase configuration is read from `.env`. The `.env` file is ignored by Git; `.env.example` documents the required variable names.
 
-## V2 architecture direction
+## Architecture direction
 
-V2 will evolve the current structure incrementally rather than undergo an untested rewrite.
+The app evolves incrementally rather than through an untested rewrite.
 
-1. Keep Expo and React Navigation while the current baseline is stabilized.
-2. Add an authentication-aware application root before expanding feature work.
-3. Separate screen presentation from finance data access and business calculations.
-4. Create a dedicated V2 Firebase project and user-scoped Firestore rules before storing V2 data.
-5. Define the Firestore collections, document ownership, and indexes before implementing multi-account and transfer features.
-6. Move to TypeScript only as a planned milestone, with a safe incremental migration strategy.
+1. Keep Expo and React Navigation while feature work continues.
+2. Keep user-owned Firestore paths and security rules as the data boundary.
+3. Separate shared finance calculations and data access from screen components as complexity grows.
+4. Move to TypeScript only as a planned milestone, with a safe incremental migration strategy.
 
 ## V2 transaction model
 
-Phase 2 supports `income` and `expense` transactions. Transfers and credit-card payments will be added later as distinct transaction behaviors.
+Transactions support `income`, `expense`, and `transfer` behaviors.
 
 Transactions are stored at:
 
@@ -72,13 +79,13 @@ Transactions are stored at:
 /users/{uid}/transactions/{transactionId}
 ```
 
-Phase 3 accounts are stored at:
+Accounts are stored at:
 
 ```text
 /users/{uid}/accounts/{accountId}
 ```
 
-The initial account types are `bank`, `cash`, `wallet`, and `creditCard`.
+The supported account types are `bank`, `cash`, `wallet`, and `creditCard`. Accounts may be archived without losing their history.
 
 Transfers are stored as one transaction with `type: "transfer"`,
 `fromAccountId`, and `toAccountId`. They decrease the source account and
@@ -100,17 +107,32 @@ migration strategy is applied.
 For the first account-enabled release, existing unassigned transactions are
 excluded from account balances rather than being assigned automatically.
 
+Budgets are stored at:
 
+```text
+/users/{uid}/settings/budget
+```
+
+The budget document stores `monthlyBudget` and category budgets. Month-scoped
+category keys use `YYYY-MM|Category`; older unscoped keys remain readable for
+compatibility. The Dashboard calculates monthly budget progress, category
+spending, and a top-five spending summary from the signed-in user's
+transactions.
+
+Transactions support search by category or note, income/expense filters, and
+native swipe and long-press actions. Profile reset permanently removes the
+user's accounts, transactions, and budget document only after explicit
+confirmation.
 
 ## Key technical decisions
 
 | Decision | Status |
 | --- | --- |
-| Use a separate Firebase project for V2 | Planned and required before V2 data work |
+| Use a separate Firebase project for V2 | Implemented |
 | Keep the existing V1 Firebase project unchanged during V2 development | Required |
 | Store Firebase client configuration in local `.env` files | Current practice |
 | Commit `.env.example`, never `.env` | Required |
-| Centralize authentication navigation | Planned |
+| Centralize authentication navigation | Implemented |
 | Use INR and Indian number formatting consistently | Required |
 | Use JavaScript during baseline stabilization | Current choice |
 | Review TypeScript migration after the V2 structure is stable | Planned |
@@ -118,6 +140,6 @@ excluded from account balances rather than being assigned automatically.
 
 ## Known baseline considerations
 
-- Firebase Auth currently uses memory-only session persistence in React Native. V2 should configure persistence using the installed AsyncStorage package.
+- Firestore isolation tests between two users have not yet been added.
 - Expo Go runs with the New Architecture enabled, while `app.json` explicitly disables it. This needs a deliberate compatibility decision before production builds.
-- Current Firestore collections and indexes have not yet been documented. Do not assume their shape; inspect them before designing V2 data migrations.
+- Several screens still combine UI, Firestore listeners, and calculations. Extract shared services when the next feature makes that worthwhile.

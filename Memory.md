@@ -20,6 +20,7 @@
 
 ```text
 /users/{uid}
+/users/{uid}/accounts/{accountId}
 /users/{uid}/transactions/{transactionId}
 /users/{uid}/settings/budget
 ```
@@ -37,14 +38,17 @@ The previous V1-style top-level `transactions` and `userSettings` paths are not 
 - Migrated transaction and budget reads/writes to the V2 user-owned paths.
 - Updated the dashboard to listen for live budget changes.
 - Transactions use integer paise and local `YYYY-MM-DD` calendar dates.
-- Add Transaction includes a native date picker.
+- Add Transaction includes a themed in-app date picker and compact category picker.
 - Existing transactions can be edited without creating duplicates.
+- Added accounts, account activity, transfers, credit-card payments, and archive controls.
+- Added monthly and category budgets with Dashboard progress and spending summaries.
+- Added persistent theme modes, gesture actions, and a confirmed Profile data reset.
 
 ## Known follow-up work
 
 - Review the Expo New Architecture warning before creating a production build.
-- Define the final V2 transaction data model before adding editing, accounts, or transfers.
 - Plan tests for Firestore access isolation between two V2 users.
+- Consider extracting shared data access and calculations from large screen components.
 
 ## Transaction decisions
 
@@ -55,3 +59,5 @@ The previous V1-style top-level `transactions` and `userSettings` paths are not 
 - Existing unassigned transactions will be excluded from account balances in the first account-enabled release.
 - Transfers use one transaction record with source and destination account IDs and do not affect dashboard net worth.
 - A transfer into a credit-card account is labeled as `cardPayment` and is not counted as a second expense.
+- Category budgets use month-scoped `YYYY-MM|Category` keys while retaining compatibility with legacy unscoped keys.
+- Budget over-limit status is shown inline in the Dashboard rather than through repeated alerts.
