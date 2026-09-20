@@ -104,7 +104,12 @@ function SwipeableAccountRow({
           onLongPress={() => setShowOptions(true)}
         >
           <View style={styles.accountContent}>
-            <View style={styles.accountIcon}>
+            <View
+              style={[
+                styles.accountIcon,
+                { backgroundColor: colors.background },
+              ]}
+            >
               <Ionicons
                 name={accountType?.icon || "wallet-outline"}
                 size={22}
@@ -380,7 +385,7 @@ export default function AccountsScreen({ navigation }) {
               <Ionicons
                 name={accountType.icon}
                 size={18}
-                color={type === accountType.value ? "white" : "#555"}
+                color={type === accountType.value ? "white" : colors.text}
               />
               <Text
                 style={[
@@ -448,6 +453,7 @@ export default function AccountsScreen({ navigation }) {
                     styles.typeButtonText,
                     editType === accountType.value &&
                       styles.typeButtonTextActive,
+                      { color: type === accountType.value ? "white" : colors.text },
                   ]}
                 >
                   {accountType.label}

@@ -16,6 +16,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db, auth } from "../services/firebaseConfig";
 import { LightTheme } from "../theme";
+import { useTheme } from "../ThemeContext";
 
 const { width, height } = Dimensions.get("window");
 const EXPENSE_CATEGORIES = [
@@ -33,6 +34,7 @@ const currentMonthKey = `${new Date().getFullYear()}-${String(
 ).padStart(2, "0")}`;
 
 export default function BudgetSettingsScreen({ navigation }) {
+  const { colors, isDark } = useTheme();
   const [budget, setBudget] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [currentBudget, setCurrentBudget] = useState(0);
@@ -176,7 +178,7 @@ export default function BudgetSettingsScreen({ navigation }) {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <LinearGradient
-        colors={[LightTheme.colors.primary, LightTheme.colors.secondary]}
+        colors={[colors.primary, colors.secondary]}
         style={styles.gradient}
       >
         <ScrollView
@@ -196,19 +198,32 @@ export default function BudgetSettingsScreen({ navigation }) {
           </View>
 
           {/* Main Form Card */}
-          <View style={styles.formCard}>
+          <View style={[styles.formCard, { backgroundColor: colors.surface }]}>
             {/* Current Budget Display */}
-            <View style={styles.currentBudgetCard}>
-              <Text style={styles.currentBudgetLabel}>
+            <View
+              style={[
+                styles.currentBudgetCard,
+                { backgroundColor: isDark ? "#252525" : "#F8F9FA" },
+              ]}
+            >
+              <Text style={[styles.currentBudgetLabel, { color: colors.text }]}>
                 Current Monthly Budget
               </Text>
-              <Text style={styles.currentBudgetAmount}>
+              <Text style={[styles.currentBudgetAmount, { color: colors.primary }]}>
                 {formatCurrency(currentBudget)}
               </Text>
             </View>
 
             {/* Budget Input */}
-            <View style={styles.inputContainer}>
+            <View
+              style={[
+                styles.inputContainer,
+                {
+                  backgroundColor: isDark ? "#252525" : "#F8F9FA",
+                  borderColor: isDark ? "#444" : "#E9ECEF",
+                },
+              ]}
+            >
               <Ionicons
                 name="wallet"
                 size={20}
@@ -226,13 +241,18 @@ export default function BudgetSettingsScreen({ navigation }) {
               <Text style={styles.currencySymbol}>₹</Text>
             </View>
 
-            <Text style={styles.sectionTitle}>Category Budget</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              Category Budget
+            </Text>
             <View style={styles.categoryGrid}>
               {EXPENSE_CATEGORIES.map((item) => (
                 <TouchableOpacity
                   key={item}
                   style={[
                     styles.categoryButton,
+                    {
+                      borderColor: isDark ? "#444" : "#E9ECEF",
+                    },
                     category === item && styles.categoryButtonActive,
                   ]}
                   onPress={() => {
@@ -247,6 +267,7 @@ export default function BudgetSettingsScreen({ navigation }) {
                   <Text
                     style={[
                       styles.categoryButtonText,
+                      { color: category === item ? "white" : colors.text },
                       category === item && styles.categoryButtonTextActive,
                     ]}
                   >
@@ -255,7 +276,15 @@ export default function BudgetSettingsScreen({ navigation }) {
                 </TouchableOpacity>
               ))}
             </View>
-            <View style={styles.inputContainer}>
+            <View
+              style={[
+                styles.inputContainer,
+                {
+                  backgroundColor: isDark ? "#252525" : "#F8F9FA",
+                  borderColor: isDark ? "#444" : "#E9ECEF",
+                },
+              ]}
+            >
               <Ionicons
                 name="pricetag-outline"
                 size={20}
@@ -273,11 +302,11 @@ export default function BudgetSettingsScreen({ navigation }) {
               <Text style={styles.currencySymbol}>₹</Text>
             </View>
             <TouchableOpacity
-              style={styles.secondaryButton}
+              style={[styles.secondaryButton, { borderColor: colors.primary }]}
               onPress={handleSaveCategoryBudget}
               disabled={isLoading}
             >
-              <Text style={styles.secondaryButtonText}>
+              <Text style={[styles.secondaryButtonText, { color: colors.primary }]}>
                 Save {category} Budget
               </Text>
             </TouchableOpacity>
