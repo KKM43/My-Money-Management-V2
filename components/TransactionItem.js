@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useTheme } from "../ThemeContext";
 
 export default function TransactionItem({
   item,
@@ -8,6 +9,7 @@ export default function TransactionItem({
   onEdit,
   showActions = true,
 }) {
+  const { colors, isDark } = useTheme();
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat("en-IN", {
       style: "currency",
@@ -95,7 +97,15 @@ export default function TransactionItem({
   const isCardPayment = item.paymentKind === "cardPayment";
 
   return (
-    <View style={styles.card}>
+    <View
+      style={[
+        styles.card,
+        {
+          backgroundColor: colors.surface,
+          borderColor: isDark ? "#444" : "#E9ECEF",
+        },
+      ]}
+    >
       <View style={styles.leftSection}>
         <View
           style={[
@@ -110,11 +120,15 @@ export default function TransactionItem({
           />
         </View>
         <View style={styles.details}>
-          <Text style={styles.category}>
+          <Text style={[styles.category, { color: colors.text }]}>
             {isCardPayment ? "Card payment" : isTransfer ? "Transfer" : item.category}
           </Text>
-          {item.note && <Text style={styles.note}>{item.note}</Text>}
-          <Text style={styles.date}>{formatDate(occurredOn)}</Text>
+          {item.note && (
+            <Text style={[styles.note, { color: colors.text }]}>{item.note}</Text>
+          )}
+          <Text style={[styles.date, { color: colors.text }]}>
+            {formatDate(occurredOn)}
+          </Text>
         </View>
       </View>
       <View style={styles.rightSection}>
@@ -131,10 +145,10 @@ export default function TransactionItem({
         {showActions && (
           <>
             <TouchableOpacity style={styles.editButton} onPress={onEdit}>
-              <Ionicons name="pencil-outline" size={16} color="#666" />
+              <Ionicons name="pencil-outline" size={16} color={colors.text} />
             </TouchableOpacity>
             <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
-              <Ionicons name="trash-outline" size={16} color="#999" />
+              <Ionicons name="trash-outline" size={16} color={colors.text} />
             </TouchableOpacity>
           </>
         )}

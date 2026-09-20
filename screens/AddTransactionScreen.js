@@ -24,6 +24,7 @@ import {
 } from "firebase/firestore";
 import { db, auth } from "../services/firebaseConfig";
 import { LightTheme } from "../theme";
+import { useTheme } from "../ThemeContext";
 import DateTimePicker from "@react-native-community/datetimepicker";
 
 const { width, height } = Dimensions.get("window");
@@ -54,6 +55,7 @@ const getTransactionDate = (transaction) => {
 };
 
 export default function AddTransactionScreen({ navigation, route }) {
+  const { colors, isDark } = useTheme();
   const editingTransaction = route?.params?.transaction;
   const isEditing = Boolean(editingTransaction);
 
@@ -284,7 +286,7 @@ export default function AddTransactionScreen({ navigation, route }) {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <LinearGradient
-        colors={[LightTheme.colors.primary, LightTheme.colors.secondary]}
+        colors={[colors.primary, colors.secondary]}
         style={styles.gradient}
       >
         <ScrollView
@@ -306,12 +308,18 @@ export default function AddTransactionScreen({ navigation, route }) {
           </View>
 
           {/* Main Form Card */}
-          <View style={styles.formCard}>
+          <View style={[styles.formCard, { backgroundColor: colors.surface }]}>
             {/* Transaction Type Toggle */}
-            <View style={styles.typeToggleContainer}>
+            <View
+              style={[
+                styles.typeToggleContainer,
+                { backgroundColor: isDark ? "#252525" : "#F8F9FA" },
+              ]}
+            >
               <TouchableOpacity
                 style={[
                   styles.typeButton,
+                  { backgroundColor: isDark ? "#252525" : "transparent" },
                   type === "expense" && styles.typeButtonActive,
                   type === "expense" && styles.expenseButton,
                 ]}
@@ -335,6 +343,7 @@ export default function AddTransactionScreen({ navigation, route }) {
               <TouchableOpacity
                 style={[
                   styles.typeButton,
+                  { backgroundColor: isDark ? "#252525" : "transparent" },
                   type === "income" && styles.typeButtonActive,
                   type === "income" && styles.incomeButton,
                 ]}
@@ -357,6 +366,7 @@ export default function AddTransactionScreen({ navigation, route }) {
               <TouchableOpacity
                 style={[
                   styles.typeButton,
+                  { backgroundColor: isDark ? "#252525" : "transparent" },
                   type === "transfer" && styles.typeButtonActive,
                   type === "transfer" && styles.transferButton,
                 ]}
@@ -379,7 +389,12 @@ export default function AddTransactionScreen({ navigation, route }) {
             </View>
 
             {/* Amount Input */}
-            <View style={styles.inputContainer}>
+            <View
+              style={[
+                styles.inputContainer,
+                { backgroundColor: isDark ? "#252525" : "#F8F9FA" },
+              ]}
+            >
               <Ionicons
                 name="cash"
                 size={20}
@@ -387,7 +402,7 @@ export default function AddTransactionScreen({ navigation, route }) {
                 style={styles.inputIcon}
               />
               <TextInput
-                style={styles.amountInput}
+                style={[styles.amountInput, { color: colors.text }]}
                 placeholder="0.00"
                 placeholderTextColor="#999"
                 keyboardType="numeric"
@@ -397,22 +412,26 @@ export default function AddTransactionScreen({ navigation, route }) {
               <Text style={styles.currencySymbol}>₹</Text>
             </View>
 
-            <Text style={styles.sectionTitle}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
               {type === "transfer" ? "Transfer Between Accounts" : "Select Account"}
             </Text>
             {accounts.length === 0 ? (
-              <Text style={styles.accountHint}>
+              <Text style={[styles.accountHint, { color: colors.text }]}>
                 Create an account before adding a new transaction.
               </Text>
             ) : type === "transfer" ? (
               <>
-                <Text style={styles.accountLabel}>From account</Text>
+                <Text style={[styles.accountLabel, { color: colors.text }]}>From account</Text>
                 <View style={styles.accountsGrid}>
                   {selectableAccounts.map((account) => (
                     <TouchableOpacity
                       key={`from-${account.id}`}
                       style={[
                         styles.accountCard,
+                        {
+                          backgroundColor: isDark ? "#252525" : "#F8F9FA",
+                          borderColor: isDark ? "#444" : "#E9ECEF",
+                        },
                         fromAccountId === account.id && styles.selectedAccountCard,
                       ]}
                       onPress={() => setFromAccountId(account.id)}
@@ -429,13 +448,17 @@ export default function AddTransactionScreen({ navigation, route }) {
                     </TouchableOpacity>
                   ))}
                 </View>
-                <Text style={styles.accountLabel}>To account</Text>
+                <Text style={[styles.accountLabel, { color: colors.text }]}>To account</Text>
                 <View style={styles.accountsGrid}>
                   {selectableAccounts.map((account) => (
                     <TouchableOpacity
                       key={`to-${account.id}`}
                       style={[
                         styles.accountCard,
+                        {
+                          backgroundColor: isDark ? "#252525" : "#F8F9FA",
+                          borderColor: isDark ? "#444" : "#E9ECEF",
+                        },
                         toAccountId === account.id && styles.selectedAccountCard,
                       ]}
                       onPress={() => setToAccountId(account.id)}
@@ -460,6 +483,10 @@ export default function AddTransactionScreen({ navigation, route }) {
                     key={account.id}
                     style={[
                       styles.accountCard,
+                      {
+                        backgroundColor: isDark ? "#252525" : "#F8F9FA",
+                        borderColor: isDark ? "#444" : "#E9ECEF",
+                      },
                       selectedAccountId === account.id &&
                         styles.selectedAccountCard,
                     ]}
@@ -498,10 +525,18 @@ export default function AddTransactionScreen({ navigation, route }) {
               </View>
             )}
 
-            <Text style={styles.sectionTitle}>Transaction Date</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              Transaction Date
+            </Text>
 
             <TouchableOpacity
-              style={styles.dateSelector}
+              style={[
+                styles.dateSelector,
+                {
+                  backgroundColor: isDark ? "#252525" : "#F8F9FA",
+                  borderColor: isDark ? "#444" : "#E9ECEF",
+                },
+              ]}
               onPress={() => setShowDatePicker(true)}
             >
               <Ionicons
@@ -509,7 +544,7 @@ export default function AddTransactionScreen({ navigation, route }) {
                 size={20}
                 color={LightTheme.colors.primary}
               />
-              <Text style={styles.dateSelectorText}>
+              <Text style={[styles.dateSelectorText, { color: colors.text }]}>
                 {formatDateForDisplay(selectedDate)}
               </Text>
               <Ionicons name="chevron-down-outline" size={20} color="#666" />
@@ -527,13 +562,26 @@ export default function AddTransactionScreen({ navigation, route }) {
             {type !== "transfer" && (
               <>
                 {/* Category Selection */}
-                <Text style={styles.sectionTitle}>Select Category</Text>
+                <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                  Select Category
+                </Text>
                 <View style={styles.categoriesGrid}>
                   {currentCategories.map((item, index) => (
                     <TouchableOpacity
                       key={index}
                       style={[
                         styles.categoryCard,
+                        {
+                          backgroundColor:
+                            category === item.name
+                              ? isDark
+                                ? "#17365D"
+                                : "#E3F2FD"
+                              : isDark
+                                ? "#252525"
+                                : "#F8F9FA",
+                          borderColor: isDark ? "#444" : item.color,
+                        },
                         category === item.name && styles.selectedCategoryCard,
                         { borderColor: item.color },
                       ]}
@@ -563,7 +611,12 @@ export default function AddTransactionScreen({ navigation, route }) {
 
             {/* Custom Category Input */}
             {isOther && (
-              <View style={styles.inputContainer}>
+              <View
+                style={[
+                  styles.inputContainer,
+                  { backgroundColor: isDark ? "#252525" : "#F8F9FA" },
+                ]}
+              >
                 <Ionicons
                   name="create"
                   size={20}
@@ -571,7 +624,7 @@ export default function AddTransactionScreen({ navigation, route }) {
                   style={styles.inputIcon}
                 />
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, { color: colors.text }]}
                   placeholder="Enter custom category"
                   placeholderTextColor="#999"
                   value={category}
@@ -581,7 +634,12 @@ export default function AddTransactionScreen({ navigation, route }) {
             )}
 
             {/* Note Input */}
-            <View style={styles.inputContainer}>
+            <View
+              style={[
+                styles.inputContainer,
+                { backgroundColor: isDark ? "#252525" : "#F8F9FA" },
+              ]}
+            >
               <Ionicons
                 name="document-text"
                 size={20}
@@ -589,7 +647,7 @@ export default function AddTransactionScreen({ navigation, route }) {
                 style={styles.inputIcon}
               />
               <TextInput
-                style={[styles.input, styles.noteInput]}
+                style={[styles.input, styles.noteInput, { color: colors.text }]}
                 placeholder="Add a note (optional)"
                 placeholderTextColor="#999"
                 value={note}
