@@ -228,6 +228,10 @@ export default function DashboardScreen({ navigation }) {
     }
     return totals;
   }, {});
+  const spendingCategories = Object.entries(categorySpending)
+    .sort(([, firstAmount], [, secondAmount]) => secondAmount - firstAmount)
+    .slice(0, 5);
+  const largestCategorySpending = spendingCategories[0]?.[1] || 0;
   const selectedMonthKey = `${currentYear}-${String(currentMonth + 1).padStart(
     2,
     "0",
@@ -466,6 +470,55 @@ export default function DashboardScreen({ navigation }) {
               {formatCurrency(Math.abs(remainingBudget))}
             </Text>
           </View>
+        </View>
+
+        {/* Spending Summary */}
+        <View style={[styles.spendingCard, { backgroundColor: colors.surface }]}>
+          <View style={styles.spendingHeader}>
+            <View>
+              <Text style={[styles.spendingTitle, { color: colors.text }]}>
+                Spending Summary
+              </Text>
+              <Text style={[styles.spendingSubtitle, { color: colors.text }]}>
+                Top categories this month
+              </Text>
+            </View>
+            <Ionicons name="pie-chart-outline" size={22} color={colors.primary} />
+          </View>
+          {spendingCategories.length === 0 ? (
+            <View style={styles.spendingEmptyState}>
+              <Text style={[styles.spendingEmptyText, { color: colors.text }]}>
+                No category spending yet
+              </Text>
+            </View>
+          ) : (
+            spendingCategories.map(([category, amount]) => (
+              <View key={category} style={styles.spendingRow}>
+                <View style={styles.spendingRowHeader}>
+                  <Text style={[styles.spendingCategory, { color: colors.text }]}>
+                    {category}
+                  </Text>
+                  <Text style={[styles.spendingAmount, { color: colors.text }]}>
+                    {formatCurrency(amount)}
+                  </Text>
+                </View>
+                <View style={styles.spendingTrack}>
+                  <View
+                    style={[
+                      styles.spendingBar,
+                      {
+                        width: `${Math.max(
+                          (amount / largestCategorySpending) * 100,
+                          4,
+                        )}%`,
+                        backgroundColor: colors.primary,
+                      },
+                    ]}
+                  />
+                </View>
+              </View>
+            ))
+          )}
         </View>
 
         {/* Primary Action */}
@@ -999,6 +1052,69 @@ const styles = StyleSheet.create({
   categoryBudgetSection: {
     marginTop: 8,
     marginBottom: 6,
+  },
+  spendingCard: {
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 20,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 5,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  spendingHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 14,
+  },
+  spendingTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+  spendingSubtitle: {
+    fontSize: 12,
+    opacity: 0.65,
+    marginTop: 3,
+  },
+  spendingRow: {
+    marginTop: 10,
+  },
+  spendingRowHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 6,
+  },
+  spendingCategory: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  spendingAmount: {
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  spendingTrack: {
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "rgba(128, 128, 128, 0.18)",
+    overflow: "hidden",
+  },
+  spendingBar: {
+    height: "100%",
+    borderRadius: 4,
+  },
+  spendingEmptyState: {
+    paddingVertical: 8,
+  },
+  spendingEmptyText: {
+    fontSize: 14,
+    opacity: 0.65,
   },
   accountsButtonText: {
     color: LightTheme.colors.primary,
