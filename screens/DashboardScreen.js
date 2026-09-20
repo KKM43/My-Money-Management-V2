@@ -35,6 +35,7 @@ const { width, height } = Dimensions.get("window");
 export default function DashboardScreen({ navigation }) {
   const { colors, isDark, themeMode, cycleThemeMode } = useTheme();
   const [transactions, setTransactions] = useState([]);
+  const [accounts, setAccounts] = useState([]);
   const [balance, setBalance] = useState(0);
   const [expenseTotal, setExpenseTotal] = useState(0);
   const [incomeTotal, setIncomeTotal] = useState(0);
@@ -45,6 +46,30 @@ export default function DashboardScreen({ navigation }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [monthlyBudget, setMonthlyBudget] = useState(20000); // Default budget
   const [showMonthPicker, setShowMonthPicker] = useState(false);
+
+  useEffect(() => {
+    const accountsRef = collection(
+      db,
+      "users",
+      auth.currentUser.uid,
+      "accounts",
+    );
+
+    return onSnapshot(
+      accountsRef,
+      (snapshot) => {
+        setAccounts(
+          snapshot.docs.map((account) => ({
+            id: account.id,
+            ...account.data(),
+          })),
+        );
+      },
+      (error) => {
+        console.error("Error loading accounts:", error);
+      },
+    );
+  }, []);
 
   useEffect(() => {
     const budgetRef = doc(
@@ -93,10 +118,28 @@ export default function DashboardScreen({ navigation }) {
 
       let totalIncome = 0;
       let totalExpense = 0;
+      let netWorthPaise = accounts.reduce(
+        (total, account) => total + Number(account.openingBalancePaise || 0),
+        0,
+      );
+
+      data.forEach((item) => {
+        const amountPaise = Number.isInteger(item.amountPaise)
+          ? item.amountPaise
+          : Math.round(Number(item.amount || 0) * 100);
+
+        if (item.type === "transfer") {
+          return;
+        }
+
+        if (!item.accountId) return;
+
+        if (item.type === "income") netWorthPaise += amountPaise;
+        else netWorthPaise -= amountPaise;
+      });
 
       selectedMonthData.forEach((item) => {
         if (item.type === "transfer") return;
-
         const amountPaise = Number.isInteger(item.amountPaise)
           ? item.amountPaise
           : Math.round(Number(item.amount || 0) * 100);
@@ -107,7 +150,7 @@ export default function DashboardScreen({ navigation }) {
 
       setIncomeTotal(totalIncome);
       setExpenseTotal(totalExpense);
-      setBalance(totalIncome - totalExpense);
+      setBalance(netWorthPaise / 100);
 
       if (totalExpense > monthlyBudget) {
         Alert.alert(
@@ -118,7 +161,7 @@ export default function DashboardScreen({ navigation }) {
     });
 
     return unsubscribe;
-  }, [currentMonth, currentYear, monthlyBudget]);
+  }, [accounts, currentMonth, currentYear, monthlyBudget]);
 
   const handleDelete = async (id) => {
     try {
