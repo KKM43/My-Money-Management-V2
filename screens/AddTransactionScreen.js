@@ -72,6 +72,7 @@ export default function AddTransactionScreen({ navigation, route }) {
     getTransactionDate(editingTransaction),
   );
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [accounts, setAccounts] = useState([]);
   const [selectedAccountId, setSelectedAccountId] = useState(
     editingTransaction?.accountId || "",
@@ -336,6 +337,7 @@ export default function AddTransactionScreen({ navigation, route }) {
                 <Text
                   style={[
                     styles.typeButtonText,
+                    { color: colors.text },
                     type === "expense" && styles.typeButtonTextActive,
                   ]}
                 >
@@ -360,6 +362,7 @@ export default function AddTransactionScreen({ navigation, route }) {
                 <Text
                   style={[
                     styles.typeButtonText,
+                    { color: colors.text },
                     type === "income" && styles.typeButtonTextActive,
                   ]}
                 >
@@ -383,6 +386,7 @@ export default function AddTransactionScreen({ navigation, route }) {
                 <Text
                   style={[
                     styles.typeButtonText,
+                    { color: colors.text },
                     type === "transfer" && styles.typeButtonTextActive,
                   ]}
                 >
@@ -641,49 +645,100 @@ export default function AddTransactionScreen({ navigation, route }) {
                 <Text style={[styles.sectionTitle, { color: colors.text }]}>
                   Select Category
                 </Text>
-                <View style={styles.categoriesGrid}>
-                  {currentCategories.map((item, index) => (
-                    <TouchableOpacity
-                      key={index}
-                      style={[
-                        styles.categoryCard,
-                        {
-                          backgroundColor:
-                            category === item.name
-                              ? isDark
-                                ? "#17365D"
-                                : "#E3F2FD"
-                              : isDark
-                                ? "#252525"
-                                : "#F8F9FA",
-                          borderColor: isDark ? "#444" : item.color,
-                        },
-                        category === item.name && styles.selectedCategoryCard,
-                        { borderColor: item.color },
-                      ]}
-                      onPress={() => handleCategorySelect(item)}
-                    >
-                      <View
-                        style={[
-                          styles.categoryIcon,
-                          { backgroundColor: item.color },
-                        ]}
-                      >
-                        <Ionicons name={item.icon} size={18} color="white" />
-                      </View>
-                      <Text
-                        style={[
-                          styles.categoryName,
-                          category === item.name && styles.selectedCategoryName,
-                        ]}
-                      >
-                        {item.name}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
+                <TouchableOpacity
+                  style={[
+                    styles.categorySelector,
+                    {
+                      backgroundColor: isDark ? "#252525" : "#F8F9FA",
+                      borderColor: isDark ? "#444" : "#E9ECEF",
+                    },
+                  ]}
+                  onPress={() => setShowCategoryPicker(true)}
+                >
+                  <Ionicons
+                    name="pricetag-outline"
+                    size={20}
+                    color={colors.primary}
+                  />
+                  <Text style={[styles.categorySelectorText, { color: colors.text }]}>
+                    {category || "Choose a category"}
+                  </Text>
+                  <Ionicons name="chevron-down" size={20} color={colors.text} />
+                </TouchableOpacity>
               </>
             )}
+
+            <Modal
+              visible={showCategoryPicker}
+              transparent
+              animationType="slide"
+              onRequestClose={() => setShowCategoryPicker(false)}
+            >
+              <View style={styles.categoryModalOverlay}>
+                <View
+                  style={[
+                    styles.categoryModal,
+                    { backgroundColor: colors.surface },
+                  ]}
+                >
+                  <View style={styles.dateModalHeader}>
+                    <Text style={[styles.dateModalTitle, { color: colors.text }]}>
+                      Choose category
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() => setShowCategoryPicker(false)}
+                      accessibilityLabel="Close category selector"
+                    >
+                      <Ionicons name="close" size={24} color={colors.text} />
+                    </TouchableOpacity>
+                  </View>
+                  <ScrollView showsVerticalScrollIndicator={false}>
+                    <View style={styles.categoriesGrid}>
+                      {currentCategories.map((item, index) => (
+                        <TouchableOpacity
+                          key={index}
+                          style={[
+                            styles.categoryCard,
+                            {
+                              backgroundColor:
+                                category === item.name
+                                  ? isDark
+                                    ? "#17365D"
+                                    : "#E3F2FD"
+                                  : isDark
+                                    ? "#252525"
+                                    : "#F8F9FA",
+                              borderColor: item.color,
+                            },
+                          ]}
+                          onPress={() => {
+                            handleCategorySelect(item);
+                            setShowCategoryPicker(false);
+                          }}
+                        >
+                          <View
+                            style={[
+                              styles.categoryIcon,
+                              { backgroundColor: item.color },
+                            ]}
+                          >
+                            <Ionicons name={item.icon} size={18} color="white" />
+                          </View>
+                          <Text
+                            style={[
+                              styles.categoryName,
+                              { color: colors.text },
+                            ]}
+                          >
+                            {item.name}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </ScrollView>
+                </View>
+              </View>
+            </Modal>
 
             {/* Custom Category Input */}
             {isOther && (
@@ -774,13 +829,13 @@ const styles = StyleSheet.create({
   scrollContainer: {
     flexGrow: 1,
     paddingHorizontal: 20,
-    paddingVertical: 20,
+    paddingVertical: 14,
   },
   headerSection: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 30,
+    marginBottom: 18,
     paddingTop: 10,
   },
   backButton: {
@@ -803,7 +858,7 @@ const styles = StyleSheet.create({
   formCard: {
     backgroundColor: "white",
     borderRadius: 20,
-    padding: 20,
+    padding: 18,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
@@ -818,7 +873,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#F8F9FA",
     borderRadius: 12,
     padding: 4,
-    marginBottom: 25,
+    marginBottom: 16,
   },
   typeButton: {
     flex: 1,
@@ -1006,6 +1061,31 @@ const styles = StyleSheet.create({
     color: "#666",
     textAlign: "center",
     lineHeight: 14,
+  },
+  categorySelector: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    marginBottom: 16,
+  },
+  categorySelectorText: {
+    flex: 1,
+    fontSize: 16,
+    marginLeft: 10,
+  },
+  categoryModalOverlay: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+  },
+  categoryModal: {
+    maxHeight: "72%",
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    padding: 20,
   },
   selectedCategoryName: {
     color: LightTheme.colors.primary,
