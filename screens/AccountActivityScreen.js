@@ -89,13 +89,13 @@ export default function AccountActivityScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
-    padding: 20,
+    padding: 16,
     backgroundColor: "#F8F9FA",
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 24,
+    marginBottom: 16,
   },
   headerText: {
     flex: 1,
