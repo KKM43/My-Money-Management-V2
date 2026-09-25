@@ -21,8 +21,16 @@ import TransactionItem from "../components/TransactionItem";
 import { LightTheme } from "../theme";
 import { useTheme } from "../ThemeContext";
 import {
+  calculateFixedCommitmentsPaise,
+  calculateMoneyAfterFixedPaise,
   calculateNetWorthPaise,
+  calculatePlannedIncomePaise,
+  calculatePlannedSpendablePaise,
+  calculateRemainingSpendablePaise,
+  calculateSafeToSpendPerDayPaise,
+  calculateVariableSpentPaise,
   getAmountPaise,
+  getDaysRemainingInMonth,
   isTransactionInMonth,
 } from "../utils/finance";
 
@@ -30,11 +38,17 @@ export default function DashboardScreen({ navigation }) {
   const { colors, isDark, themeMode, cycleThemeMode } = useTheme();
   const [transactions, setTransactions] = useState([]);
   const [accounts, setAccounts] = useState([]);
+  const [monthlyPlan, setMonthlyPlan] = useState(null);
+  const [isPlanLoading, setIsPlanLoading] = useState(true);
   const [balance, setBalance] = useState(0);
   const [expenseTotal, setExpenseTotal] = useState(0);
   const [incomeTotal, setIncomeTotal] = useState(0);
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
+  const selectedMonthKey = `${currentYear}-${String(currentMonth + 1).padStart(
+    2,
+    "0",
+  )}`;
   const [refreshing, setRefreshing] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState("all"); // all, income, expense
   const [searchQuery, setSearchQuery] = useState("");
@@ -65,6 +79,42 @@ export default function DashboardScreen({ navigation }) {
       },
     );
   }, []);
+
+  useEffect(() => {
+    const userId = auth.currentUser?.uid;
+
+    if (!userId) {
+      setMonthlyPlan(null);
+      setIsPlanLoading(false);
+      return;
+    }
+
+    setIsPlanLoading(true);
+
+    const planRef = doc(db, "users", userId, "monthlyPlans", selectedMonthKey);
+
+    return onSnapshot(
+      planRef,
+      (snapshot) => {
+        if (snapshot.exists()) {
+          setMonthlyPlan({
+            id: snapshot.id,
+            ...snapshot.data(),
+          });
+        } else {
+          setMonthlyPlan(null);
+        }
+
+        setIsPlanLoading(false);
+      },
+      (error) => {
+        console.error("Error loading monthly plan:", error);
+
+        setMonthlyPlan(null);
+        setIsPlanLoading(false);
+      },
+    );
+  }, [selectedMonthKey]);
 
   useEffect(() => {
     const budgetRef = doc(
@@ -177,6 +227,57 @@ export default function DashboardScreen({ navigation }) {
     return matchesType && matchesSearch;
   });
 
+  const incomeSources = Array.isArray(monthlyPlan?.incomeSources)
+    ? monthlyPlan.incomeSources
+    : [];
+
+  const fixedCommitments = Array.isArray(monthlyPlan?.fixedCommitments)
+    ? monthlyPlan.fixedCommitments
+    : [];
+
+  const plannedIncomePaise = calculatePlannedIncomePaise(incomeSources);
+
+  const plannedFixedPaise = calculateFixedCommitmentsPaise(fixedCommitments);
+
+  const moneyAfterFixedPaise = calculateMoneyAfterFixedPaise(
+    plannedIncomePaise,
+    plannedFixedPaise,
+  );
+
+  const savingsTargetPaise = Number.isInteger(monthlyPlan?.savingsTargetPaise)
+    ? monthlyPlan.savingsTargetPaise
+    : 0;
+
+  const plannedSpendablePaise = calculatePlannedSpendablePaise(
+    moneyAfterFixedPaise,
+    savingsTargetPaise,
+  );
+
+  const now = new Date();
+
+  const isCurrentMonthSelected =
+    currentMonth === now.getMonth() && currentYear === now.getFullYear();
+
+  const variableSpentPaise = calculateVariableSpentPaise(
+    transactions,
+    currentYear,
+    currentMonth,
+    now,
+  );
+
+  const remainingSpendablePaise = calculateRemainingSpendablePaise(
+    plannedSpendablePaise,
+    variableSpentPaise,
+  );
+
+  const daysRemaining = isCurrentMonthSelected
+    ? getDaysRemainingInMonth(now)
+    : 0;
+
+  const safeToSpendPerDayPaise = isCurrentMonthSelected
+    ? calculateSafeToSpendPerDayPaise(remainingSpendablePaise, now)
+    : null;
+
   const remainingBudget = monthlyBudget - expenseTotal;
   const progress =
     monthlyBudget > 0 ? Math.min(expenseTotal / monthlyBudget, 1) : 0;
@@ -198,10 +299,7 @@ export default function DashboardScreen({ navigation }) {
     .sort(([, firstAmount], [, secondAmount]) => secondAmount - firstAmount)
     .slice(0, 5);
   const largestCategorySpending = spendingCategories[0]?.[1] || 0;
-  const selectedMonthKey = `${currentYear}-${String(currentMonth + 1).padStart(
-    2,
-    "0",
-  )}`;
+
   const selectedCategoryBudgets = Object.entries(categoryBudgets).reduce(
     (budgets, [key, amount]) => {
       if (key.includes("|")) {
@@ -719,7 +817,7 @@ export default function DashboardScreen({ navigation }) {
               ["person-outline", "Profile", "Profile"],
               ["wallet-outline", "Accounts", "Accounts"],
               ["analytics-outline", "Analytics", "Analytics"],
-               ["flag-outline", "Savings Goals", "SavingsGoals"],
+              ["flag-outline", "Savings Goals", "SavingsGoals"],
               ["settings-outline", "Budget Settings", "BudgetSettings"],
             ].map(([icon, label, routeName]) => (
               <TouchableOpacity
