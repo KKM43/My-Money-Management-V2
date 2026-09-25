@@ -92,7 +92,7 @@ export default function DashboardScreen({ navigation }) {
       budgetRef,
       (budgetSnapshot) => {
         if (budgetSnapshot.exists()) {
-          setMonthlyBudget(budgetSnapshot.data().monthlyBudget || 20000);
+          setMonthlyBudget(budgetSnapshot.data().monthlyBudget ?? 20000);
           setCategoryBudgets(budgetSnapshot.data().categoryBudgets || {});
         } else {
           setMonthlyBudget(20000);
@@ -136,7 +136,6 @@ export default function DashboardScreen({ navigation }) {
       setIncomeTotal(totalIncome);
       setExpenseTotal(totalExpense);
       setBalance(netWorthPaise / 100);
-
     });
 
     return unsubscribe;
@@ -192,9 +191,12 @@ export default function DashboardScreen({ navigation }) {
   });
 
   const remainingBudget = monthlyBudget - expenseTotal;
-  const progress = Math.min(expenseTotal / monthlyBudget, 1);
-  const budgetPercentage = Math.round((expenseTotal / monthlyBudget) * 100);
-  const isOverBudget = remainingBudget < 0;
+  const progress =
+    monthlyBudget > 0 ? Math.min(expenseTotal / monthlyBudget, 1) : 0;
+  const budgetPercentage =
+    monthlyBudget > 0 ? Math.round((expenseTotal / monthlyBudget) * 100) : 0;
+
+  const isOverBudget = monthlyBudget >= 0 && expenseTotal > monthlyBudget;
   const categorySpending = transactions.reduce((totals, transaction) => {
     if (transaction.type === "expense" && transaction.category) {
       const amountPaise = Number.isInteger(transaction.amountPaise)
@@ -220,9 +222,12 @@ export default function DashboardScreen({ navigation }) {
         if (monthKey === selectedMonthKey) {
           budgets[category] = amount;
         }
-      } else if (selectedMonthKey === `${new Date().getFullYear()}-${String(
-        new Date().getMonth() + 1,
-      ).padStart(2, "0")}`) {
+      } else if (
+        selectedMonthKey ===
+        `${new Date().getFullYear()}-${String(
+          new Date().getMonth() + 1,
+        ).padStart(2, "0")}`
+      ) {
         budgets[key] = amount;
       }
       return budgets;
@@ -336,7 +341,9 @@ export default function DashboardScreen({ navigation }) {
           </View>
 
           {/* Balance Card */}
-          <View style={[styles.balanceCard, { backgroundColor: colors.surface }]}>
+          <View
+            style={[styles.balanceCard, { backgroundColor: colors.surface }]}
+          >
             <Text style={styles.balanceLabel}>Total Balance</Text>
             <Text
               style={[
@@ -349,14 +356,18 @@ export default function DashboardScreen({ navigation }) {
             <View style={styles.balanceStats}>
               <View style={styles.statItem}>
                 <Ionicons name="trending-up" size={16} color="#4ECDC4" />
-                <Text style={[styles.statLabel, { color: colors.text }]}>Income</Text>
+                <Text style={[styles.statLabel, { color: colors.text }]}>
+                  Income
+                </Text>
                 <Text style={[styles.statValue, { color: colors.text }]}>
                   {formatCurrency(incomeTotal)}
                 </Text>
               </View>
               <View style={styles.statItem}>
                 <Ionicons name="trending-down" size={16} color="#FF6B6B" />
-                <Text style={[styles.statLabel, { color: colors.text }]}>Expenses</Text>
+                <Text style={[styles.statLabel, { color: colors.text }]}>
+                  Expenses
+                </Text>
                 <Text style={[styles.statValue, { color: colors.text }]}>
                   {formatCurrency(expenseTotal)}
                 </Text>
@@ -384,7 +395,9 @@ export default function DashboardScreen({ navigation }) {
               </Text>
             </View>
             <View style={styles.budgetHeaderActions}>
-              <Text style={[styles.budgetPercentage, { color: colors.primary }]}>
+              <Text
+                style={[styles.budgetPercentage, { color: colors.primary }]}
+              >
                 {budgetPercentage}%
               </Text>
               <TouchableOpacity
@@ -392,7 +405,11 @@ export default function DashboardScreen({ navigation }) {
                 onPress={() => navigation.navigate("BudgetSettings")}
                 accessibilityLabel="Open budget settings"
               >
-                <Ionicons name="settings-outline" size={18} color={colors.primary} />
+                <Ionicons
+                  name="settings-outline"
+                  size={18}
+                  color={colors.primary}
+                />
               </TouchableOpacity>
             </View>
           </View>
@@ -402,27 +419,44 @@ export default function DashboardScreen({ navigation }) {
               <Text style={[styles.budgetTitle, { color: colors.text }]}>
                 Category Budgets
               </Text>
-              {Object.entries(selectedCategoryBudgets).map(([category, budget]) => {
-                const spent = categorySpending[category] || 0;
-                const percentage = Math.round((spent / budget) * 100);
-                return (
-                  <View key={category} style={styles.categoryBudgetRow}>
-                    <View style={styles.categoryBudgetHeader}>
-                      <Text style={[styles.categoryBudgetName, { color: colors.text }]}>
-                        {category}
-                      </Text>
-                      <Text style={[styles.categoryBudgetAmount, { color: colors.text }]}>
-                        {formatCurrency(spent)} / {formatCurrency(budget)}
-                      </Text>
+              {Object.entries(selectedCategoryBudgets).map(
+                ([category, budget]) => {
+                  const spent = categorySpending[category] || 0;
+
+                  const percentage =
+                    budget > 0 ? Math.round((spent / budget) * 100) : 0;
+
+                  const categoryProgress =
+                    budget > 0 ? Math.min(spent / budget, 1) : 0;
+                  return (
+                    <View key={category} style={styles.categoryBudgetRow}>
+                      <View style={styles.categoryBudgetHeader}>
+                        <Text
+                          style={[
+                            styles.categoryBudgetName,
+                            { color: colors.text },
+                          ]}
+                        >
+                          {category}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.categoryBudgetAmount,
+                            { color: colors.text },
+                          ]}
+                        >
+                          {formatCurrency(spent)} / {formatCurrency(budget)}
+                        </Text>
+                      </View>
+                      <ProgressBar
+                        progress={categoryProgress}
+                        color={percentage > 100 ? "#FF6B6B" : colors.primary}
+                        style={styles.categoryProgressBar}
+                      />
                     </View>
-                    <ProgressBar
-                      progress={Math.min(spent / budget, 1)}
-                      color={percentage > 100 ? "#FF6B6B" : colors.primary}
-                      style={styles.categoryProgressBar}
-                    />
-                  </View>
-                );
-              })}
+                  );
+                },
+              )}
             </View>
           )}
           <View style={styles.budgetProgress}>
@@ -473,7 +507,9 @@ export default function DashboardScreen({ navigation }) {
         </View>
 
         {/* Spending Summary */}
-        <View style={[styles.spendingCard, { backgroundColor: colors.surface }]}>
+        <View
+          style={[styles.spendingCard, { backgroundColor: colors.surface }]}
+        >
           <View style={styles.spendingHeader}>
             <View>
               <Text style={[styles.spendingTitle, { color: colors.text }]}>
@@ -483,7 +519,11 @@ export default function DashboardScreen({ navigation }) {
                 Top categories this month
               </Text>
             </View>
-            <Ionicons name="pie-chart-outline" size={22} color={colors.primary} />
+            <Ionicons
+              name="pie-chart-outline"
+              size={22}
+              color={colors.primary}
+            />
           </View>
           {spendingCategories.length === 0 ? (
             <View style={styles.spendingEmptyState}>
@@ -495,7 +535,9 @@ export default function DashboardScreen({ navigation }) {
             spendingCategories.map(([category, amount]) => (
               <View key={category} style={styles.spendingRow}>
                 <View style={styles.spendingRowHeader}>
-                  <Text style={[styles.spendingCategory, { color: colors.text }]}>
+                  <Text
+                    style={[styles.spendingCategory, { color: colors.text }]}
+                  >
                     {category}
                   </Text>
                   <Text style={[styles.spendingAmount, { color: colors.text }]}>
@@ -537,7 +579,9 @@ export default function DashboardScreen({ navigation }) {
           </TouchableOpacity>
         </View>
 
-        <View style={[styles.searchContainer, { backgroundColor: colors.surface }]}>
+        <View
+          style={[styles.searchContainer, { backgroundColor: colors.surface }]}
+        >
           <Ionicons
             name="search-outline"
             size={20}
@@ -563,7 +607,9 @@ export default function DashboardScreen({ navigation }) {
         </View>
 
         {/* Filter Tabs */}
-        <View style={[styles.filterContainer, { backgroundColor: colors.surface }]}>
+        <View
+          style={[styles.filterContainer, { backgroundColor: colors.surface }]}
+        >
           <TouchableOpacity
             style={[
               styles.filterTab,
@@ -618,7 +664,12 @@ export default function DashboardScreen({ navigation }) {
         </View>
 
         {/* Transactions List */}
-        <View style={[styles.transactionsContainer, { backgroundColor: colors.surface }]}>
+        <View
+          style={[
+            styles.transactionsContainer,
+            { backgroundColor: colors.surface },
+          ]}
+        >
           <Text style={[styles.transactionsTitle, { color: colors.text }]}>
             Recent Transactions ({filteredTransactions.length})
           </Text>
@@ -702,7 +753,13 @@ export default function DashboardScreen({ navigation }) {
               accessibilityLabel={`Theme mode: ${themeMode}`}
             >
               <Ionicons
-                name={themeMode === "system" ? "contrast-outline" : isDark ? "moon-outline" : "sunny-outline"}
+                name={
+                  themeMode === "system"
+                    ? "contrast-outline"
+                    : isDark
+                      ? "moon-outline"
+                      : "sunny-outline"
+                }
                 size={21}
                 color={colors.primary}
               />
