@@ -13,6 +13,7 @@ import AccountsScreen from "./screens/AccountsScreen";
 import AccountActivityScreen from "./screens/AccountActivityScreen";
 import ProfileScreen from "./screens/ProfileScreen";
 import AnalyticsScreen from "./screens/AnalyticsScreen";
+import SavingsGoalsScreen from "./screens/SavingsGoalsScreen";
 import { auth } from "./services/firebaseConfig";
 import { ThemeProvider } from "./ThemeContext";
 
@@ -55,6 +56,11 @@ export default function App() {
               />
 
               <Stack.Screen name="Analytics" component={AnalyticsScreen} />
+
+              <Stack.Screen
+                name="SavingsGoals"
+                component={SavingsGoalsScreen}
+              />
               <Stack.Screen
                 name="BudgetSettings"
                 component={BudgetSettingsScreen}
