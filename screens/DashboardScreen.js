@@ -718,6 +718,7 @@ export default function DashboardScreen({ navigation }) {
             {[
               ["person-outline", "Profile", "Profile"],
               ["wallet-outline", "Accounts", "Accounts"],
+              ["analytics-outline", "Analytics", "Analytics"],
               ["settings-outline", "Budget Settings", "BudgetSettings"],
             ].map(([icon, label, routeName]) => (
               <TouchableOpacity

@@ -12,6 +12,7 @@ import BudgetSettingsScreen from "./screens/BudgetSettingsScreen";
 import AccountsScreen from "./screens/AccountsScreen";
 import AccountActivityScreen from "./screens/AccountActivityScreen";
 import ProfileScreen from "./screens/ProfileScreen";
+import AnalyticsScreen from "./screens/AnalyticsScreen";
 import { auth } from "./services/firebaseConfig";
 import { ThemeProvider } from "./ThemeContext";
 
@@ -41,35 +42,37 @@ export default function App() {
   return (
     <ThemeProvider>
       <NavigationContainer>
-      <Stack.Navigator
-        key={user ? "authenticated" : "unauthenticated"}
-        screenOptions={{ headerShown: false }}
-      >
-        {user ? (
-          <>
-            <Stack.Screen name="Dashboard" component={DashboardScreen} />
-            <Stack.Screen
-              name="AddTransaction"
-              component={AddTransactionScreen}
-            />
-            <Stack.Screen
-              name="BudgetSettings"
-              component={BudgetSettingsScreen}
-            />
-            <Stack.Screen name="Accounts" component={AccountsScreen} />
-            <Stack.Screen
-              name="AccountActivity"
-              component={AccountActivityScreen}
-            />
-            <Stack.Screen name="Profile" component={ProfileScreen} />
-          </>
-        ) : (
-          <>
-            <Stack.Screen name="Login" component={LoginScreen} />
-            <Stack.Screen name="Signup" component={SignupScreen} />
-          </>
-        )}
-      </Stack.Navigator>
+        <Stack.Navigator
+          key={user ? "authenticated" : "unauthenticated"}
+          screenOptions={{ headerShown: false }}
+        >
+          {user ? (
+            <>
+              <Stack.Screen name="Dashboard" component={DashboardScreen} />
+              <Stack.Screen
+                name="AddTransaction"
+                component={AddTransactionScreen}
+              />
+
+              <Stack.Screen name="Analytics" component={AnalyticsScreen} />
+              <Stack.Screen
+                name="BudgetSettings"
+                component={BudgetSettingsScreen}
+              />
+              <Stack.Screen name="Accounts" component={AccountsScreen} />
+              <Stack.Screen
+                name="AccountActivity"
+                component={AccountActivityScreen}
+              />
+              <Stack.Screen name="Profile" component={ProfileScreen} />
+            </>
+          ) : (
+            <>
+              <Stack.Screen name="Login" component={LoginScreen} />
+              <Stack.Screen name="Signup" component={SignupScreen} />
+            </>
+          )}
+        </Stack.Navigator>
       </NavigationContainer>
     </ThemeProvider>
   );
