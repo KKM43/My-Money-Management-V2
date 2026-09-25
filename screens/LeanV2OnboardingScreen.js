@@ -16,7 +16,7 @@ import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import { auth, db } from "../services/firebaseConfig";
 import { useTheme } from "../ThemeContext";
 import {
-    calculateFixedCommitmentsPaise,
+  calculateFixedCommitmentsPaise,
   calculateMoneyAfterFixedPaise,
   calculatePlannedIncomePaise,
   calculatePlannedSpendablePaise,
@@ -118,10 +118,8 @@ export default function LeanV2OnboardingScreen() {
             );
           }
           if (Number.isInteger(planData.savingsTargetPaise)) {
-  setSavingsTarget(
-    (planData.savingsTargetPaise / 100).toString(),
-  );
-}
+            setSavingsTarget((planData.savingsTargetPaise / 100).toString());
+          }
         }
       } catch (error) {
         console.error("Error loading Lean V2 onboarding:", error);
@@ -257,22 +255,18 @@ export default function LeanV2OnboardingScreen() {
     totalFixedPaise,
   );
 
-  const parsedSavingsTargetPaise =
-  parseMoneyInputToPaise(savingsTarget);
+  const parsedSavingsTargetPaise = parseMoneyInputToPaise(savingsTarget);
 
-const savingsTargetPaise =
-  Number.isInteger(parsedSavingsTargetPaise)
+  const savingsTargetPaise = Number.isInteger(parsedSavingsTargetPaise)
     ? parsedSavingsTargetPaise
     : 0;
 
-const savingsPercentage =
-  calculateSavingsPercentage(
+  const savingsPercentage = calculateSavingsPercentage(
     totalIncomePaise,
     savingsTargetPaise,
   );
 
-const plannedSpendablePaise =
-  calculatePlannedSpendablePaise(
+  const plannedSpendablePaise = calculatePlannedSpendablePaise(
     moneyAfterFixedPaise,
     savingsTargetPaise,
   );
@@ -441,17 +435,17 @@ const plannedSpendablePaise =
       );
 
       await setDoc(
-  doc(db, "users", userId),
-  {
-    leanV2OnboardingStep: "savings",
-    updatedAt: serverTimestamp(),
-  },
-  {
-    merge: true,
-  },
-);
+        doc(db, "users", userId),
+        {
+          leanV2OnboardingStep: "savings",
+          updatedAt: serverTimestamp(),
+        },
+        {
+          merge: true,
+        },
+      );
 
-setStep("savings");
+      setStep("savings");
     } catch (error) {
       Alert.alert("Error", error.message || "Could not save your commitments.");
     } finally {
@@ -460,88 +454,107 @@ setStep("savings");
   };
 
   const handleSavingsTargetChange = (value) => {
-  const cleaned = value.replace(
-    /[^0-9.]/g,
-    "",
-  );
+    const cleaned = value.replace(/[^0-9.]/g, "");
 
-  const parts = cleaned.split(".");
+    const parts = cleaned.split(".");
 
-  if (parts.length > 2) {
-    return;
-  }
+    if (parts.length > 2) {
+      return;
+    }
 
-  const [rupees, paise = ""] = parts;
+    const [rupees, paise = ""] = parts;
 
-  const normalized = cleaned.includes(".")
-    ? `${rupees || "0"}.${paise.slice(0, 2)}`
-    : rupees;
+    const normalized = cleaned.includes(".")
+      ? `${rupees || "0"}.${paise.slice(0, 2)}`
+      : rupees;
 
-  setSavingsTarget(normalized);
-};
+    setSavingsTarget(normalized);
+  };
 
+  const handleSaveSavings = async () => {
+    const amountPaise = parseMoneyInputToPaise(savingsTarget);
 
-const handleSaveSavings = async () => {
-  const amountPaise =
-    parseMoneyInputToPaise(savingsTarget);
+    if (!Number.isInteger(amountPaise) || amountPaise < 0) {
+      Alert.alert("Check your savings target", "Enter a valid savings amount.");
+      return;
+    }
 
-  if (
-    !Number.isInteger(amountPaise) ||
-    amountPaise < 0
-  ) {
-    Alert.alert(
-      "Check your savings target",
-      "Enter a valid savings amount.",
-    );
-    return;
-  }
+    const userId = auth.currentUser?.uid;
 
+    if (!userId) {
+      return;
+    }
+
+    setIsSaving(true);
+
+    try {
+      const monthKey = getCurrentMonthKey();
+
+      await setDoc(
+        doc(db, "users", userId, "monthlyPlans", monthKey),
+        {
+          monthKey,
+          savingsTargetPaise: amountPaise,
+          updatedAt: serverTimestamp(),
+        },
+        {
+          merge: true,
+        },
+      );
+
+      await setDoc(
+        doc(db, "users", userId),
+        {
+          leanV2OnboardingStep: "review",
+          updatedAt: serverTimestamp(),
+        },
+        {
+          merge: true,
+        },
+      );
+
+      setStep("review");
+    } catch (error) {
+      Alert.alert(
+        "Error",
+        error.message || "Could not save your savings target.",
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleCompleteOnboarding = async () => {
   const userId = auth.currentUser?.uid;
 
   if (!userId) {
+    Alert.alert(
+      "Sign in required",
+      "Please sign in again and continue.",
+    );
     return;
   }
 
   setIsSaving(true);
 
   try {
-    const monthKey =
-      getCurrentMonthKey();
-
     await setDoc(
-      doc(
-        db,
-        "users",
-        userId,
-        "monthlyPlans",
-        monthKey,
-      ),
+      doc(db, "users", userId),
       {
-        monthKey,
-        savingsTargetPaise:
-          amountPaise,
-        updatedAt:
-          serverTimestamp(),
+        leanV2OnboardingComplete: true,
+        leanV2OnboardingStep: "complete",
+        onboardingCompletedAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
       },
       {
         merge: true,
       },
     );
-
-    /*
-     * Plan Review is the next step.
-     * We will add the transition when
-     * the Review screen exists.
-     */
-    Alert.alert(
-      "Savings saved",
-      "Your savings target has been saved.",
-    );
   } catch (error) {
     Alert.alert(
       "Error",
       error.message ||
-        "Could not save your savings target.",
+        "Could not finish setting up your plan.",
     );
   } finally {
     setIsSaving(false);
@@ -1043,289 +1056,373 @@ const handleSaveSavings = async () => {
   }
 
   if (step === "savings") {
-  return (
-    <KeyboardAvoidingView
-      style={[
-        styles.container,
-        {
-          backgroundColor:
-            colors.background,
-        },
-      ]}
-      behavior={
-        Platform.OS === "ios"
-          ? "padding"
-          : undefined
-      }
-    >
-      <ScrollView
-        contentContainerStyle={
-          styles.incomeContent
-        }
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
+    return (
+      <KeyboardAvoidingView
+        style={[
+          styles.container,
+          {
+            backgroundColor: colors.background,
+          },
+        ]}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <TouchableOpacity
-          onPress={() =>
-            setStep("fixedCommitments")
-          }
-          style={styles.backButton}
+        <ScrollView
+          contentContainerStyle={styles.incomeContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
+          <TouchableOpacity
+            onPress={() => setStep("fixedCommitments")}
+            style={styles.backButton}
+          >
+            <Text
+              style={[
+                styles.backButtonText,
+                {
+                  color: colors.primary,
+                },
+              ]}
+            >
+              ← Back
+            </Text>
+          </TouchableOpacity>
+
           <Text
             style={[
-              styles.backButtonText,
+              styles.stepText,
               {
                 color: colors.primary,
               },
             ]}
           >
-            ← Back
+            STEP 4
           </Text>
-        </TouchableOpacity>
 
+          <Text style={[styles.title, { color: colors.text }]}>
+            Protect some money
+          </Text>
+
+          <Text style={[styles.subtitle, { color: colors.text }]}>
+            Choose how much money you want to keep aside as savings this month.
+          </Text>
+
+          <View
+            style={[
+              styles.summaryCard,
+              {
+                backgroundColor: colors.surface,
+              },
+            ]}
+          >
+            <View style={styles.summaryRow}>
+              <Text style={[styles.summaryLabel, { color: colors.text }]}>
+                Monthly income
+              </Text>
+
+              <Text style={[styles.summaryValue, { color: colors.text }]}>
+                {new Intl.NumberFormat("en-IN", {
+                  style: "currency",
+                  currency: "INR",
+                  maximumFractionDigits: 2,
+                }).format(totalIncomePaise / 100)}
+              </Text>
+            </View>
+
+            <View style={styles.summaryRow}>
+              <Text style={[styles.summaryLabel, { color: colors.text }]}>
+                Fixed commitments
+              </Text>
+
+              <Text style={[styles.summaryValue, { color: colors.text }]}>
+                {new Intl.NumberFormat("en-IN", {
+                  style: "currency",
+                  currency: "INR",
+                  maximumFractionDigits: 2,
+                }).format(totalFixedPaise / 100)}
+              </Text>
+            </View>
+
+            <View style={styles.summaryRow}>
+              <Text style={[styles.summaryLabel, { color: colors.text }]}>
+                After fixed
+              </Text>
+
+              <Text
+                style={[
+                  styles.summaryValue,
+                  {
+                    color: moneyAfterFixedPaise >= 0 ? colors.text : "#D32F2F",
+                  },
+                ]}
+              >
+                {new Intl.NumberFormat("en-IN", {
+                  style: "currency",
+                  currency: "INR",
+                  maximumFractionDigits: 2,
+                }).format(moneyAfterFixedPaise / 100)}
+              </Text>
+            </View>
+          </View>
+
+          <Text style={[styles.label, { color: colors.text }]}>
+            How much do you want to save?
+          </Text>
+
+          <View
+            style={[
+              styles.moneyInput,
+              styles.savingsInput,
+              {
+                backgroundColor: isDark ? "#1F2937" : "#F8FAFC",
+                borderColor: isDark ? "#374151" : "#E2E8F0",
+              },
+            ]}
+          >
+            <Text
+              style={[
+                styles.rupee,
+                {
+                  color: colors.primary,
+                },
+              ]}
+            >
+              ₹
+            </Text>
+
+            <TextInput
+              style={[
+                styles.moneyInputText,
+                {
+                  color: colors.text,
+                },
+              ]}
+              placeholder="0"
+              placeholderTextColor="#94A3B8"
+              keyboardType="numeric"
+              value={savingsTarget}
+              onChangeText={handleSavingsTargetChange}
+            />
+          </View>
+
+          <View
+            style={[
+              styles.savingsRateCard,
+              {
+                backgroundColor: colors.surface,
+              },
+            ]}
+          >
+            <Text style={[styles.summaryLabel, { color: colors.text }]}>
+              Savings rate
+            </Text>
+
+            <Text
+              style={[
+                styles.savingsRateValue,
+                {
+                  color: colors.primary,
+                },
+              ]}
+            >
+              {savingsPercentage.toFixed(2)}%
+            </Text>
+          </View>
+
+          <View
+            style={[
+              styles.totalCard,
+              {
+                backgroundColor:
+                  plannedSpendablePaise >= 0
+                    ? isDark
+                      ? "#1E293B"
+                      : "#EFF6FF"
+                    : isDark
+                      ? "#3F1D1D"
+                      : "#FEF2F2",
+              },
+            ]}
+          >
+            <Text style={[styles.totalLabel, { color: colors.text }]}>
+              Available to spend
+            </Text>
+
+            <Text
+              style={[
+                styles.totalAmount,
+                {
+                  color:
+                    plannedSpendablePaise >= 0 ? colors.primary : "#D32F2F",
+                },
+              ]}
+            >
+              {new Intl.NumberFormat("en-IN", {
+                style: "currency",
+                currency: "INR",
+                maximumFractionDigits: 2,
+              }).format(plannedSpendablePaise / 100)}
+            </Text>
+          </View>
+
+          <TouchableOpacity
+            style={[
+              styles.primaryButton,
+              {
+                backgroundColor: colors.primary,
+              },
+              isSaving && styles.disabledButton,
+            ]}
+            onPress={handleSaveSavings}
+            disabled={isSaving}
+          >
+            {isSaving ? (
+              <ActivityIndicator size="small" color="white" />
+            ) : (
+              <Text style={styles.primaryButtonText}>Continue</Text>
+            )}
+          </TouchableOpacity>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    );
+  }
+
+  if (step === "review") {
+  return (
+    <ScrollView
+      style={{
+        backgroundColor: colors.background,
+      }}
+      contentContainerStyle={styles.reviewContent}
+      showsVerticalScrollIndicator={false}
+    >
+      <TouchableOpacity
+        onPress={() => setStep("savings")}
+        style={styles.backButton}
+      >
         <Text
           style={[
-            styles.stepText,
+            styles.backButtonText,
             {
               color: colors.primary,
             },
           ]}
         >
-          STEP 4
+          ← Back
         </Text>
+      </TouchableOpacity>
 
-        <Text
-          style={[
-            styles.title,
-            { color: colors.text },
-          ]}
-        >
-          Protect some money
-        </Text>
+      <Text
+        style={[
+          styles.stepText,
+          {
+            color: colors.primary,
+          },
+        ]}
+      >
+        STEP 5
+      </Text>
 
-        <Text
-          style={[
-            styles.subtitle,
-            { color: colors.text },
-          ]}
-        >
-          Choose how much money you want to keep aside as savings this month.
-        </Text>
+      <Text
+        style={[
+          styles.title,
+          { color: colors.text },
+        ]}
+      >
+        Your monthly plan
+      </Text>
 
-        <View
-          style={[
-            styles.summaryCard,
-            {
-              backgroundColor:
-                colors.surface,
-            },
-          ]}
-        >
-          <View style={styles.summaryRow}>
-            <Text
-              style={[
-                styles.summaryLabel,
-                { color: colors.text },
-              ]}
-            >
-              Monthly income
-            </Text>
+      <Text
+        style={[
+          styles.subtitle,
+          { color: colors.text },
+        ]}
+      >
+        Here's how your money is planned for this month.
+      </Text>
 
-            <Text
-              style={[
-                styles.summaryValue,
-                { color: colors.text },
-              ]}
-            >
-              {new Intl.NumberFormat(
-                "en-IN",
-                {
-                  style: "currency",
-                  currency: "INR",
-                  maximumFractionDigits: 2,
-                },
-              ).format(
-                totalIncomePaise / 100,
-              )}
-            </Text>
-          </View>
-
-          <View style={styles.summaryRow}>
-            <Text
-              style={[
-                styles.summaryLabel,
-                { color: colors.text },
-              ]}
-            >
-              Fixed commitments
-            </Text>
-
-            <Text
-              style={[
-                styles.summaryValue,
-                { color: colors.text },
-              ]}
-            >
-              {new Intl.NumberFormat(
-                "en-IN",
-                {
-                  style: "currency",
-                  currency: "INR",
-                  maximumFractionDigits: 2,
-                },
-              ).format(
-                totalFixedPaise / 100,
-              )}
-            </Text>
-          </View>
-
-          <View style={styles.summaryRow}>
-            <Text
-              style={[
-                styles.summaryLabel,
-                { color: colors.text },
-              ]}
-            >
-              After fixed
-            </Text>
-
-            <Text
-              style={[
-                styles.summaryValue,
-                {
-                  color:
-                    moneyAfterFixedPaise >= 0
-                      ? colors.text
-                      : "#D32F2F",
-                },
-              ]}
-            >
-              {new Intl.NumberFormat(
-                "en-IN",
-                {
-                  style: "currency",
-                  currency: "INR",
-                  maximumFractionDigits: 2,
-                },
-              ).format(
-                moneyAfterFixedPaise / 100,
-              )}
-            </Text>
-          </View>
-        </View>
-
-        <Text
-          style={[
-            styles.label,
-            { color: colors.text },
-          ]}
-        >
-          How much do you want to save?
-        </Text>
-
-        <View
-          style={[
-            styles.moneyInput,
-            styles.savingsInput,
-            {
-              backgroundColor: isDark
-                ? "#1F2937"
-                : "#F8FAFC",
-              borderColor: isDark
-                ? "#374151"
-                : "#E2E8F0",
-            },
-          ]}
-        >
+      <View
+        style={[
+          styles.reviewCard,
+          {
+            backgroundColor: colors.surface,
+          },
+        ]}
+      >
+        <View style={styles.reviewRow}>
           <Text
             style={[
-              styles.rupee,
-              {
-                color: colors.primary,
-              },
-            ]}
-          >
-            ₹
-          </Text>
-
-          <TextInput
-            style={[
-              styles.moneyInputText,
-              {
-                color: colors.text,
-              },
-            ]}
-            placeholder="0"
-            placeholderTextColor="#94A3B8"
-            keyboardType="numeric"
-            value={savingsTarget}
-            onChangeText={
-              handleSavingsTargetChange
-            }
-          />
-        </View>
-
-        <View
-          style={[
-            styles.savingsRateCard,
-            {
-              backgroundColor:
-                colors.surface,
-            },
-          ]}
-        >
-          <Text
-            style={[
-              styles.summaryLabel,
+              styles.reviewLabel,
               { color: colors.text },
             ]}
           >
-            Savings rate
+            Monthly income
           </Text>
 
           <Text
             style={[
-              styles.savingsRateValue,
-              {
-                color: colors.primary,
-              },
-            ]}
-          >
-            {savingsPercentage.toFixed(2)}%
-          </Text>
-        </View>
-
-        <View
-          style={[
-            styles.totalCard,
-            {
-              backgroundColor:
-                plannedSpendablePaise >= 0
-                  ? isDark
-                    ? "#1E293B"
-                    : "#EFF6FF"
-                  : isDark
-                    ? "#3F1D1D"
-                    : "#FEF2F2",
-            },
-          ]}
-        >
-          <Text
-            style={[
-              styles.totalLabel,
+              styles.reviewValue,
               { color: colors.text },
             ]}
           >
-            Available to spend
+            {new Intl.NumberFormat(
+              "en-IN",
+              {
+                style: "currency",
+                currency: "INR",
+                maximumFractionDigits: 2,
+              },
+            ).format(totalIncomePaise / 100)}
+          </Text>
+        </View>
+
+        <View style={styles.reviewDivider} />
+
+        <View style={styles.reviewRow}>
+          <Text
+            style={[
+              styles.reviewLabel,
+              { color: colors.text },
+            ]}
+          >
+            Fixed commitments
           </Text>
 
           <Text
             style={[
-              styles.totalAmount,
+              styles.reviewValue,
+              { color: colors.text },
+            ]}
+          >
+            {new Intl.NumberFormat(
+              "en-IN",
+              {
+                style: "currency",
+                currency: "INR",
+                maximumFractionDigits: 2,
+              },
+            ).format(totalFixedPaise / 100)}
+          </Text>
+        </View>
+
+        <View style={styles.reviewDivider} />
+
+        <View style={styles.reviewRow}>
+          <Text
+            style={[
+              styles.reviewLabel,
+              { color: colors.text },
+            ]}
+          >
+            Money after fixed
+          </Text>
+
+          <Text
+            style={[
+              styles.reviewValue,
               {
                 color:
-                  plannedSpendablePaise >= 0
-                    ? colors.primary
+                  moneyAfterFixedPaise >= 0
+                    ? colors.text
                     : "#D32F2F",
               },
             ]}
@@ -1338,41 +1435,136 @@ const handleSaveSavings = async () => {
                 maximumFractionDigits: 2,
               },
             ).format(
-              plannedSpendablePaise / 100,
+              moneyAfterFixedPaise / 100,
             )}
           </Text>
         </View>
 
-        <TouchableOpacity
-          style={[
-            styles.primaryButton,
-            {
-              backgroundColor:
-                colors.primary,
-            },
-            isSaving &&
-              styles.disabledButton,
-          ]}
-          onPress={handleSaveSavings}
-          disabled={isSaving}
-        >
-          {isSaving ? (
-            <ActivityIndicator
-              size="small"
-              color="white"
-            />
-          ) : (
+        <View style={styles.reviewDivider} />
+
+        <View style={styles.reviewRow}>
+          <View>
             <Text
-              style={
-                styles.primaryButtonText
-              }
+              style={[
+                styles.reviewLabel,
+                { color: colors.text },
+              ]}
             >
-              Continue
+              Savings target
             </Text>
+
+            <Text
+              style={[
+                styles.reviewSubtext,
+                { color: colors.text },
+              ]}
+            >
+              {savingsPercentage.toFixed(2)}% of income
+            </Text>
+          </View>
+
+          <Text
+            style={[
+              styles.reviewValue,
+              { color: colors.text },
+            ]}
+          >
+            {new Intl.NumberFormat(
+              "en-IN",
+              {
+                style: "currency",
+                currency: "INR",
+                maximumFractionDigits: 2,
+              },
+            ).format(
+              savingsTargetPaise / 100,
+            )}
+          </Text>
+        </View>
+      </View>
+
+      <View
+        style={[
+          styles.reviewSpendableCard,
+          {
+            backgroundColor:
+              plannedSpendablePaise >= 0
+                ? isDark
+                  ? "#1E293B"
+                  : "#EFF6FF"
+                : isDark
+                  ? "#3F1D1D"
+                  : "#FEF2F2",
+          },
+        ]}
+      >
+        <Text
+          style={[
+            styles.totalLabel,
+            {
+              color: colors.text,
+            },
+          ]}
+        >
+          Available to spend
+        </Text>
+
+        <Text
+          style={[
+            styles.reviewSpendableAmount,
+            {
+              color:
+                plannedSpendablePaise >= 0
+                  ? colors.primary
+                  : "#D32F2F",
+            },
+          ]}
+        >
+          {new Intl.NumberFormat(
+            "en-IN",
+            {
+              style: "currency",
+              currency: "INR",
+              maximumFractionDigits: 2,
+            },
+          ).format(
+            plannedSpendablePaise / 100,
           )}
-        </TouchableOpacity>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        </Text>
+
+        <Text
+          style={[
+            styles.reviewSpendableHint,
+            { color: colors.text },
+          ]}
+        >
+          This is the money available for your day-to-day spending after fixed commitments and savings.
+        </Text>
+      </View>
+
+      <TouchableOpacity
+        style={[
+          styles.primaryButton,
+          {
+            backgroundColor: colors.primary,
+          },
+          isSaving && styles.disabledButton,
+        ]}
+        onPress={handleCompleteOnboarding}
+        disabled={isSaving}
+      >
+        {isSaving ? (
+          <ActivityIndicator
+            size="small"
+            color="white"
+          />
+        ) : (
+          <Text style={styles.primaryButtonText}>
+            Start My Plan
+          </Text>
+        )}
+      </TouchableOpacity>
+    </ScrollView>
   );
 }
 
@@ -1658,20 +1850,79 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   savingsInput: {
-  marginBottom: 16,
+    marginBottom: 16,
+  },
+
+  savingsRateCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderRadius: 16,
+    padding: 18,
+    marginBottom: 16,
+  },
+
+  savingsRateValue: {
+    fontSize: 20,
+    fontWeight: "bold",
+  },
+  reviewContent: {
+  paddingHorizontal: 24,
+  paddingTop: 70,
+  paddingBottom: 40,
 },
 
-savingsRateCard: {
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "space-between",
-  borderRadius: 16,
+reviewCard: {
+  borderRadius: 18,
   padding: 18,
-  marginBottom: 16,
+  marginBottom: 18,
 },
 
-savingsRateValue: {
-  fontSize: 20,
+reviewRow: {
+  flexDirection: "row",
+  justifyContent: "space-between",
+  alignItems: "center",
+},
+
+reviewLabel: {
+  fontSize: 14,
+  opacity: 0.72,
+},
+
+reviewValue: {
+  fontSize: 16,
+  fontWeight: "700",
+},
+
+reviewSubtext: {
+  fontSize: 12,
+  opacity: 0.55,
+  marginTop: 4,
+},
+
+reviewDivider: {
+  height: 1,
+  backgroundColor: "#94A3B8",
+  opacity: 0.18,
+  marginVertical: 16,
+},
+
+reviewSpendableCard: {
+  borderRadius: 20,
+  padding: 22,
+  marginBottom: 20,
+},
+
+reviewSpendableAmount: {
+  fontSize: 34,
   fontWeight: "bold",
+  marginTop: 6,
+  marginBottom: 10,
+},
+
+reviewSpendableHint: {
+  fontSize: 13,
+  lineHeight: 19,
+  opacity: 0.6,
 },
 });
