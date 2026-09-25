@@ -16,6 +16,8 @@ import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import { auth, db } from "../services/firebaseConfig";
 import { useTheme } from "../ThemeContext";
 import {
+  calculateFixedCommitmentsPaise,
+  calculateMoneyAfterFixedPaise,
   calculatePlannedIncomePaise,
   parseMoneyInputToPaise,
 } from "../utils/finance";
@@ -39,6 +41,7 @@ export default function LeanV2OnboardingScreen() {
       amount: "",
     },
   ]);
+  const [fixedCommitments, setFixedCommitments] = useState([]);
   const [name, setName] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
@@ -99,6 +102,18 @@ export default function LeanV2OnboardingScreen() {
               })),
             );
           }
+          if (
+            Array.isArray(planData.fixedCommitments) &&
+            planData.fixedCommitments.length > 0
+          ) {
+            setFixedCommitments(
+              planData.fixedCommitments.map((commitment) => ({
+                id: commitment.id,
+                name: commitment.name,
+                amount: (commitment.amountPaise / 100).toString(),
+              })),
+            );
+          }
         }
       } catch (error) {
         console.error("Error loading Lean V2 onboarding:", error);
@@ -141,12 +156,6 @@ export default function LeanV2OnboardingScreen() {
         },
       );
 
-      /*
-       * Temporary for this step.
-       *
-       * Next we will replace this with:
-       * setStep("income")
-       */
       setStep("income");
     } catch (error) {
       Alert.alert("Error", error.message || "Could not save your profile.");
@@ -220,6 +229,26 @@ export default function LeanV2OnboardingScreen() {
 
   const totalIncomePaise = calculatePlannedIncomePaise(normalizedIncomeSources);
 
+  const normalizedFixedCommitments = fixedCommitments
+    .map((commitment) => ({
+      id: commitment.id,
+      name: commitment.name.trim(),
+      amountPaise: parseMoneyInputToPaise(commitment.amount),
+    }))
+    .filter(
+      (commitment) =>
+        commitment.name && Number.isInteger(commitment.amountPaise),
+    );
+
+  const totalFixedPaise = calculateFixedCommitmentsPaise(
+    normalizedFixedCommitments,
+  );
+
+  const moneyAfterFixedPaise = calculateMoneyAfterFixedPaise(
+    totalIncomePaise,
+    totalFixedPaise,
+  );
+
   const handleSaveIncome = async () => {
     if (normalizedIncomeSources.length === 0) {
       Alert.alert("Income required", "Please add at least one income source.");
@@ -276,13 +305,119 @@ export default function LeanV2OnboardingScreen() {
         },
       );
 
-      /*
-       * Temporary.
-       * Fixed Commitments is the next screen.
-       */
-      Alert.alert("Income saved", "Your monthly income has been saved.");
+      setStep("fixedCommitments");
     } catch (error) {
       Alert.alert("Error", error.message || "Could not save your income.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleCommitmentNameChange = (id, value) => {
+    setFixedCommitments((current) =>
+      current.map((commitment) =>
+        commitment.id === id
+          ? {
+              ...commitment,
+              name: value,
+            }
+          : commitment,
+      ),
+    );
+  };
+
+  const handleCommitmentAmountChange = (id, value) => {
+    const cleaned = value.replace(/[^0-9.]/g, "");
+
+    const parts = cleaned.split(".");
+
+    if (parts.length > 2) {
+      return;
+    }
+
+    const [rupees, paise = ""] = parts;
+
+    const normalized = cleaned.includes(".")
+      ? `${rupees || "0"}.${paise.slice(0, 2)}`
+      : rupees;
+
+    setFixedCommitments((current) =>
+      current.map((commitment) =>
+        commitment.id === id
+          ? {
+              ...commitment,
+              amount: normalized,
+            }
+          : commitment,
+      ),
+    );
+  };
+
+  const addFixedCommitment = () => {
+    setFixedCommitments((current) => [
+      ...current,
+      {
+        id: `fixed-${Date.now()}`,
+        name: "",
+        amount: "",
+      },
+    ]);
+  };
+
+  const removeFixedCommitment = (id) => {
+    setFixedCommitments((current) =>
+      current.filter((commitment) => commitment.id !== id),
+    );
+  };
+
+  const handleSaveFixedCommitments = async () => {
+    const hasInvalidCommitment = fixedCommitments.some((commitment) => {
+      const commitmentName = commitment.name.trim();
+
+      const amountPaise = parseMoneyInputToPaise(commitment.amount);
+
+      return (
+        !commitmentName || !Number.isInteger(amountPaise) || amountPaise <= 0
+      );
+    });
+
+    if (hasInvalidCommitment) {
+      Alert.alert(
+        "Check your commitments",
+        "Each fixed commitment needs a name and an amount greater than ₹0.",
+      );
+      return;
+    }
+
+    const userId = auth.currentUser?.uid;
+
+    if (!userId) {
+      return;
+    }
+
+    setIsSaving(true);
+
+    try {
+      const monthKey = getCurrentMonthKey();
+
+      await setDoc(
+        doc(db, "users", userId, "monthlyPlans", monthKey),
+        {
+          monthKey,
+          fixedCommitments: normalizedFixedCommitments,
+          updatedAt: serverTimestamp(),
+        },
+        {
+          merge: true,
+        },
+      );
+
+      Alert.alert(
+        "Commitments saved",
+        "Your fixed monthly commitments have been saved.",
+      );
+    } catch (error) {
+      Alert.alert("Error", error.message || "Could not save your commitments.");
     } finally {
       setIsSaving(false);
     }
@@ -496,6 +631,292 @@ export default function LeanV2OnboardingScreen() {
     );
   }
 
+  if (step === "fixedCommitments") {
+    return (
+      <KeyboardAvoidingView
+        style={[
+          styles.container,
+          {
+            backgroundColor: colors.background,
+          },
+        ]}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        <ScrollView
+          contentContainerStyle={styles.incomeContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <TouchableOpacity
+            onPress={() => setStep("income")}
+            style={styles.backButton}
+          >
+            <Text
+              style={[
+                styles.backButtonText,
+                {
+                  color: colors.primary,
+                },
+              ]}
+            >
+              ← Back
+            </Text>
+          </TouchableOpacity>
+
+          <Text
+            style={[
+              styles.stepText,
+              {
+                color: colors.primary,
+              },
+            ]}
+          >
+            STEP 3
+          </Text>
+
+          <Text style={[styles.title, { color: colors.text }]}>
+            Fixed monthly commitments
+          </Text>
+
+          <Text style={[styles.subtitle, { color: colors.text }]}>
+            Add expenses you already know you must pay this month.
+          </Text>
+
+          {fixedCommitments.map((commitment, index) => (
+            <View
+              key={commitment.id}
+              style={[
+                styles.incomeCard,
+                {
+                  backgroundColor: colors.surface,
+                },
+              ]}
+            >
+              <View style={styles.incomeCardHeader}>
+                <Text
+                  style={[
+                    styles.incomeNumber,
+                    {
+                      color: colors.text,
+                    },
+                  ]}
+                >
+                  Commitment {index + 1}
+                </Text>
+
+                <TouchableOpacity
+                  onPress={() => removeFixedCommitment(commitment.id)}
+                >
+                  <Text style={styles.removeText}>Remove</Text>
+                </TouchableOpacity>
+              </View>
+
+              <TextInput
+                style={[
+                  styles.input,
+                  {
+                    color: colors.text,
+                    backgroundColor: isDark ? "#1F2937" : "#F8FAFC",
+                    borderColor: isDark ? "#374151" : "#E2E8F0",
+                  },
+                ]}
+                placeholder="Rent, EMI, Recharge..."
+                placeholderTextColor="#94A3B8"
+                value={commitment.name}
+                onChangeText={(value) =>
+                  handleCommitmentNameChange(commitment.id, value)
+                }
+              />
+
+              <View
+                style={[
+                  styles.moneyInput,
+                  {
+                    backgroundColor: isDark ? "#1F2937" : "#F8FAFC",
+                    borderColor: isDark ? "#374151" : "#E2E8F0",
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.rupee,
+                    {
+                      color: colors.primary,
+                    },
+                  ]}
+                >
+                  ₹
+                </Text>
+
+                <TextInput
+                  style={[
+                    styles.moneyInputText,
+                    {
+                      color: colors.text,
+                    },
+                  ]}
+                  placeholder="0"
+                  placeholderTextColor="#94A3B8"
+                  keyboardType="numeric"
+                  value={commitment.amount}
+                  onChangeText={(value) =>
+                    handleCommitmentAmountChange(commitment.id, value)
+                  }
+                />
+              </View>
+            </View>
+          ))}
+
+          <TouchableOpacity
+            style={[
+              styles.addButton,
+              {
+                borderColor: colors.primary,
+              },
+            ]}
+            onPress={addFixedCommitment}
+          >
+            <Text
+              style={[
+                styles.addButtonText,
+                {
+                  color: colors.primary,
+                },
+              ]}
+            >
+              + Add fixed commitment
+            </Text>
+          </TouchableOpacity>
+
+          <View
+            style={[
+              styles.summaryCard,
+              {
+                backgroundColor: colors.surface,
+              },
+            ]}
+          >
+            <View style={styles.summaryRow}>
+              <Text
+                style={[
+                  styles.summaryLabel,
+                  {
+                    color: colors.text,
+                  },
+                ]}
+              >
+                Monthly income
+              </Text>
+
+              <Text
+                style={[
+                  styles.summaryValue,
+                  {
+                    color: colors.text,
+                  },
+                ]}
+              >
+                {new Intl.NumberFormat("en-IN", {
+                  style: "currency",
+                  currency: "INR",
+                  maximumFractionDigits: 2,
+                }).format(totalIncomePaise / 100)}
+              </Text>
+            </View>
+
+            <View style={styles.summaryRow}>
+              <Text
+                style={[
+                  styles.summaryLabel,
+                  {
+                    color: colors.text,
+                  },
+                ]}
+              >
+                Fixed commitments
+              </Text>
+
+              <Text
+                style={[
+                  styles.summaryValue,
+                  {
+                    color: colors.text,
+                  },
+                ]}
+              >
+                {new Intl.NumberFormat("en-IN", {
+                  style: "currency",
+                  currency: "INR",
+                  maximumFractionDigits: 2,
+                }).format(totalFixedPaise / 100)}
+              </Text>
+            </View>
+          </View>
+
+          <View
+            style={[
+              styles.totalCard,
+              {
+                backgroundColor:
+                  moneyAfterFixedPaise >= 0
+                    ? isDark
+                      ? "#1E293B"
+                      : "#EFF6FF"
+                    : isDark
+                      ? "#3F1D1D"
+                      : "#FEF2F2",
+              },
+            ]}
+          >
+            <Text
+              style={[
+                styles.totalLabel,
+                {
+                  color: colors.text,
+                },
+              ]}
+            >
+              Money after fixed commitments
+            </Text>
+
+            <Text
+              style={[
+                styles.totalAmount,
+                {
+                  color: moneyAfterFixedPaise >= 0 ? colors.primary : "#D32F2F",
+                },
+              ]}
+            >
+              {new Intl.NumberFormat("en-IN", {
+                style: "currency",
+                currency: "INR",
+                maximumFractionDigits: 2,
+              }).format(moneyAfterFixedPaise / 100)}
+            </Text>
+          </View>
+
+          <TouchableOpacity
+            style={[
+              styles.primaryButton,
+              {
+                backgroundColor: colors.primary,
+              },
+              isSaving && styles.disabledButton,
+            ]}
+            onPress={handleSaveFixedCommitments}
+            disabled={isSaving}
+          >
+            {isSaving ? (
+              <ActivityIndicator size="small" color="white" />
+            ) : (
+              <Text style={styles.primaryButtonText}>Continue</Text>
+            )}
+          </TouchableOpacity>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    );
+  }
+
   return (
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: colors.background }]}
@@ -655,94 +1076,126 @@ const styles = StyleSheet.create({
     marginTop: 24,
   },
   loadingContainer: {
-  flex: 1,
-  alignItems: "center",
-  justifyContent: "center",
-},
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
 
-incomeContent: {
-  paddingHorizontal: 24,
-  paddingTop: 70,
-  paddingBottom: 40,
-},
+  incomeContent: {
+    paddingHorizontal: 24,
+    paddingTop: 70,
+    paddingBottom: 40,
+  },
 
-stepText: {
-  fontSize: 13,
-  fontWeight: "bold",
-  marginBottom: 8,
-},
+  stepText: {
+    fontSize: 13,
+    fontWeight: "bold",
+    marginBottom: 8,
+  },
 
-incomeCard: {
-  borderRadius: 16,
-  padding: 16,
-  marginBottom: 14,
-},
+  incomeCard: {
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 14,
+  },
 
-incomeCardHeader: {
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "space-between",
-  marginBottom: 10,
-},
+  incomeCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 10,
+  },
 
-incomeNumber: {
-  fontSize: 14,
-  fontWeight: "600",
-},
+  incomeNumber: {
+    fontSize: 14,
+    fontWeight: "600",
+  },
 
-removeText: {
-  color: "#D32F2F",
-  fontSize: 13,
-  fontWeight: "600",
-},
+  removeText: {
+    color: "#D32F2F",
+    fontSize: 13,
+    fontWeight: "600",
+  },
 
-moneyInput: {
-  flexDirection: "row",
-  alignItems: "center",
-  borderWidth: 1,
-  borderRadius: 14,
-  paddingHorizontal: 16,
-},
+  moneyInput: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+  },
 
-rupee: {
-  fontSize: 18,
-  fontWeight: "bold",
-  marginRight: 8,
-},
+  rupee: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginRight: 8,
+  },
 
-moneyInputText: {
-  flex: 1,
-  paddingVertical: 15,
-  fontSize: 17,
-},
+  moneyInputText: {
+    flex: 1,
+    paddingVertical: 15,
+    fontSize: 17,
+  },
 
-addButton: {
-  borderWidth: 1,
-  borderRadius: 14,
-  paddingVertical: 14,
-  alignItems: "center",
-  marginBottom: 20,
-},
+  addButton: {
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: "center",
+    marginBottom: 20,
+  },
 
-addButtonText: {
-  fontSize: 15,
-  fontWeight: "600",
-},
+  addButtonText: {
+    fontSize: 15,
+    fontWeight: "600",
+  },
 
-totalCard: {
-  borderRadius: 18,
-  padding: 20,
-  marginBottom: 20,
-},
+  totalCard: {
+    borderRadius: 18,
+    padding: 20,
+    marginBottom: 20,
+  },
 
-totalLabel: {
-  fontSize: 14,
-  opacity: 0.65,
-  marginBottom: 6,
-},
+  totalLabel: {
+    fontSize: 14,
+    opacity: 0.65,
+    marginBottom: 6,
+  },
 
-totalAmount: {
-  fontSize: 30,
-  fontWeight: "bold",
-},
+  totalAmount: {
+    fontSize: 30,
+    fontWeight: "bold",
+  },
+  backButton: {
+    alignSelf: "flex-start",
+    marginBottom: 20,
+  },
+
+  backButtonText: {
+    fontSize: 15,
+    fontWeight: "600",
+  },
+
+  summaryCard: {
+    borderRadius: 16,
+    padding: 18,
+    marginBottom: 16,
+  },
+
+  summaryRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+
+  summaryLabel: {
+    fontSize: 14,
+    opacity: 0.7,
+  },
+
+  summaryValue: {
+    fontSize: 15,
+    fontWeight: "600",
+  },
 });
