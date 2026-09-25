@@ -331,7 +331,7 @@ export default function DashboardScreen({ navigation }) {
           <View
             style={[styles.balanceCard, { backgroundColor: colors.surface }]}
           >
-            <Text style={styles.balanceLabel}>Total Balance</Text>
+            <Text style={styles.balanceLabel}>Net Worth</Text>
             <Text
               style={[
                 styles.balanceAmount,
