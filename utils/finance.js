@@ -220,6 +220,26 @@ const calculateSafeToSpendPerDayPaise = (
   );
 };
 
+
+const parseMoneyInputToPaise = (value) => {
+  const trimmed = String(value ?? "").trim();
+
+  if (!trimmed) {
+    return null;
+  }
+
+  if (!/^\d+(\.\d{1,2})?$/.test(trimmed)) {
+    return null;
+  }
+
+  const [rupees, paise = ""] = trimmed.split(".");
+
+  return (
+    Number(rupees) * 100 +
+    Number(paise.padEnd(2, "0"))
+  );
+};
+
 module.exports = {
   calculateAccountBalancePaise,
   calculateFixedCommitmentsPaise,
@@ -238,4 +258,5 @@ module.exports = {
   getTransactionDateKey,
   isTransactionInMonth,
   isTransactionOnOrBeforeToday,
+  parseMoneyInputToPaise,
 };

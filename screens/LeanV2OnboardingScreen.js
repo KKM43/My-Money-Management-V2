@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -8,37 +8,120 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  ScrollView,
   Alert,
 } from "react-native";
-import { doc, serverTimestamp, setDoc } from "firebase/firestore";
+import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 
 import { auth, db } from "../services/firebaseConfig";
 import { useTheme } from "../ThemeContext";
+import {
+  calculatePlannedIncomePaise,
+  parseMoneyInputToPaise,
+} from "../utils/finance";
+
+const getCurrentMonthKey = () => {
+  const now = new Date();
+
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+};
 
 export default function LeanV2OnboardingScreen() {
   const { colors, isDark } = useTheme();
 
+  const [step, setStep] = useState("name");
+  const [isLoadingSetup, setIsLoadingSetup] = useState(true);
+
+  const [incomeSources, setIncomeSources] = useState([
+    {
+      id: "salary",
+      name: "Salary",
+      amount: "",
+    },
+  ]);
   const [name, setName] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    const loadSetup = async () => {
+      const userId = auth.currentUser?.uid;
+
+      if (!userId) {
+        setIsLoadingSetup(false);
+        return;
+      }
+
+      try {
+        const userSnapshot = await getDoc(doc(db, "users", userId));
+
+        if (!userSnapshot.exists()) {
+          setIsLoadingSetup(false);
+          return;
+        }
+
+        const userData = userSnapshot.data();
+
+        if (userData.displayName) {
+          setName(userData.displayName);
+        }
+
+        const savedStep = userData.leanV2OnboardingStep;
+
+        if (savedStep) {
+          setStep(savedStep);
+        } else if (
+          userData.displayName &&
+          userData.leanV2OnboardingComplete !== true
+        ) {
+          // Existing development user who saved their
+          // name before onboarding-step tracking existed.
+          setStep("income");
+        }
+
+        const monthKey = getCurrentMonthKey();
+
+        const planSnapshot = await getDoc(
+          doc(db, "users", userId, "monthlyPlans", monthKey),
+        );
+
+        if (planSnapshot.exists()) {
+          const planData = planSnapshot.data();
+
+          if (
+            Array.isArray(planData.incomeSources) &&
+            planData.incomeSources.length > 0
+          ) {
+            setIncomeSources(
+              planData.incomeSources.map((source) => ({
+                id: source.id,
+                name: source.name,
+                amount: (source.amountPaise / 100).toString(),
+              })),
+            );
+          }
+        }
+      } catch (error) {
+        console.error("Error loading Lean V2 onboarding:", error);
+      } finally {
+        setIsLoadingSetup(false);
+      }
+    };
+
+    loadSetup();
+  }, []);
 
   const handleGetStarted = async () => {
     const trimmedName = name.trim();
 
     if (!trimmedName) {
-      Alert.alert(
-        "Name required",
-        "Please enter your name before continuing.",
-      );
+      Alert.alert("Name required", "Please enter your name before continuing.");
       return;
     }
 
     const userId = auth.currentUser?.uid;
 
     if (!userId) {
-      Alert.alert(
-        "Sign in required",
-        "Please sign in again and continue.",
-      );
+      Alert.alert("Sign in required", "Please sign in again and continue.");
       return;
     }
 
@@ -50,6 +133,7 @@ export default function LeanV2OnboardingScreen() {
         {
           displayName: trimmedName,
           leanV2OnboardingComplete: false,
+          leanV2OnboardingStep: "income",
           updatedAt: serverTimestamp(),
         },
         {
@@ -63,26 +147,358 @@ export default function LeanV2OnboardingScreen() {
        * Next we will replace this with:
        * setStep("income")
        */
-      Alert.alert(
-        "Saved",
-        `Welcome, ${trimmedName}! Your name has been saved.`,
-      );
+      setStep("income");
     } catch (error) {
-      Alert.alert(
-        "Error",
-        error.message || "Could not save your profile.",
-      );
+      Alert.alert("Error", error.message || "Could not save your profile.");
     } finally {
       setIsSaving(false);
     }
   };
 
+  const handleIncomeNameChange = (id, value) => {
+    setIncomeSources((current) =>
+      current.map((source) =>
+        source.id === id
+          ? {
+              ...source,
+              name: value,
+            }
+          : source,
+      ),
+    );
+  };
+
+  const handleIncomeAmountChange = (id, value) => {
+    const cleaned = value.replace(/[^0-9.]/g, "");
+
+    const parts = cleaned.split(".");
+
+    if (parts.length > 2) {
+      return;
+    }
+
+    const [rupees, paise = ""] = parts;
+
+    const normalized = cleaned.includes(".")
+      ? `${rupees || "0"}.${paise.slice(0, 2)}`
+      : rupees;
+
+    setIncomeSources((current) =>
+      current.map((source) =>
+        source.id === id
+          ? {
+              ...source,
+              amount: normalized,
+            }
+          : source,
+      ),
+    );
+  };
+
+  const addIncomeSource = () => {
+    setIncomeSources((current) => [
+      ...current,
+      {
+        id: `income-${Date.now()}`,
+        name: "",
+        amount: "",
+      },
+    ]);
+  };
+
+  const removeIncomeSource = (id) => {
+    setIncomeSources((current) => current.filter((source) => source.id !== id));
+  };
+
+  const normalizedIncomeSources = incomeSources
+    .map((source) => ({
+      id: source.id,
+      name: source.name.trim(),
+      amountPaise: parseMoneyInputToPaise(source.amount),
+    }))
+    .filter((source) => source.name && Number.isInteger(source.amountPaise));
+
+  const totalIncomePaise = calculatePlannedIncomePaise(normalizedIncomeSources);
+
+  const handleSaveIncome = async () => {
+    if (normalizedIncomeSources.length === 0) {
+      Alert.alert("Income required", "Please add at least one income source.");
+      return;
+    }
+
+    const hasInvalidSource = incomeSources.some((source) => {
+      const sourceName = source.name.trim();
+
+      const amountPaise = parseMoneyInputToPaise(source.amount);
+
+      return !sourceName || !Number.isInteger(amountPaise) || amountPaise <= 0;
+    });
+
+    if (hasInvalidSource) {
+      Alert.alert(
+        "Check your income",
+        "Each income source needs a name and an amount greater than ₹0.",
+      );
+      return;
+    }
+
+    const userId = auth.currentUser?.uid;
+
+    if (!userId) {
+      return;
+    }
+
+    setIsSaving(true);
+
+    try {
+      const monthKey = getCurrentMonthKey();
+
+      await setDoc(
+        doc(db, "users", userId, "monthlyPlans", monthKey),
+        {
+          monthKey,
+          incomeSources: normalizedIncomeSources,
+          updatedAt: serverTimestamp(),
+        },
+        {
+          merge: true,
+        },
+      );
+
+      await setDoc(
+        doc(db, "users", userId),
+        {
+          leanV2OnboardingStep: "fixedCommitments",
+          updatedAt: serverTimestamp(),
+        },
+        {
+          merge: true,
+        },
+      );
+
+      /*
+       * Temporary.
+       * Fixed Commitments is the next screen.
+       */
+      Alert.alert("Income saved", "Your monthly income has been saved.");
+    } catch (error) {
+      Alert.alert("Error", error.message || "Could not save your income.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  if (isLoadingSetup) {
+    return (
+      <View
+        style={[
+          styles.loadingContainer,
+          {
+            backgroundColor: colors.background,
+          },
+        ]}
+      >
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
+
+  if (step === "income") {
+    return (
+      <KeyboardAvoidingView
+        style={[
+          styles.container,
+          {
+            backgroundColor: colors.background,
+          },
+        ]}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        <ScrollView
+          contentContainerStyle={styles.incomeContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <Text
+            style={[
+              styles.stepText,
+              {
+                color: colors.primary,
+              },
+            ]}
+          >
+            STEP 2
+          </Text>
+
+          <Text style={[styles.title, { color: colors.text }]}>
+            Your monthly income
+          </Text>
+
+          <Text style={[styles.subtitle, { color: colors.text }]}>
+            Add the money you expect to receive this month.
+          </Text>
+
+          {incomeSources.map((source, index) => (
+            <View
+              key={source.id}
+              style={[
+                styles.incomeCard,
+                {
+                  backgroundColor: colors.surface,
+                },
+              ]}
+            >
+              <View style={styles.incomeCardHeader}>
+                <Text
+                  style={[
+                    styles.incomeNumber,
+                    {
+                      color: colors.text,
+                    },
+                  ]}
+                >
+                  Income {index + 1}
+                </Text>
+
+                {incomeSources.length > 1 && (
+                  <TouchableOpacity
+                    onPress={() => removeIncomeSource(source.id)}
+                  >
+                    <Text style={styles.removeText}>Remove</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              <TextInput
+                style={[
+                  styles.input,
+                  {
+                    color: colors.text,
+                    backgroundColor: isDark ? "#1F2937" : "#F8FAFC",
+                    borderColor: isDark ? "#374151" : "#E2E8F0",
+                  },
+                ]}
+                placeholder="Salary, Freelance, Bonus..."
+                placeholderTextColor="#94A3B8"
+                value={source.name}
+                onChangeText={(value) =>
+                  handleIncomeNameChange(source.id, value)
+                }
+              />
+
+              <View
+                style={[
+                  styles.moneyInput,
+                  {
+                    backgroundColor: isDark ? "#1F2937" : "#F8FAFC",
+                    borderColor: isDark ? "#374151" : "#E2E8F0",
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.rupee,
+                    {
+                      color: colors.primary,
+                    },
+                  ]}
+                >
+                  ₹
+                </Text>
+
+                <TextInput
+                  style={[
+                    styles.moneyInputText,
+                    {
+                      color: colors.text,
+                    },
+                  ]}
+                  placeholder="0"
+                  placeholderTextColor="#94A3B8"
+                  keyboardType="numeric"
+                  value={source.amount}
+                  onChangeText={(value) =>
+                    handleIncomeAmountChange(source.id, value)
+                  }
+                />
+              </View>
+            </View>
+          ))}
+
+          <TouchableOpacity
+            style={[
+              styles.addButton,
+              {
+                borderColor: colors.primary,
+              },
+            ]}
+            onPress={addIncomeSource}
+          >
+            <Text
+              style={[
+                styles.addButtonText,
+                {
+                  color: colors.primary,
+                },
+              ]}
+            >
+              + Add another income source
+            </Text>
+          </TouchableOpacity>
+
+          <View
+            style={[
+              styles.totalCard,
+              {
+                backgroundColor: isDark ? "#1E293B" : "#EFF6FF",
+              },
+            ]}
+          >
+            <Text style={[styles.totalLabel, { color: colors.text }]}>
+              Total monthly income
+            </Text>
+
+            <Text
+              style={[
+                styles.totalAmount,
+                {
+                  color: colors.primary,
+                },
+              ]}
+            >
+              {new Intl.NumberFormat("en-IN", {
+                style: "currency",
+                currency: "INR",
+                maximumFractionDigits: 2,
+              }).format(totalIncomePaise / 100)}
+            </Text>
+          </View>
+
+          <TouchableOpacity
+            style={[
+              styles.primaryButton,
+              {
+                backgroundColor: colors.primary,
+              },
+              isSaving && styles.disabledButton,
+            ]}
+            onPress={handleSaveIncome}
+            disabled={isSaving}
+          >
+            {isSaving ? (
+              <ActivityIndicator size="small" color="white" />
+            ) : (
+              <Text style={styles.primaryButtonText}>Continue</Text>
+            )}
+          </TouchableOpacity>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    );
+  }
+
   return (
     <KeyboardAvoidingView
-      style={[
-        styles.container,
-        { backgroundColor: colors.background },
-      ]}
+      style={[styles.container, { backgroundColor: colors.background }]}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <View style={styles.content}>
@@ -90,40 +506,23 @@ export default function LeanV2OnboardingScreen() {
           style={[
             styles.iconCircle,
             {
-              backgroundColor: isDark
-                ? "#1E293B"
-                : "#EFF6FF",
+              backgroundColor: isDark ? "#1E293B" : "#EFF6FF",
             },
           ]}
         >
           <Text style={styles.icon}>👋</Text>
         </View>
 
-        <Text
-          style={[
-            styles.title,
-            { color: colors.text },
-          ]}
-        >
+        <Text style={[styles.title, { color: colors.text }]}>
           Welcome to My Money
         </Text>
 
-        <Text
-          style={[
-            styles.subtitle,
-            { color: colors.text },
-          ]}
-        >
+        <Text style={[styles.subtitle, { color: colors.text }]}>
           Let's make your money easier to understand, control, and save.
         </Text>
 
         <View style={styles.form}>
-          <Text
-            style={[
-              styles.label,
-              { color: colors.text },
-            ]}
-          >
+          <Text style={[styles.label, { color: colors.text }]}>
             What should we call you?
           </Text>
 
@@ -132,12 +531,8 @@ export default function LeanV2OnboardingScreen() {
               styles.input,
               {
                 color: colors.text,
-                backgroundColor: isDark
-                  ? "#1F2937"
-                  : "#F8FAFC",
-                borderColor: isDark
-                  ? "#374151"
-                  : "#E2E8F0",
+                backgroundColor: isDark ? "#1F2937" : "#F8FAFC",
+                borderColor: isDark ? "#374151" : "#E2E8F0",
               },
             ]}
             placeholder="Enter your name"
@@ -163,25 +558,16 @@ export default function LeanV2OnboardingScreen() {
             disabled={isSaving}
           >
             {isSaving ? (
-              <ActivityIndicator
-                size="small"
-                color="white"
-              />
+              <ActivityIndicator size="small" color="white" />
             ) : (
-              <Text style={styles.primaryButtonText}>
-                Get Started
-              </Text>
+              <Text style={styles.primaryButtonText}>Get Started</Text>
             )}
           </TouchableOpacity>
         </View>
 
-        <Text
-          style={[
-            styles.footerText,
-            { color: colors.text },
-          ]}
-        >
-          We'll use your real numbers to build a monthly plan that works for you.
+        <Text style={[styles.footerText, { color: colors.text }]}>
+          We'll use your real numbers to build a monthly plan that works for
+          you.
         </Text>
       </View>
     </KeyboardAvoidingView>
@@ -268,5 +654,95 @@ const styles = StyleSheet.create({
     opacity: 0.55,
     marginTop: 24,
   },
-});
+  loadingContainer: {
+  flex: 1,
+  alignItems: "center",
+  justifyContent: "center",
+},
 
+incomeContent: {
+  paddingHorizontal: 24,
+  paddingTop: 70,
+  paddingBottom: 40,
+},
+
+stepText: {
+  fontSize: 13,
+  fontWeight: "bold",
+  marginBottom: 8,
+},
+
+incomeCard: {
+  borderRadius: 16,
+  padding: 16,
+  marginBottom: 14,
+},
+
+incomeCardHeader: {
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "space-between",
+  marginBottom: 10,
+},
+
+incomeNumber: {
+  fontSize: 14,
+  fontWeight: "600",
+},
+
+removeText: {
+  color: "#D32F2F",
+  fontSize: 13,
+  fontWeight: "600",
+},
+
+moneyInput: {
+  flexDirection: "row",
+  alignItems: "center",
+  borderWidth: 1,
+  borderRadius: 14,
+  paddingHorizontal: 16,
+},
+
+rupee: {
+  fontSize: 18,
+  fontWeight: "bold",
+  marginRight: 8,
+},
+
+moneyInputText: {
+  flex: 1,
+  paddingVertical: 15,
+  fontSize: 17,
+},
+
+addButton: {
+  borderWidth: 1,
+  borderRadius: 14,
+  paddingVertical: 14,
+  alignItems: "center",
+  marginBottom: 20,
+},
+
+addButtonText: {
+  fontSize: 15,
+  fontWeight: "600",
+},
+
+totalCard: {
+  borderRadius: 18,
+  padding: 20,
+  marginBottom: 20,
+},
+
+totalLabel: {
+  fontSize: 14,
+  opacity: 0.65,
+  marginBottom: 6,
+},
+
+totalAmount: {
+  fontSize: 30,
+  fontWeight: "bold",
+},
+});

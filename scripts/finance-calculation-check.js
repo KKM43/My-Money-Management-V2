@@ -14,6 +14,7 @@ const {
   getAmountPaise,
   getDaysRemainingInMonth,
   isTransactionInMonth,
+  parseMoneyInputToPaise
 } = require("../utils/finance");
 
 const today = new Date(2026, 8, 21, 12);
@@ -515,6 +516,31 @@ assert.strictEqual(
 assert.strictEqual(
   calculateFixedCommitmentsPaise([]),
   0,
+);
+
+assert.strictEqual(
+  parseMoneyInputToPaise("35000"),
+  3500000,
+);
+
+assert.strictEqual(
+  parseMoneyInputToPaise("10000.50"),
+  1000050,
+);
+
+assert.strictEqual(
+  parseMoneyInputToPaise("0"),
+  0,
+);
+
+assert.strictEqual(
+  parseMoneyInputToPaise("12.345"),
+  null,
+);
+
+assert.strictEqual(
+  parseMoneyInputToPaise(""),
+  null,
 );
 
 console.log("Finance calculation checks passed.");
