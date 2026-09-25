@@ -16,14 +16,13 @@ import { Ionicons } from "@expo/vector-icons";
 import { collection, onSnapshot, deleteDoc, doc } from "firebase/firestore";
 import { db, auth } from "../services/firebaseConfig";
 import { signOut } from "firebase/auth";
-import { ProgressBar } from "react-native-paper";
+
 import TransactionItem from "../components/TransactionItem";
 import { LightTheme } from "../theme";
 import { useTheme } from "../ThemeContext";
 import {
   calculateFixedCommitmentsPaise,
   calculateMoneyAfterFixedPaise,
-  calculateNetWorthPaise,
   calculatePlannedIncomePaise,
   calculatePlannedSpendablePaise,
   calculateRemainingSpendablePaise,
@@ -37,12 +36,9 @@ import {
 export default function DashboardScreen({ navigation }) {
   const { colors, isDark, themeMode, cycleThemeMode } = useTheme();
   const [transactions, setTransactions] = useState([]);
-  const [accounts, setAccounts] = useState([]);
   const [monthlyPlan, setMonthlyPlan] = useState(null);
   const [isPlanLoading, setIsPlanLoading] = useState(true);
-  const [balance, setBalance] = useState(0);
-  const [expenseTotal, setExpenseTotal] = useState(0);
-  const [incomeTotal, setIncomeTotal] = useState(0);
+
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const selectedMonthKey = `${currentYear}-${String(currentMonth + 1).padStart(
@@ -52,33 +48,8 @@ export default function DashboardScreen({ navigation }) {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState("all"); // all, income, expense
   const [searchQuery, setSearchQuery] = useState("");
-  const [monthlyBudget, setMonthlyBudget] = useState(20000); // Default budget
-  const [categoryBudgets, setCategoryBudgets] = useState({});
+
   const [showDrawer, setShowDrawer] = useState(false);
-
-  useEffect(() => {
-    const accountsRef = collection(
-      db,
-      "users",
-      auth.currentUser.uid,
-      "accounts",
-    );
-
-    return onSnapshot(
-      accountsRef,
-      (snapshot) => {
-        setAccounts(
-          snapshot.docs.map((account) => ({
-            id: account.id,
-            ...account.data(),
-          })),
-        );
-      },
-      (error) => {
-        console.error("Error loading accounts:", error);
-      },
-    );
-  }, []);
 
   useEffect(() => {
     const userId = auth.currentUser?.uid;
@@ -117,66 +88,23 @@ export default function DashboardScreen({ navigation }) {
   }, [selectedMonthKey]);
 
   useEffect(() => {
-    const budgetRef = doc(
-      db,
-      "users",
-      auth.currentUser.uid,
-      "settings",
-      "budget",
-    );
-
-    const unsubscribe = onSnapshot(
-      budgetRef,
-      (budgetSnapshot) => {
-        if (budgetSnapshot.exists()) {
-          setMonthlyBudget(budgetSnapshot.data().monthlyBudget ?? 20000);
-          setCategoryBudgets(budgetSnapshot.data().categoryBudgets || {});
-        } else {
-          setMonthlyBudget(20000);
-        }
-      },
-      (error) => {
-        console.error("Error loading budget:", error);
-      },
-    );
-
-    return unsubscribe;
-  }, []);
-
-  useEffect(() => {
     const q = collection(db, "users", auth.currentUser.uid, "transactions");
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      const data = snapshot.docs.map((item) => ({
+        id: item.id,
+        ...item.data(),
+      }));
 
-      // 🔹 Filter selected month and year
-      // Monthly reports retain their existing meaning: all transactions in the
-      // selected calendar month, including future-dated entries in that month.
       const selectedMonthData = data.filter((item) =>
         isTransactionInMonth(item, currentYear, currentMonth),
       );
 
       setTransactions(selectedMonthData);
-
-      let totalIncome = 0;
-      let totalExpense = 0;
-      const netWorthPaise = calculateNetWorthPaise(accounts, data);
-
-      selectedMonthData.forEach((item) => {
-        if (item.type === "transfer") return;
-        const amountPaise = getAmountPaise(item);
-
-        if (item.type === "income") totalIncome += amountPaise / 100;
-        else totalExpense += amountPaise / 100;
-      });
-
-      setIncomeTotal(totalIncome);
-      setExpenseTotal(totalExpense);
-      setBalance(netWorthPaise / 100);
     });
 
     return unsubscribe;
-  }, [accounts, currentMonth, currentYear]);
+  }, [currentMonth, currentYear]);
 
   const handleDelete = async (id) => {
     try {
@@ -278,13 +206,6 @@ export default function DashboardScreen({ navigation }) {
     ? calculateSafeToSpendPerDayPaise(remainingSpendablePaise, now)
     : null;
 
-  const remainingBudget = monthlyBudget - expenseTotal;
-  const progress =
-    monthlyBudget > 0 ? Math.min(expenseTotal / monthlyBudget, 1) : 0;
-  const budgetPercentage =
-    monthlyBudget > 0 ? Math.round((expenseTotal / monthlyBudget) * 100) : 0;
-
-  const isOverBudget = monthlyBudget >= 0 && expenseTotal > monthlyBudget;
   const categorySpending = transactions.reduce((totals, transaction) => {
     if (transaction.type === "expense" && transaction.category) {
       const amountPaise = getAmountPaise(transaction);
@@ -299,26 +220,6 @@ export default function DashboardScreen({ navigation }) {
     .sort(([, firstAmount], [, secondAmount]) => secondAmount - firstAmount)
     .slice(0, 5);
   const largestCategorySpending = spendingCategories[0]?.[1] || 0;
-
-  const selectedCategoryBudgets = Object.entries(categoryBudgets).reduce(
-    (budgets, [key, amount]) => {
-      if (key.includes("|")) {
-        const [monthKey, category] = key.split("|");
-        if (monthKey === selectedMonthKey) {
-          budgets[category] = amount;
-        }
-      } else if (
-        selectedMonthKey ===
-        `${new Date().getFullYear()}-${String(
-          new Date().getMonth() + 1,
-        ).padStart(2, "0")}`
-      ) {
-        budgets[key] = amount;
-      }
-      return budgets;
-    },
-    {},
-  );
 
   const monthNames = [
     "January",
@@ -425,7 +326,6 @@ export default function DashboardScreen({ navigation }) {
             </TouchableOpacity>
           </View>
 
-          {/* Balance Card */}
           {/* Lean V2 Money Status */}
           {isPlanLoading ? (
             <View
@@ -965,15 +865,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  settingsButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 8,
-  },
+
   monthNavigationContainer: {
     flexDirection: "row",
     justifyContent: "center",
@@ -1016,164 +908,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "white",
   },
-  logoutButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  balanceCard: {
-    backgroundColor: "white",
-    borderRadius: 20,
-    padding: 20,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 10,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 20,
-    elevation: 15,
-  },
-  balanceLabel: {
-    fontSize: 16,
-    color: "#666",
-    marginBottom: 8,
-  },
-  balanceAmount: {
-    fontSize: 28,
-    fontWeight: "bold",
-    marginBottom: 15,
-  },
-  balanceStats: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  statItem: {
-    flex: 1,
-    alignItems: "center",
-  },
-  statLabel: {
-    fontSize: 12,
-    color: "#666",
-    marginTop: 4,
-    marginBottom: 2,
-  },
-  statValue: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: LightTheme.colors.text,
-  },
-  contentContainer: {
-    flex: 1,
-    paddingHorizontal: 20,
-    marginTop: 0,
-  },
-  budgetCard: {
-    backgroundColor: "white",
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 20,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 5,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 5,
-  },
-  budgetHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 15,
-  },
-  budgetHeaderActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  budgetSettingsButton: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: "rgba(77, 150, 255, 0.12)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  budgetSubtitle: {
-    fontSize: 12,
-    opacity: 0.65,
-    marginTop: 3,
-  },
-  budgetTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: LightTheme.colors.text,
-  },
-  budgetPercentage: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: LightTheme.colors.primary,
-  },
-  budgetProgress: {
-    marginBottom: 15,
-  },
-  progressBar: {
-    height: 8,
-    borderRadius: 4,
-  },
-  budgetDetails: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  budgetWarning: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 14,
-    padding: 10,
-    borderRadius: 10,
-    backgroundColor: "#FDECEC",
-  },
-  budgetWarningText: {
-    flex: 1,
-    marginLeft: 8,
-    color: "#B42318",
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  categoryBudgetRow: {
-    marginTop: 14,
-  },
-  categoryBudgetHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 6,
-  },
-  categoryBudgetName: {
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  categoryBudgetAmount: {
-    fontSize: 12,
-  },
-  categoryProgressBar: {
-    height: 6,
-    borderRadius: 3,
-  },
-  budgetSpent: {
-    fontSize: 14,
-    color: "#666",
-  },
-  budgetRemaining: {
-    fontSize: 14,
-    fontWeight: "bold",
-  },
+
   drawerOverlay: {
     flex: 1,
     flexDirection: "row",
@@ -1222,12 +957,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#E0E0E0",
     marginVertical: 10,
   },
-  overBudget: {
-    color: "#FF6B6B",
-  },
-  underBudget: {
-    color: "#4ECDC4",
-  },
+
   quickActions: {
     flexDirection: "row",
     marginBottom: 12,
@@ -1250,20 +980,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     marginLeft: 8,
   },
-  accountsButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "white",
-    borderRadius: 15,
-    paddingVertical: 14,
-    borderWidth: 1,
-    borderColor: LightTheme.colors.primary,
-  },
-  categoryBudgetSection: {
-    marginTop: 8,
-    marginBottom: 6,
-  },
+
   spendingCard: {
     borderRadius: 20,
     padding: 20,
@@ -1327,12 +1044,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     opacity: 0.65,
   },
-  accountsButtonText: {
-    color: LightTheme.colors.primary,
-    fontSize: 16,
-    fontWeight: "bold",
-    marginLeft: 8,
-  },
+
   filterContainer: {
     flexDirection: "row",
     backgroundColor: "white",
@@ -1423,149 +1135,154 @@ const styles = StyleSheet.create({
     paddingLeft: 8,
   },
   leanHeroCard: {
-  borderRadius: 20,
-  padding: 22,
-  shadowColor: "#000",
-  shadowOffset: {
-    width: 0,
-    height: 8,
+    borderRadius: 20,
+    padding: 22,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 8,
+    },
+    shadowOpacity: 0.18,
+    shadowRadius: 16,
+    elevation: 10,
   },
-  shadowOpacity: 0.18,
-  shadowRadius: 16,
-  elevation: 10,
-},
 
-leanLoadingText: {
-  fontSize: 15,
-  textAlign: "center",
-  opacity: 0.7,
-},
+  leanLoadingText: {
+    fontSize: 15,
+    textAlign: "center",
+    opacity: 0.7,
+  },
 
-leanHeroLabel: {
-  fontSize: 14,
-  opacity: 0.68,
-  marginBottom: 6,
-},
+  leanHeroLabel: {
+    fontSize: 14,
+    opacity: 0.68,
+    marginBottom: 6,
+  },
 
-leanHeroAmount: {
-  fontSize: 36,
-  fontWeight: "bold",
-},
+  leanHeroAmount: {
+    fontSize: 36,
+    fontWeight: "bold",
+  },
 
-leanHeroDivider: {
-  height: 1,
-  backgroundColor: "#94A3B8",
-  opacity: 0.2,
-  marginVertical: 18,
-},
+  leanHeroDivider: {
+    height: 1,
+    backgroundColor: "#94A3B8",
+    opacity: 0.2,
+    marginVertical: 18,
+  },
 
-leanSafeRow: {
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "space-between",
-},
+  leanSafeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
 
-leanSafeValueContainer: {
+  leanSafeValueContainer: {
+    flex: 1,
+  },
+
+  leanSafeLabel: {
+    fontSize: 12,
+    opacity: 0.65,
+    marginBottom: 4,
+  },
+
+  leanSafeAmount: {
+    fontSize: 22,
+    fontWeight: "bold",
+  },
+
+  daysBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginLeft: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: "rgba(77, 150, 255, 0.10)",
+  },
+
+  daysBadgeText: {
+    fontSize: 12,
+    fontWeight: "600",
+    marginLeft: 5,
+  },
+
+  noPlanTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 6,
+  },
+
+  noPlanText: {
+    fontSize: 14,
+    lineHeight: 20,
+    opacity: 0.65,
+  },
+
+  planSummaryCard: {
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 20,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+
+  planSummaryHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 18,
+  },
+
+  planSummaryTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+
+  planSummarySubtitle: {
+    fontSize: 12,
+    opacity: 0.6,
+    marginTop: 3,
+  },
+
+  planRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 7,
+  },
+
+  planLabel: {
+    fontSize: 14,
+    opacity: 0.72,
+  },
+
+  planValue: {
+    fontSize: 14,
+    fontWeight: "600",
+  },
+
+  planValueStrong: {
+    fontSize: 15,
+    fontWeight: "bold",
+  },
+
+  planDivider: {
+    height: 1,
+    backgroundColor: "#94A3B8",
+    opacity: 0.2,
+    marginVertical: 10,
+  },
+  contentContainer: {
   flex: 1,
-},
-
-leanSafeLabel: {
-  fontSize: 12,
-  opacity: 0.65,
-  marginBottom: 4,
-},
-
-leanSafeAmount: {
-  fontSize: 22,
-  fontWeight: "bold",
-},
-
-daysBadge: {
-  flexDirection: "row",
-  alignItems: "center",
-  marginLeft: 12,
-  paddingHorizontal: 10,
-  paddingVertical: 8,
-  borderRadius: 12,
-  backgroundColor: "rgba(77, 150, 255, 0.10)",
-},
-
-daysBadgeText: {
-  fontSize: 12,
-  fontWeight: "600",
-  marginLeft: 5,
-},
-
-noPlanTitle: {
-  fontSize: 18,
-  fontWeight: "bold",
-  marginBottom: 6,
-},
-
-noPlanText: {
-  fontSize: 14,
-  lineHeight: 20,
-  opacity: 0.65,
-},
-
-planSummaryCard: {
-  borderRadius: 20,
-  padding: 20,
-  marginBottom: 20,
-  shadowColor: "#000",
-  shadowOffset: {
-    width: 0,
-    height: 4,
-  },
-  shadowOpacity: 0.08,
-  shadowRadius: 8,
-  elevation: 4,
-},
-
-planSummaryHeader: {
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "space-between",
-  marginBottom: 18,
-},
-
-planSummaryTitle: {
-  fontSize: 18,
-  fontWeight: "bold",
-},
-
-planSummarySubtitle: {
-  fontSize: 12,
-  opacity: 0.6,
-  marginTop: 3,
-},
-
-planRow: {
-  flexDirection: "row",
-  justifyContent: "space-between",
-  alignItems: "center",
-  paddingVertical: 7,
-},
-
-planLabel: {
-  fontSize: 14,
-  opacity: 0.72,
-},
-
-planValue: {
-  fontSize: 14,
-  fontWeight: "600",
-},
-
-planValueStrong: {
-  fontSize: 15,
-  fontWeight: "bold",
-},
-
-planDivider: {
-  height: 1,
-  backgroundColor: "#94A3B8",
-  opacity: 0.2,
-  marginVertical: 10,
+  paddingHorizontal: 20,
+  marginTop: 0,
 },
 });
