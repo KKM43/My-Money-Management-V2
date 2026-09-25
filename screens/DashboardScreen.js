@@ -29,6 +29,11 @@ import { ProgressBar } from "react-native-paper";
 import TransactionItem from "../components/TransactionItem";
 import { LightTheme } from "../theme";
 import { useTheme } from "../ThemeContext";
+import {
+  calculateNetWorthPaise,
+  getAmountPaise,
+  isTransactionInMonth,
+} from "../utils/finance";
 
 const MONTHLY_BUDGET = 20000;
 const { width, height } = Dimensions.get("window");
@@ -108,44 +113,21 @@ export default function DashboardScreen({ navigation }) {
       const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
 
       // 🔹 Filter selected month and year
-      const selectedMonthData = data.filter((item) => {
-        const dateValue = item.occurredOn || item.date;
-        const date = item.occurredOn
-          ? new Date(`${dateValue}T00:00:00`)
-          : new Date(dateValue);
-        return (
-          date.getMonth() === currentMonth && date.getFullYear() === currentYear
-        );
-      });
+      // Monthly reports retain their existing meaning: all transactions in the
+      // selected calendar month, including future-dated entries in that month.
+      const selectedMonthData = data.filter((item) =>
+        isTransactionInMonth(item, currentYear, currentMonth),
+      );
 
       setTransactions(selectedMonthData);
 
       let totalIncome = 0;
       let totalExpense = 0;
-      let netWorthPaise = accounts.reduce(
-        (total, account) => total + Number(account.openingBalancePaise || 0),
-        0,
-      );
-
-      data.forEach((item) => {
-        const amountPaise = Number.isInteger(item.amountPaise)
-          ? item.amountPaise
-          : Math.round(Number(item.amount || 0) * 100);
-
-        if (item.type === "transfer") {
-          return;
-        }
-
-        if (!item.accountId) return;
-        if (item.type === "income") netWorthPaise += amountPaise;
-        else netWorthPaise -= amountPaise;
-      });
+      const netWorthPaise = calculateNetWorthPaise(accounts, data);
 
       selectedMonthData.forEach((item) => {
         if (item.type === "transfer") return;
-        const amountPaise = Number.isInteger(item.amountPaise)
-          ? item.amountPaise
-          : Math.round(Number(item.amount || 0) * 100);
+        const amountPaise = getAmountPaise(item);
 
         if (item.type === "income") totalIncome += amountPaise / 100;
         else totalExpense += amountPaise / 100;

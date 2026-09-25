@@ -25,6 +25,10 @@ import {
 import { auth, db } from "../services/firebaseConfig";
 import { LightTheme } from "../theme";
 import { useTheme } from "../ThemeContext";
+import {
+  calculateAccountBalancePaise,
+  getAccountDisplayAmountPaise,
+} from "../utils/finance";
 
 const ACCOUNT_TYPES = [
   { value: "bank", label: "Bank", icon: "business-outline" },
@@ -121,7 +125,9 @@ function SwipeableAccountRow({
                 {account.name}
               </Text>
               <Text style={[styles.accountType, { color: colors.text }]}>
-                {accountType?.label || "Account"}
+                {account.type === "creditCard"
+                  ? "Credit card • Outstanding"
+                  : accountType?.label || "Account"}
                 {account.isArchived ? " • Archived" : ""}
               </Text>
             </View>
@@ -453,7 +459,7 @@ export default function AccountsScreen({ navigation }) {
                     styles.typeButtonText,
                     editType === accountType.value &&
                       styles.typeButtonTextActive,
-                      { color: type === accountType.value ? "white" : colors.text },
+                      { color: editType === accountType.value ? "white" : colors.text },
                   ]}
                 >
                   {accountType.label}
@@ -484,33 +490,14 @@ export default function AccountsScreen({ navigation }) {
           const accountType = ACCOUNT_TYPES.find(
             (item) => item.value === account.type,
           );
-          const transactionBalancePaise = transactions.reduce(
-            (balance, transaction) => {
-              const amountPaise = Number.isInteger(transaction.amountPaise)
-                ? transaction.amountPaise
-                : Math.round(Number(transaction.amount || 0) * 100);
-
-              if (transaction.type === "transfer") {
-                if (transaction.fromAccountId === account.id) {
-                  return balance - amountPaise;
-                }
-                if (transaction.toAccountId === account.id) {
-                  return balance + amountPaise;
-                }
-                return balance;
-              }
-
-              if (transaction.accountId !== account.id) return balance;
-
-              return transaction.type === "income"
-                ? balance + amountPaise
-                : balance - amountPaise;
-            },
-            0,
+          const signedBalancePaise = calculateAccountBalancePaise(
+            account,
+            transactions,
           );
-          const balancePaise =
-            Number(account.openingBalancePaise || 0) +
-            transactionBalancePaise;
+          const balancePaise = getAccountDisplayAmountPaise(
+            account,
+            signedBalancePaise,
+          );
 
           return (
             <SwipeableAccountRow
