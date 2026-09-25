@@ -426,39 +426,94 @@ export default function DashboardScreen({ navigation }) {
           </View>
 
           {/* Balance Card */}
-          <View
-            style={[styles.balanceCard, { backgroundColor: colors.surface }]}
-          >
-            <Text style={styles.balanceLabel}>Net Worth</Text>
-            <Text
-              style={[
-                styles.balanceAmount,
-                { color: balance >= 0 ? "#4ECDC4" : "#FF6B6B" },
-              ]}
+          {/* Lean V2 Money Status */}
+          {isPlanLoading ? (
+            <View
+              style={[styles.leanHeroCard, { backgroundColor: colors.surface }]}
             >
-              {formatCurrency(balance)}
-            </Text>
-            <View style={styles.balanceStats}>
-              <View style={styles.statItem}>
-                <Ionicons name="trending-up" size={16} color="#4ECDC4" />
-                <Text style={[styles.statLabel, { color: colors.text }]}>
-                  Income
-                </Text>
-                <Text style={[styles.statValue, { color: colors.text }]}>
-                  {formatCurrency(incomeTotal)}
-                </Text>
-              </View>
-              <View style={styles.statItem}>
-                <Ionicons name="trending-down" size={16} color="#FF6B6B" />
-                <Text style={[styles.statLabel, { color: colors.text }]}>
-                  Expenses
-                </Text>
-                <Text style={[styles.statValue, { color: colors.text }]}>
-                  {formatCurrency(expenseTotal)}
-                </Text>
+              <Text style={[styles.leanLoadingText, { color: colors.text }]}>
+                Loading your monthly plan...
+              </Text>
+            </View>
+          ) : monthlyPlan ? (
+            <View
+              style={[styles.leanHeroCard, { backgroundColor: colors.surface }]}
+            >
+              <Text style={[styles.leanHeroLabel, { color: colors.text }]}>
+                Remaining to Spend
+              </Text>
+
+              <Text
+                style={[
+                  styles.leanHeroAmount,
+                  {
+                    color:
+                      remainingSpendablePaise >= 0 ? colors.primary : "#D32F2F",
+                  },
+                ]}
+              >
+                {formatCurrency(remainingSpendablePaise / 100)}
+              </Text>
+
+              <View style={styles.leanHeroDivider} />
+
+              <View style={styles.leanSafeRow}>
+                <View style={styles.leanSafeValueContainer}>
+                  <Text style={[styles.leanSafeLabel, { color: colors.text }]}>
+                    {isCurrentMonthSelected
+                      ? "Safe to Spend / Day"
+                      : "Planned Spendable"}
+                  </Text>
+
+                  <Text
+                    style={[
+                      styles.leanSafeAmount,
+                      {
+                        color:
+                          isCurrentMonthSelected && safeToSpendPerDayPaise < 0
+                            ? "#D32F2F"
+                            : colors.text,
+                      },
+                    ]}
+                  >
+                    {isCurrentMonthSelected
+                      ? formatCurrency(safeToSpendPerDayPaise / 100)
+                      : formatCurrency(plannedSpendablePaise / 100)}
+                  </Text>
+                </View>
+
+                {isCurrentMonthSelected && (
+                  <View style={styles.daysBadge}>
+                    <Ionicons
+                      name="calendar-outline"
+                      size={16}
+                      color={colors.primary}
+                    />
+
+                    <Text
+                      style={[styles.daysBadgeText, { color: colors.text }]}
+                    >
+                      {daysRemaining}{" "}
+                      {daysRemaining === 1 ? "day left" : "days left"}
+                    </Text>
+                  </View>
+                )}
               </View>
             </View>
-          </View>
+          ) : (
+            <View
+              style={[styles.leanHeroCard, { backgroundColor: colors.surface }]}
+            >
+              <Text style={[styles.noPlanTitle, { color: colors.text }]}>
+                No monthly plan
+              </Text>
+
+              <Text style={[styles.noPlanText, { color: colors.text }]}>
+                No Lean V2 plan exists for {monthNames[currentMonth]}{" "}
+                {currentYear}.
+              </Text>
+            </View>
+          )}
         </View>
       </LinearGradient>
 
@@ -468,128 +523,125 @@ export default function DashboardScreen({ navigation }) {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        {/* Budget Card */}
-        <View style={[styles.budgetCard, { backgroundColor: colors.surface }]}>
-          <View style={styles.budgetHeader}>
-            <View>
-              <Text style={[styles.budgetTitle, { color: colors.text }]}>
-                Monthly Budget
-              </Text>
-              <Text style={[styles.budgetSubtitle, { color: colors.text }]}>
-                {monthNames[currentMonth]} {currentYear}
-              </Text>
-            </View>
-            <View style={styles.budgetHeaderActions}>
-              <Text
-                style={[styles.budgetPercentage, { color: colors.primary }]}
-              >
-                {budgetPercentage}%
-              </Text>
-              <TouchableOpacity
-                style={styles.budgetSettingsButton}
-                onPress={() => navigation.navigate("BudgetSettings")}
-                accessibilityLabel="Open budget settings"
-              >
-                <Ionicons
-                  name="settings-outline"
-                  size={18}
-                  color={colors.primary}
-                />
-              </TouchableOpacity>
-            </View>
-          </View>
+        {/* Lean V2 Plan Summary */}
+        {!isPlanLoading && monthlyPlan && (
+          <View
+            style={[
+              styles.planSummaryCard,
+              { backgroundColor: colors.surface },
+            ]}
+          >
+            <View style={styles.planSummaryHeader}>
+              <View>
+                <Text style={[styles.planSummaryTitle, { color: colors.text }]}>
+                  Your Plan
+                </Text>
 
-          {Object.keys(selectedCategoryBudgets).length > 0 && (
-            <View style={styles.categoryBudgetSection}>
-              <Text style={[styles.budgetTitle, { color: colors.text }]}>
-                Category Budgets
-              </Text>
-              {Object.entries(selectedCategoryBudgets).map(
-                ([category, budget]) => {
-                  const spent = categorySpending[category] || 0;
+                <Text
+                  style={[styles.planSummarySubtitle, { color: colors.text }]}
+                >
+                  {monthNames[currentMonth]} {currentYear}
+                </Text>
+              </View>
 
-                  const percentage =
-                    budget > 0 ? Math.round((spent / budget) * 100) : 0;
-
-                  const categoryProgress =
-                    budget > 0 ? Math.min(spent / budget, 1) : 0;
-                  return (
-                    <View key={category} style={styles.categoryBudgetRow}>
-                      <View style={styles.categoryBudgetHeader}>
-                        <Text
-                          style={[
-                            styles.categoryBudgetName,
-                            { color: colors.text },
-                          ]}
-                        >
-                          {category}
-                        </Text>
-                        <Text
-                          style={[
-                            styles.categoryBudgetAmount,
-                            { color: colors.text },
-                          ]}
-                        >
-                          {formatCurrency(spent)} / {formatCurrency(budget)}
-                        </Text>
-                      </View>
-                      <ProgressBar
-                        progress={categoryProgress}
-                        color={percentage > 100 ? "#FF6B6B" : colors.primary}
-                        style={styles.categoryProgressBar}
-                      />
-                    </View>
-                  );
-                },
-              )}
-            </View>
-          )}
-          <View style={styles.budgetProgress}>
-            <ProgressBar
-              progress={progress}
-              color={remainingBudget < 0 ? "#FF6B6B" : "#4ECDC4"}
-              style={styles.progressBar}
-            />
-          </View>
-          <View style={styles.budgetDetails}>
-            <Text style={[styles.budgetSpent, { color: colors.text }]}>
-              Spent: {formatCurrency(expenseTotal)} /{" "}
-              {formatCurrency(monthlyBudget)}
-            </Text>
-            <Text
-              style={[
-                styles.budgetRemaining,
-                remainingBudget < 0 ? styles.overBudget : styles.underBudget,
-              ]}
-            >
-              {remainingBudget < 0 ? "Over budget by " : "Remaining: "}
-              {formatCurrency(Math.abs(remainingBudget))}
-            </Text>
-          </View>
-          {isOverBudget && (
-            <View
-              style={[
-                styles.budgetWarning,
-                { backgroundColor: isDark ? "#3A2020" : "#FDECEC" },
-              ]}
-            >
               <Ionicons
-                name="warning-outline"
-                size={18}
-                color={isDark ? "#FF8A80" : "#B42318"}
+                name="wallet-outline"
+                size={22}
+                color={colors.primary}
               />
+            </View>
+
+            <View style={styles.planRow}>
+              <Text style={[styles.planLabel, { color: colors.text }]}>
+                Income
+              </Text>
+
+              <Text style={[styles.planValue, { color: colors.text }]}>
+                {formatCurrency(plannedIncomePaise / 100)}
+              </Text>
+            </View>
+
+            <View style={styles.planRow}>
+              <Text style={[styles.planLabel, { color: colors.text }]}>
+                Fixed commitments
+              </Text>
+
+              <Text style={[styles.planValue, { color: colors.text }]}>
+                {formatCurrency(plannedFixedPaise / 100)}
+              </Text>
+            </View>
+
+            <View style={styles.planRow}>
+              <Text style={[styles.planLabel, { color: colors.text }]}>
+                Savings target
+              </Text>
+
+              <Text style={[styles.planValue, { color: colors.text }]}>
+                {formatCurrency(savingsTargetPaise / 100)}
+              </Text>
+            </View>
+
+            <View style={styles.planDivider} />
+
+            <View style={styles.planRow}>
+              <Text style={[styles.planLabel, { color: colors.text }]}>
+                Planned spendable
+              </Text>
+
               <Text
                 style={[
-                  styles.budgetWarningText,
-                  { color: isDark ? "#FFB4AB" : "#B42318" },
+                  styles.planValueStrong,
+                  {
+                    color:
+                      plannedSpendablePaise >= 0 ? colors.primary : "#D32F2F",
+                  },
                 ]}
               >
-                Spending is {formatCurrency(Math.abs(remainingBudget))} over
-                your monthly budget.
+                {formatCurrency(plannedSpendablePaise / 100)}
               </Text>
             </View>
-          )}
-        </View>
+
+            <View style={styles.planRow}>
+              <Text style={[styles.planLabel, { color: colors.text }]}>
+                Spent so far
+              </Text>
+
+              <Text style={[styles.planValue, { color: colors.text }]}>
+                {formatCurrency(variableSpentPaise / 100)}
+              </Text>
+            </View>
+
+            <View style={styles.planRow}>
+              <Text style={[styles.planLabel, { color: colors.text }]}>
+                Remaining
+              </Text>
+
+              <Text
+                style={[
+                  styles.planValueStrong,
+                  {
+                    color:
+                      remainingSpendablePaise >= 0 ? colors.primary : "#D32F2F",
+                  },
+                ]}
+              >
+                {formatCurrency(remainingSpendablePaise / 100)}
+              </Text>
+            </View>
+
+            {isCurrentMonthSelected && (
+              <View style={styles.planRow}>
+                <Text style={[styles.planLabel, { color: colors.text }]}>
+                  Days remaining
+                </Text>
+
+                <Text style={[styles.planValue, { color: colors.text }]}>
+                  {daysRemaining}
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
 
         {/* Spending Summary */}
         <View
@@ -1370,4 +1422,150 @@ const styles = StyleSheet.create({
   clearSearchButton: {
     paddingLeft: 8,
   },
+  leanHeroCard: {
+  borderRadius: 20,
+  padding: 22,
+  shadowColor: "#000",
+  shadowOffset: {
+    width: 0,
+    height: 8,
+  },
+  shadowOpacity: 0.18,
+  shadowRadius: 16,
+  elevation: 10,
+},
+
+leanLoadingText: {
+  fontSize: 15,
+  textAlign: "center",
+  opacity: 0.7,
+},
+
+leanHeroLabel: {
+  fontSize: 14,
+  opacity: 0.68,
+  marginBottom: 6,
+},
+
+leanHeroAmount: {
+  fontSize: 36,
+  fontWeight: "bold",
+},
+
+leanHeroDivider: {
+  height: 1,
+  backgroundColor: "#94A3B8",
+  opacity: 0.2,
+  marginVertical: 18,
+},
+
+leanSafeRow: {
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "space-between",
+},
+
+leanSafeValueContainer: {
+  flex: 1,
+},
+
+leanSafeLabel: {
+  fontSize: 12,
+  opacity: 0.65,
+  marginBottom: 4,
+},
+
+leanSafeAmount: {
+  fontSize: 22,
+  fontWeight: "bold",
+},
+
+daysBadge: {
+  flexDirection: "row",
+  alignItems: "center",
+  marginLeft: 12,
+  paddingHorizontal: 10,
+  paddingVertical: 8,
+  borderRadius: 12,
+  backgroundColor: "rgba(77, 150, 255, 0.10)",
+},
+
+daysBadgeText: {
+  fontSize: 12,
+  fontWeight: "600",
+  marginLeft: 5,
+},
+
+noPlanTitle: {
+  fontSize: 18,
+  fontWeight: "bold",
+  marginBottom: 6,
+},
+
+noPlanText: {
+  fontSize: 14,
+  lineHeight: 20,
+  opacity: 0.65,
+},
+
+planSummaryCard: {
+  borderRadius: 20,
+  padding: 20,
+  marginBottom: 20,
+  shadowColor: "#000",
+  shadowOffset: {
+    width: 0,
+    height: 4,
+  },
+  shadowOpacity: 0.08,
+  shadowRadius: 8,
+  elevation: 4,
+},
+
+planSummaryHeader: {
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "space-between",
+  marginBottom: 18,
+},
+
+planSummaryTitle: {
+  fontSize: 18,
+  fontWeight: "bold",
+},
+
+planSummarySubtitle: {
+  fontSize: 12,
+  opacity: 0.6,
+  marginTop: 3,
+},
+
+planRow: {
+  flexDirection: "row",
+  justifyContent: "space-between",
+  alignItems: "center",
+  paddingVertical: 7,
+},
+
+planLabel: {
+  fontSize: 14,
+  opacity: 0.72,
+},
+
+planValue: {
+  fontSize: 14,
+  fontWeight: "600",
+},
+
+planValueStrong: {
+  fontSize: 15,
+  fontWeight: "bold",
+},
+
+planDivider: {
+  height: 1,
+  backgroundColor: "#94A3B8",
+  opacity: 0.2,
+  marginVertical: 10,
+},
 });
