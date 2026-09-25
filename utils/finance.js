@@ -89,11 +89,151 @@ const getAccountDisplayAmountPaise = (account, signedBalancePaise) => {
   return signedBalancePaise;
 };
 
+const calculatePlannedIncomePaise = (incomeSources = []) =>
+  incomeSources.reduce(
+    (total, incomeSource) =>
+      total + getAmountPaise(incomeSource),
+    0,
+  );
+
+const calculateFixedCommitmentsPaise = (
+  fixedCommitments = [],
+) =>
+  fixedCommitments.reduce(
+    (total, commitment) =>
+      total + getAmountPaise(commitment),
+    0,
+  );
+
+const calculateMoneyAfterFixedPaise = (
+  totalIncomePaise,
+  totalFixedPaise,
+) =>
+  Number(totalIncomePaise || 0) -
+  Number(totalFixedPaise || 0);
+
+const calculatePlannedSpendablePaise = (
+  moneyAfterFixedPaise,
+  savingsTargetPaise,
+) =>
+  Number(moneyAfterFixedPaise || 0) -
+  Number(savingsTargetPaise || 0);
+
+const calculateSavingsPercentage = (
+  totalIncomePaise,
+  savingsTargetPaise,
+) => {
+  if (totalIncomePaise <= 0) {
+    return 0;
+  }
+
+  return (
+    Math.round(
+      (savingsTargetPaise / totalIncomePaise) *
+        100 *
+        100,
+    ) / 100
+  );
+};
+
+const calculateVariableSpentPaise = (
+  transactions = [],
+  year,
+  month,
+  now = new Date(),
+) =>
+  transactions.reduce((total, transaction) => {
+    if (transaction?.type !== "expense") {
+      return total;
+    }
+
+    if (transaction.fixedCommitmentId) {
+      return total;
+    }
+
+    if (
+      !isTransactionInMonth(
+        transaction,
+        year,
+        month,
+      )
+    ) {
+      return total;
+    }
+
+    if (
+      !isTransactionOnOrBeforeToday(
+        transaction,
+        now,
+      )
+    ) {
+      return total;
+    }
+
+    return total + getAmountPaise(transaction);
+  }, 0);
+
+const calculateRemainingSpendablePaise = (
+  plannedSpendablePaise,
+  variableSpentPaise,
+) =>
+  Number(plannedSpendablePaise || 0) -
+  Number(variableSpentPaise || 0);
+
+const getDaysRemainingInMonth = (
+  now = new Date(),
+) => {
+  if (
+    !(now instanceof Date) ||
+    Number.isNaN(now.getTime())
+  ) {
+    return 0;
+  }
+
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  const currentDay = now.getDate();
+
+  const daysInMonth = new Date(
+    year,
+    month + 1,
+    0,
+  ).getDate();
+
+  return daysInMonth - currentDay + 1;
+};
+
+const calculateSafeToSpendPerDayPaise = (
+  remainingSpendablePaise,
+  now = new Date(),
+) => {
+  const daysRemaining =
+    getDaysRemainingInMonth(now);
+
+  if (daysRemaining <= 0) {
+    return 0;
+  }
+
+  return Math.trunc(
+    Number(remainingSpendablePaise || 0) /
+      daysRemaining,
+  );
+};
+
 module.exports = {
   calculateAccountBalancePaise,
+  calculateFixedCommitmentsPaise,
+  calculateMoneyAfterFixedPaise,
   calculateNetWorthPaise,
+  calculatePlannedIncomePaise,
+  calculatePlannedSpendablePaise,
+  calculateRemainingSpendablePaise,
+  calculateSafeToSpendPerDayPaise,
+  calculateSavingsPercentage,
+  calculateVariableSpentPaise,
   getAccountDisplayAmountPaise,
   getAmountPaise,
+  getDaysRemainingInMonth,
   getTransactionBalanceEffectPaise,
   getTransactionDateKey,
   isTransactionInMonth,

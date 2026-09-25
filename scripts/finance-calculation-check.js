@@ -1,9 +1,18 @@
 const assert = require("assert");
 const {
   calculateAccountBalancePaise,
+  calculateFixedCommitmentsPaise,
+  calculateMoneyAfterFixedPaise,
   calculateNetWorthPaise,
+  calculatePlannedIncomePaise,
+  calculatePlannedSpendablePaise,
+  calculateRemainingSpendablePaise,
+  calculateSafeToSpendPerDayPaise,
+  calculateSavingsPercentage,
+  calculateVariableSpentPaise,
   getAccountDisplayAmountPaise,
   getAmountPaise,
+  getDaysRemainingInMonth,
   isTransactionInMonth,
 } = require("../utils/finance");
 
@@ -221,6 +230,291 @@ const archivedAccount = {
 assert.strictEqual(
   calculateNetWorthPaise([archivedAccount], [], today),
   50000,
+);
+
+// ============================================================
+// LEAN V2 MONTHLY MONEY PLAN CHECKS
+// ============================================================
+
+const leanV2Today = new Date(2026, 8, 25, 12);
+
+// Multiple income sources should combine correctly.
+const incomeSources = [
+  {
+    id: "salary",
+    name: "Salary",
+    amountPaise: 3000000,
+  },
+  {
+    id: "freelance",
+    name: "Freelance",
+    amountPaise: 500000,
+  },
+];
+
+const totalIncomePaise =
+  calculatePlannedIncomePaise(incomeSources);
+
+assert.strictEqual(
+  totalIncomePaise,
+  3500000,
+);
+
+
+// Fixed commitments from the real Lean V2 example.
+const fixedCommitments = [
+  {
+    id: "rent",
+    name: "Rent",
+    amountPaise: 1400000,
+  },
+  {
+    id: "emi",
+    name: "EMI",
+    amountPaise: 505200,
+  },
+  {
+    id: "recharge",
+    name: "Recharge",
+    amountPaise: 117500,
+  },
+];
+
+const totalFixedPaise =
+  calculateFixedCommitmentsPaise(
+    fixedCommitments,
+  );
+
+assert.strictEqual(
+  totalFixedPaise,
+  2022700,
+);
+
+
+// ₹35,000 - ₹20,227 = ₹14,773.
+const moneyAfterFixedPaise =
+  calculateMoneyAfterFixedPaise(
+    totalIncomePaise,
+    totalFixedPaise,
+  );
+
+assert.strictEqual(
+  moneyAfterFixedPaise,
+  1477300,
+);
+
+
+// Protect ₹4,000 as savings.
+const savingsTargetPaise = 400000;
+
+const plannedSpendablePaise =
+  calculatePlannedSpendablePaise(
+    moneyAfterFixedPaise,
+    savingsTargetPaise,
+  );
+
+assert.strictEqual(
+  plannedSpendablePaise,
+  1077300,
+);
+
+
+// ₹4,000 is 11.43% of ₹35,000.
+assert.strictEqual(
+  calculateSavingsPercentage(
+    totalIncomePaise,
+    savingsTargetPaise,
+  ),
+  11.43,
+);
+
+
+// No income means savings percentage should be safe.
+assert.strictEqual(
+  calculateSavingsPercentage(
+    0,
+    400000,
+  ),
+  0,
+);
+
+
+// Actual variable spending.
+//
+// Food + travel should count.
+//
+// Rent is already reserved as a fixed commitment,
+// so its actual payment must not reduce spendable
+// money for a second time.
+//
+// Transfers are also not spending.
+//
+// Future expenses should not affect today's
+// Safe-to-Spend calculation.
+const leanV2Transactions = [
+  {
+    type: "expense",
+    accountId: "bank",
+    category: "Food & Dining",
+    amountPaise: 200000,
+    occurredOn: "2026-09-10",
+  },
+  {
+    type: "expense",
+    accountId: "bank",
+    category: "Transportation",
+    amountPaise: 85000,
+    occurredOn: "2026-09-25",
+  },
+  {
+    type: "expense",
+    accountId: "bank",
+    category: "Bills & Utilities",
+    amountPaise: 1400000,
+    fixedCommitmentId: "rent",
+    occurredOn: "2026-09-05",
+  },
+  {
+    type: "transfer",
+    fromAccountId: "bank",
+    toAccountId: "cash",
+    amountPaise: 100000,
+    occurredOn: "2026-09-15",
+  },
+  {
+    type: "expense",
+    accountId: "bank",
+    category: "Shopping",
+    amountPaise: 50000,
+    occurredOn: "2026-09-26",
+  },
+  {
+    type: "expense",
+    accountId: "bank",
+    category: "Food & Dining",
+    amountPaise: 99999,
+    occurredOn: "2026-10-01",
+  },
+];
+
+const variableSpentPaise =
+  calculateVariableSpentPaise(
+    leanV2Transactions,
+    2026,
+    8,
+    leanV2Today,
+  );
+
+assert.strictEqual(
+  variableSpentPaise,
+  285000,
+);
+
+
+// ₹10,773 - ₹2,850 = ₹7,923.
+const remainingSpendablePaise =
+  calculateRemainingSpendablePaise(
+    plannedSpendablePaise,
+    variableSpentPaise,
+  );
+
+assert.strictEqual(
+  remainingSpendablePaise,
+  792300,
+);
+
+
+// September 25 through September 30 = 6 days.
+assert.strictEqual(
+  getDaysRemainingInMonth(
+    leanV2Today,
+  ),
+  6,
+);
+
+
+// ₹7,923 / 6 = ₹1,320.50 per day.
+assert.strictEqual(
+  calculateSafeToSpendPerDayPaise(
+    remainingSpendablePaise,
+    leanV2Today,
+  ),
+  132050,
+);
+
+
+// Last day of the month should still count as one day.
+const lastDayOfSeptember =
+  new Date(2026, 8, 30, 12);
+
+assert.strictEqual(
+  getDaysRemainingInMonth(
+    lastDayOfSeptember,
+  ),
+  1,
+);
+
+assert.strictEqual(
+  calculateSafeToSpendPerDayPaise(
+    50000,
+    lastDayOfSeptember,
+  ),
+  50000,
+);
+
+
+// Fixed commitments may exceed income.
+// We preserve the negative financial position.
+assert.strictEqual(
+  calculateMoneyAfterFixedPaise(
+    1000000,
+    1200000,
+  ),
+  -200000,
+);
+
+
+// Savings may exceed money after fixed.
+// Do not silently clamp the result.
+assert.strictEqual(
+  calculatePlannedSpendablePaise(
+    500000,
+    600000,
+  ),
+  -100000,
+);
+
+
+// Overspending must remain negative.
+assert.strictEqual(
+  calculateRemainingSpendablePaise(
+    1000000,
+    1150000,
+  ),
+  -150000,
+);
+
+
+// A negative Safe-to-Spend result should also
+// remain visible rather than being changed to zero.
+assert.strictEqual(
+  calculateSafeToSpendPerDayPaise(
+    -150000,
+    new Date(2026, 8, 25, 12),
+  ),
+  -25000,
+);
+
+
+// Empty plans should be safe.
+assert.strictEqual(
+  calculatePlannedIncomePaise([]),
+  0,
+);
+
+assert.strictEqual(
+  calculateFixedCommitmentsPaise([]),
+  0,
 );
 
 console.log("Finance calculation checks passed.");
