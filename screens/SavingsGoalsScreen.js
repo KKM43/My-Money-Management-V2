@@ -213,7 +213,7 @@ export default function SavingsGoalsScreen({ navigation }) {
     }
   };
 
-  
+
 
   return (
     <KeyboardAvoidingView
