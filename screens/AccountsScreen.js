@@ -37,12 +37,14 @@ const ACCOUNT_TYPES = [
   { value: "creditCard", label: "Credit card", icon: "card-outline" },
 ];
 
-const parseOpeningBalance = (value) => {
+const parseOpeningBalance = (value, accountType) => {
   if (!value.trim()) return 0;
   if (!/^\d+(\.\d{1,2})?$/.test(value)) return null;
 
   const [rupees, paise = ""] = value.split(".");
-  return Number(rupees) * 100 + Number(paise.padEnd(2, "0"));
+  const amountPaise = Number(rupees) * 100 + Number(paise.padEnd(2, "0"));
+
+  return accountType === "creditCard" ? -amountPaise : amountPaise;
 };
 
 function SwipeableAccountRow({
@@ -144,7 +146,9 @@ function SwipeableAccountRow({
         onRequestClose={() => setShowOptions(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.optionsModal, { backgroundColor: colors.surface }]}>
+          <View
+            style={[styles.optionsModal, { backgroundColor: colors.surface }]}
+          >
             <TouchableOpacity
               style={styles.closeButton}
               onPress={() => setShowOptions(false)}
@@ -162,7 +166,9 @@ function SwipeableAccountRow({
                 onEdit();
               }}
             >
-              <Text style={[styles.optionText, { color: colors.text }]}>Edit</Text>
+              <Text style={[styles.optionText, { color: colors.text }]}>
+                Edit
+              </Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.optionButton}
@@ -237,9 +243,7 @@ export default function AccountsScreen({ navigation }) {
     return onSnapshot(
       transactionsRef,
       (snapshot) => {
-        setTransactions(
-          snapshot.docs.map((transaction) => transaction.data()),
-        );
+        setTransactions(snapshot.docs.map((transaction) => transaction.data()));
       },
       (error) => {
         Alert.alert("Error", `Could not load transactions: ${error.message}`);
@@ -249,17 +253,14 @@ export default function AccountsScreen({ navigation }) {
 
   const handleCreateAccount = async () => {
     const trimmedName = name.trim();
-    const openingBalancePaise = parseOpeningBalance(openingBalance);
+    const openingBalancePaise = parseOpeningBalance(openingBalance, type);
 
     if (!trimmedName) {
       Alert.alert("Error", "Please enter an account name");
       return;
     }
 
-    if (
-      !Number.isInteger(openingBalancePaise) ||
-      openingBalancePaise < 0
-    ) {
+    if (!Number.isInteger(openingBalancePaise)) {
       Alert.alert("Error", "Please enter a valid opening balance");
       return;
     }
@@ -267,17 +268,14 @@ export default function AccountsScreen({ navigation }) {
     setIsSaving(true);
 
     try {
-      await addDoc(
-        collection(db, "users", auth.currentUser.uid, "accounts"),
-        {
-          name: trimmedName,
-          type,
-          openingBalancePaise,
-          isArchived: false,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        },
-      );
+      await addDoc(collection(db, "users", auth.currentUser.uid, "accounts"), {
+        name: trimmedName,
+        type,
+        openingBalancePaise,
+        isArchived: false,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
 
       setName("");
       setOpeningBalance("");
@@ -355,7 +353,10 @@ export default function AccountsScreen({ navigation }) {
 
   return (
     <ScrollView
-      contentContainerStyle={[styles.container, { backgroundColor: colors.background }]}
+      contentContainerStyle={[
+        styles.container,
+        { backgroundColor: colors.background },
+      ]}
     >
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
@@ -366,11 +367,14 @@ export default function AccountsScreen({ navigation }) {
       </View>
 
       <View style={[styles.card, { backgroundColor: colors.surface }]}>
-      <Text style={[styles.sectionTitle, { color: colors.text }]}>
-        Create account
-      </Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>
+          Create account
+        </Text>
         <TextInput
-          style={[styles.input, { color: colors.text, borderColor: isDark ? "#444" : "#E0E0E0" }]}
+          style={[
+            styles.input,
+            { color: colors.text, borderColor: isDark ? "#444" : "#E0E0E0" },
+          ]}
           placeholder="Account name"
           placeholderTextColor="#999"
           value={name}
@@ -406,8 +410,15 @@ export default function AccountsScreen({ navigation }) {
         </View>
 
         <TextInput
-          style={[styles.input, { color: colors.text, borderColor: isDark ? "#444" : "#E0E0E0" }]}
-          placeholder="Opening balance (optional)"
+          style={[
+            styles.input,
+            { color: colors.text, borderColor: isDark ? "#444" : "#E0E0E0" },
+          ]}
+          placeholder={
+            type === "creditCard"
+              ? "Current outstanding (optional)"
+              : "Opening balance (optional)"
+          }
           placeholderTextColor="#999"
           keyboardType="numeric"
           value={openingBalance}
@@ -438,7 +449,10 @@ export default function AccountsScreen({ navigation }) {
             Edit account
           </Text>
           <TextInput
-            style={[styles.input, { color: colors.text, borderColor: isDark ? "#444" : "#E0E0E0" }]}
+            style={[
+              styles.input,
+              { color: colors.text, borderColor: isDark ? "#444" : "#E0E0E0" },
+            ]}
             value={editName}
             onChangeText={setEditName}
             placeholder="Account name"
@@ -459,7 +473,10 @@ export default function AccountsScreen({ navigation }) {
                     styles.typeButtonText,
                     editType === accountType.value &&
                       styles.typeButtonTextActive,
-                      { color: editType === accountType.value ? "white" : colors.text },
+                    {
+                      color:
+                        editType === accountType.value ? "white" : colors.text,
+                    },
                   ]}
                 >
                   {accountType.label}
@@ -468,7 +485,10 @@ export default function AccountsScreen({ navigation }) {
             ))}
           </View>
           <View style={styles.editActions}>
-            <TouchableOpacity style={styles.cancelButton} onPress={cancelEditing}>
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={cancelEditing}
+            >
               <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity
