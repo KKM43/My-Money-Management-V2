@@ -16,9 +16,11 @@ import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import { auth, db } from "../services/firebaseConfig";
 import { useTheme } from "../ThemeContext";
 import {
-  calculateFixedCommitmentsPaise,
+    calculateFixedCommitmentsPaise,
   calculateMoneyAfterFixedPaise,
   calculatePlannedIncomePaise,
+  calculatePlannedSpendablePaise,
+  calculateSavingsPercentage,
   parseMoneyInputToPaise,
 } from "../utils/finance";
 
@@ -44,6 +46,7 @@ export default function LeanV2OnboardingScreen() {
   const [fixedCommitments, setFixedCommitments] = useState([]);
   const [name, setName] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [savingsTarget, setSavingsTarget] = useState("0");
 
   useEffect(() => {
     const loadSetup = async () => {
@@ -114,6 +117,11 @@ export default function LeanV2OnboardingScreen() {
               })),
             );
           }
+          if (Number.isInteger(planData.savingsTargetPaise)) {
+  setSavingsTarget(
+    (planData.savingsTargetPaise / 100).toString(),
+  );
+}
         }
       } catch (error) {
         console.error("Error loading Lean V2 onboarding:", error);
@@ -247,6 +255,26 @@ export default function LeanV2OnboardingScreen() {
   const moneyAfterFixedPaise = calculateMoneyAfterFixedPaise(
     totalIncomePaise,
     totalFixedPaise,
+  );
+
+  const parsedSavingsTargetPaise =
+  parseMoneyInputToPaise(savingsTarget);
+
+const savingsTargetPaise =
+  Number.isInteger(parsedSavingsTargetPaise)
+    ? parsedSavingsTargetPaise
+    : 0;
+
+const savingsPercentage =
+  calculateSavingsPercentage(
+    totalIncomePaise,
+    savingsTargetPaise,
+  );
+
+const plannedSpendablePaise =
+  calculatePlannedSpendablePaise(
+    moneyAfterFixedPaise,
+    savingsTargetPaise,
   );
 
   const handleSaveIncome = async () => {
@@ -412,16 +440,113 @@ export default function LeanV2OnboardingScreen() {
         },
       );
 
-      Alert.alert(
-        "Commitments saved",
-        "Your fixed monthly commitments have been saved.",
-      );
+      await setDoc(
+  doc(db, "users", userId),
+  {
+    leanV2OnboardingStep: "savings",
+    updatedAt: serverTimestamp(),
+  },
+  {
+    merge: true,
+  },
+);
+
+setStep("savings");
     } catch (error) {
       Alert.alert("Error", error.message || "Could not save your commitments.");
     } finally {
       setIsSaving(false);
     }
   };
+
+  const handleSavingsTargetChange = (value) => {
+  const cleaned = value.replace(
+    /[^0-9.]/g,
+    "",
+  );
+
+  const parts = cleaned.split(".");
+
+  if (parts.length > 2) {
+    return;
+  }
+
+  const [rupees, paise = ""] = parts;
+
+  const normalized = cleaned.includes(".")
+    ? `${rupees || "0"}.${paise.slice(0, 2)}`
+    : rupees;
+
+  setSavingsTarget(normalized);
+};
+
+
+const handleSaveSavings = async () => {
+  const amountPaise =
+    parseMoneyInputToPaise(savingsTarget);
+
+  if (
+    !Number.isInteger(amountPaise) ||
+    amountPaise < 0
+  ) {
+    Alert.alert(
+      "Check your savings target",
+      "Enter a valid savings amount.",
+    );
+    return;
+  }
+
+  const userId = auth.currentUser?.uid;
+
+  if (!userId) {
+    return;
+  }
+
+  setIsSaving(true);
+
+  try {
+    const monthKey =
+      getCurrentMonthKey();
+
+    await setDoc(
+      doc(
+        db,
+        "users",
+        userId,
+        "monthlyPlans",
+        monthKey,
+      ),
+      {
+        monthKey,
+        savingsTargetPaise:
+          amountPaise,
+        updatedAt:
+          serverTimestamp(),
+      },
+      {
+        merge: true,
+      },
+    );
+
+    /*
+     * Plan Review is the next step.
+     * We will add the transition when
+     * the Review screen exists.
+     */
+    Alert.alert(
+      "Savings saved",
+      "Your savings target has been saved.",
+    );
+  } catch (error) {
+    Alert.alert(
+      "Error",
+      error.message ||
+        "Could not save your savings target.",
+    );
+  } finally {
+    setIsSaving(false);
+  }
+};
 
   if (isLoadingSetup) {
     return (
@@ -917,6 +1042,340 @@ export default function LeanV2OnboardingScreen() {
     );
   }
 
+  if (step === "savings") {
+  return (
+    <KeyboardAvoidingView
+      style={[
+        styles.container,
+        {
+          backgroundColor:
+            colors.background,
+        },
+      ]}
+      behavior={
+        Platform.OS === "ios"
+          ? "padding"
+          : undefined
+      }
+    >
+      <ScrollView
+        contentContainerStyle={
+          styles.incomeContent
+        }
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <TouchableOpacity
+          onPress={() =>
+            setStep("fixedCommitments")
+          }
+          style={styles.backButton}
+        >
+          <Text
+            style={[
+              styles.backButtonText,
+              {
+                color: colors.primary,
+              },
+            ]}
+          >
+            ← Back
+          </Text>
+        </TouchableOpacity>
+
+        <Text
+          style={[
+            styles.stepText,
+            {
+              color: colors.primary,
+            },
+          ]}
+        >
+          STEP 4
+        </Text>
+
+        <Text
+          style={[
+            styles.title,
+            { color: colors.text },
+          ]}
+        >
+          Protect some money
+        </Text>
+
+        <Text
+          style={[
+            styles.subtitle,
+            { color: colors.text },
+          ]}
+        >
+          Choose how much money you want to keep aside as savings this month.
+        </Text>
+
+        <View
+          style={[
+            styles.summaryCard,
+            {
+              backgroundColor:
+                colors.surface,
+            },
+          ]}
+        >
+          <View style={styles.summaryRow}>
+            <Text
+              style={[
+                styles.summaryLabel,
+                { color: colors.text },
+              ]}
+            >
+              Monthly income
+            </Text>
+
+            <Text
+              style={[
+                styles.summaryValue,
+                { color: colors.text },
+              ]}
+            >
+              {new Intl.NumberFormat(
+                "en-IN",
+                {
+                  style: "currency",
+                  currency: "INR",
+                  maximumFractionDigits: 2,
+                },
+              ).format(
+                totalIncomePaise / 100,
+              )}
+            </Text>
+          </View>
+
+          <View style={styles.summaryRow}>
+            <Text
+              style={[
+                styles.summaryLabel,
+                { color: colors.text },
+              ]}
+            >
+              Fixed commitments
+            </Text>
+
+            <Text
+              style={[
+                styles.summaryValue,
+                { color: colors.text },
+              ]}
+            >
+              {new Intl.NumberFormat(
+                "en-IN",
+                {
+                  style: "currency",
+                  currency: "INR",
+                  maximumFractionDigits: 2,
+                },
+              ).format(
+                totalFixedPaise / 100,
+              )}
+            </Text>
+          </View>
+
+          <View style={styles.summaryRow}>
+            <Text
+              style={[
+                styles.summaryLabel,
+                { color: colors.text },
+              ]}
+            >
+              After fixed
+            </Text>
+
+            <Text
+              style={[
+                styles.summaryValue,
+                {
+                  color:
+                    moneyAfterFixedPaise >= 0
+                      ? colors.text
+                      : "#D32F2F",
+                },
+              ]}
+            >
+              {new Intl.NumberFormat(
+                "en-IN",
+                {
+                  style: "currency",
+                  currency: "INR",
+                  maximumFractionDigits: 2,
+                },
+              ).format(
+                moneyAfterFixedPaise / 100,
+              )}
+            </Text>
+          </View>
+        </View>
+
+        <Text
+          style={[
+            styles.label,
+            { color: colors.text },
+          ]}
+        >
+          How much do you want to save?
+        </Text>
+
+        <View
+          style={[
+            styles.moneyInput,
+            styles.savingsInput,
+            {
+              backgroundColor: isDark
+                ? "#1F2937"
+                : "#F8FAFC",
+              borderColor: isDark
+                ? "#374151"
+                : "#E2E8F0",
+            },
+          ]}
+        >
+          <Text
+            style={[
+              styles.rupee,
+              {
+                color: colors.primary,
+              },
+            ]}
+          >
+            ₹
+          </Text>
+
+          <TextInput
+            style={[
+              styles.moneyInputText,
+              {
+                color: colors.text,
+              },
+            ]}
+            placeholder="0"
+            placeholderTextColor="#94A3B8"
+            keyboardType="numeric"
+            value={savingsTarget}
+            onChangeText={
+              handleSavingsTargetChange
+            }
+          />
+        </View>
+
+        <View
+          style={[
+            styles.savingsRateCard,
+            {
+              backgroundColor:
+                colors.surface,
+            },
+          ]}
+        >
+          <Text
+            style={[
+              styles.summaryLabel,
+              { color: colors.text },
+            ]}
+          >
+            Savings rate
+          </Text>
+
+          <Text
+            style={[
+              styles.savingsRateValue,
+              {
+                color: colors.primary,
+              },
+            ]}
+          >
+            {savingsPercentage.toFixed(2)}%
+          </Text>
+        </View>
+
+        <View
+          style={[
+            styles.totalCard,
+            {
+              backgroundColor:
+                plannedSpendablePaise >= 0
+                  ? isDark
+                    ? "#1E293B"
+                    : "#EFF6FF"
+                  : isDark
+                    ? "#3F1D1D"
+                    : "#FEF2F2",
+            },
+          ]}
+        >
+          <Text
+            style={[
+              styles.totalLabel,
+              { color: colors.text },
+            ]}
+          >
+            Available to spend
+          </Text>
+
+          <Text
+            style={[
+              styles.totalAmount,
+              {
+                color:
+                  plannedSpendablePaise >= 0
+                    ? colors.primary
+                    : "#D32F2F",
+              },
+            ]}
+          >
+            {new Intl.NumberFormat(
+              "en-IN",
+              {
+                style: "currency",
+                currency: "INR",
+                maximumFractionDigits: 2,
+              },
+            ).format(
+              plannedSpendablePaise / 100,
+            )}
+          </Text>
+        </View>
+
+        <TouchableOpacity
+          style={[
+            styles.primaryButton,
+            {
+              backgroundColor:
+                colors.primary,
+            },
+            isSaving &&
+              styles.disabledButton,
+          ]}
+          onPress={handleSaveSavings}
+          disabled={isSaving}
+        >
+          {isSaving ? (
+            <ActivityIndicator
+              size="small"
+              color="white"
+            />
+          ) : (
+            <Text
+              style={
+                styles.primaryButtonText
+              }
+            >
+              Continue
+            </Text>
+          )}
+        </TouchableOpacity>
+      </ScrollView>
+    </KeyboardAvoidingView>
+  );
+}
+
   return (
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: colors.background }]}
@@ -1198,4 +1657,21 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "600",
   },
+  savingsInput: {
+  marginBottom: 16,
+},
+
+savingsRateCard: {
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "space-between",
+  borderRadius: 16,
+  padding: 18,
+  marginBottom: 16,
+},
+
+savingsRateValue: {
+  fontSize: 20,
+  fontWeight: "bold",
+},
 });
