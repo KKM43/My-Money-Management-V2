@@ -8,21 +8,12 @@ import {
   TouchableOpacity,
   ScrollView,
   RefreshControl,
-  Dimensions,
   Modal,
   TextInput,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import {
-  collection,
-  query,
-  where,
-  onSnapshot,
-  deleteDoc,
-  doc,
-  getDoc,
-} from "firebase/firestore";
+import { collection, onSnapshot, deleteDoc, doc } from "firebase/firestore";
 import { db, auth } from "../services/firebaseConfig";
 import { signOut } from "firebase/auth";
 import { ProgressBar } from "react-native-paper";
@@ -34,9 +25,6 @@ import {
   getAmountPaise,
   isTransactionInMonth,
 } from "../utils/finance";
-
-const MONTHLY_BUDGET = 20000;
-const { width, height } = Dimensions.get("window");
 
 export default function DashboardScreen({ navigation }) {
   const { colors, isDark, themeMode, cycleThemeMode } = useTheme();
@@ -52,7 +40,6 @@ export default function DashboardScreen({ navigation }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [monthlyBudget, setMonthlyBudget] = useState(20000); // Default budget
   const [categoryBudgets, setCategoryBudgets] = useState({});
-  const [showMonthPicker, setShowMonthPicker] = useState(false);
   const [showDrawer, setShowDrawer] = useState(false);
 
   useEffect(() => {
@@ -139,7 +126,7 @@ export default function DashboardScreen({ navigation }) {
     });
 
     return unsubscribe;
-  }, [accounts, currentMonth, currentYear, monthlyBudget]);
+  }, [accounts, currentMonth, currentYear]);
 
   const handleDelete = async (id) => {
     try {
@@ -199,12 +186,12 @@ export default function DashboardScreen({ navigation }) {
   const isOverBudget = monthlyBudget >= 0 && expenseTotal > monthlyBudget;
   const categorySpending = transactions.reduce((totals, transaction) => {
     if (transaction.type === "expense" && transaction.category) {
-      const amountPaise = Number.isInteger(transaction.amountPaise)
-        ? transaction.amountPaise
-        : Math.round(Number(transaction.amount || 0) * 100);
+      const amountPaise = getAmountPaise(transaction);
+
       totals[transaction.category] =
         (totals[transaction.category] || 0) + amountPaise / 100;
     }
+
     return totals;
   }, {});
   const spendingCategories = Object.entries(categorySpending)
