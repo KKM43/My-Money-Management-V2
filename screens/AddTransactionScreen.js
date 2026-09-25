@@ -22,6 +22,7 @@ import {
   serverTimestamp,
   updateDoc,
   onSnapshot,
+  deleteField,
 } from "firebase/firestore";
 import { db, auth } from "../services/firebaseConfig";
 import { LightTheme } from "../theme";
@@ -201,13 +202,14 @@ export default function AddTransactionScreen({ navigation, route }) {
       return;
     }
 
-    if (type !== "transfer" && !isEditing && !selectedAccountId) {
+    if (type !== "transfer" && !selectedAccountId) {
       Alert.alert(
         "Account required",
         selectableAccounts.length === 0
           ? "Create an active account before adding a transaction."
           : "Please select an account.",
       );
+
       return;
     }
 
@@ -249,6 +251,20 @@ export default function AddTransactionScreen({ navigation, route }) {
 
     try {
       if (isEditing) {
+        const updateData =
+          type === "transfer"
+            ? {
+                ...transactionData,
+                accountId: deleteField(),
+                paymentKind: paymentKind || deleteField(),
+              }
+            : {
+                ...transactionData,
+                fromAccountId: deleteField(),
+                toAccountId: deleteField(),
+                paymentKind: deleteField(),
+              };
+
         await updateDoc(
           doc(
             db,
@@ -257,7 +273,7 @@ export default function AddTransactionScreen({ navigation, route }) {
             "transactions",
             editingTransaction.id,
           ),
-          transactionData,
+          updateData,
         );
 
         Alert.alert("Success", "Transaction updated successfully!");
@@ -420,7 +436,9 @@ export default function AddTransactionScreen({ navigation, route }) {
             </View>
 
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              {type === "transfer" ? "Transfer Between Accounts" : "Select Account"}
+              {type === "transfer"
+                ? "Transfer Between Accounts"
+                : "Select Account"}
             </Text>
             {selectableAccounts.length === 0 ? (
               <View
@@ -451,7 +469,9 @@ export default function AddTransactionScreen({ navigation, route }) {
               </View>
             ) : type === "transfer" ? (
               <>
-                <Text style={[styles.accountLabel, { color: colors.text }]}>From account</Text>
+                <Text style={[styles.accountLabel, { color: colors.text }]}>
+                  From account
+                </Text>
                 <View style={styles.accountsGrid}>
                   {selectableAccounts.map((account) => (
                     <TouchableOpacity
@@ -462,14 +482,16 @@ export default function AddTransactionScreen({ navigation, route }) {
                           backgroundColor: isDark ? "#252525" : "#F8F9FA",
                           borderColor: isDark ? "#444" : "#E9ECEF",
                         },
-                        fromAccountId === account.id && styles.selectedAccountCard,
+                        fromAccountId === account.id &&
+                          styles.selectedAccountCard,
                       ]}
                       onPress={() => setFromAccountId(account.id)}
                     >
                       <Text
                         style={[
                           styles.accountName,
-                          fromAccountId === account.id && styles.selectedAccountText,
+                          fromAccountId === account.id &&
+                            styles.selectedAccountText,
                         ]}
                         numberOfLines={1}
                       >
@@ -478,7 +500,9 @@ export default function AddTransactionScreen({ navigation, route }) {
                     </TouchableOpacity>
                   ))}
                 </View>
-                <Text style={[styles.accountLabel, { color: colors.text }]}>To account</Text>
+                <Text style={[styles.accountLabel, { color: colors.text }]}>
+                  To account
+                </Text>
                 <View style={styles.accountsGrid}>
                   {selectableAccounts.map((account) => (
                     <TouchableOpacity
@@ -489,14 +513,16 @@ export default function AddTransactionScreen({ navigation, route }) {
                           backgroundColor: isDark ? "#252525" : "#F8F9FA",
                           borderColor: isDark ? "#444" : "#E9ECEF",
                         },
-                        toAccountId === account.id && styles.selectedAccountCard,
+                        toAccountId === account.id &&
+                          styles.selectedAccountCard,
                       ]}
                       onPress={() => setToAccountId(account.id)}
                     >
                       <Text
                         style={[
                           styles.accountName,
-                          toAccountId === account.id && styles.selectedAccountText,
+                          toAccountId === account.id &&
+                            styles.selectedAccountText,
                         ]}
                         numberOfLines={1}
                       >
@@ -594,7 +620,9 @@ export default function AddTransactionScreen({ navigation, route }) {
                   ]}
                 >
                   <View style={styles.dateModalHeader}>
-                    <Text style={[styles.dateModalTitle, { color: colors.text }]}>
+                    <Text
+                      style={[styles.dateModalTitle, { color: colors.text }]}
+                    >
                       Select transaction date
                     </Text>
                     <TouchableOpacity
@@ -604,7 +632,9 @@ export default function AddTransactionScreen({ navigation, route }) {
                       <Ionicons name="close" size={24} color={colors.text} />
                     </TouchableOpacity>
                   </View>
-                  <Text style={[styles.dateModalValue, { color: colors.primary }]}>
+                  <Text
+                    style={[styles.dateModalValue, { color: colors.primary }]}
+                  >
                     {formatDateForDisplay(selectedDate)}
                   </Text>
                   <View style={styles.dateAdjustRow}>
@@ -626,7 +656,11 @@ export default function AddTransactionScreen({ navigation, route }) {
                       onPress={() => adjustSelectedDate(1)}
                       accessibilityLabel="Next day"
                     >
-                      <Ionicons name="chevron-forward" size={22} color="white" />
+                      <Ionicons
+                        name="chevron-forward"
+                        size={22}
+                        color="white"
+                      />
                     </TouchableOpacity>
                   </View>
                   <TouchableOpacity
@@ -660,7 +694,12 @@ export default function AddTransactionScreen({ navigation, route }) {
                     size={20}
                     color={colors.primary}
                   />
-                  <Text style={[styles.categorySelectorText, { color: colors.text }]}>
+                  <Text
+                    style={[
+                      styles.categorySelectorText,
+                      { color: colors.text },
+                    ]}
+                  >
                     {category || "Choose a category"}
                   </Text>
                   <Ionicons name="chevron-down" size={20} color={colors.text} />
@@ -682,7 +721,9 @@ export default function AddTransactionScreen({ navigation, route }) {
                   ]}
                 >
                   <View style={styles.dateModalHeader}>
-                    <Text style={[styles.dateModalTitle, { color: colors.text }]}>
+                    <Text
+                      style={[styles.dateModalTitle, { color: colors.text }]}
+                    >
                       Choose category
                     </Text>
                     <TouchableOpacity
@@ -722,7 +763,11 @@ export default function AddTransactionScreen({ navigation, route }) {
                               { backgroundColor: item.color },
                             ]}
                           >
-                            <Ionicons name={item.icon} size={18} color="white" />
+                            <Ionicons
+                              name={item.icon}
+                              size={18}
+                              color="white"
+                            />
                           </View>
                           <Text
                             style={[
