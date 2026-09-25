@@ -287,6 +287,14 @@ export default function AccountsScreen({ navigation }) {
     }
   };
 
+  const accountHasTransactions = (accountId) =>
+    transactions.some(
+      (transaction) =>
+        transaction.accountId === accountId ||
+        transaction.fromAccountId === accountId ||
+        transaction.toAccountId === accountId,
+    );
+
   const startEditing = (account) => {
     setEditingAccountId(account.id);
     setEditName(account.name);
@@ -300,8 +308,28 @@ export default function AccountsScreen({ navigation }) {
 
   const handleUpdateAccount = async () => {
     const trimmedName = editName.trim();
+
     if (!trimmedName) {
       Alert.alert("Error", "Please enter an account name");
+      return;
+    }
+
+    const editingAccount = accounts.find(
+      (account) => account.id === editingAccountId,
+    );
+
+    if (!editingAccount) {
+      Alert.alert("Error", "Account could not be found");
+      return;
+    }
+
+    const hasTransactions = accountHasTransactions(editingAccountId);
+
+    if (hasTransactions && editType !== editingAccount.type) {
+      Alert.alert(
+        "Account type locked",
+        "This account already has transactions, so its type cannot be changed.",
+      );
       return;
     }
 
@@ -351,6 +379,9 @@ export default function AccountsScreen({ navigation }) {
     );
   };
 
+  const isEditingAccountTypeLocked =
+    editingAccountId && accountHasTransactions(editingAccountId);
+
   return (
     <ScrollView
       contentContainerStyle={[
@@ -382,6 +413,7 @@ export default function AccountsScreen({ navigation }) {
         />
 
         <Text style={[styles.label, { color: colors.text }]}>Account type</Text>
+
         <View style={styles.typeGrid}>
           {ACCOUNT_TYPES.map((accountType) => (
             <TouchableOpacity
@@ -465,8 +497,10 @@ export default function AccountsScreen({ navigation }) {
                 style={[
                   styles.typeButton,
                   editType === accountType.value && styles.typeButtonActive,
+                  isEditingAccountTypeLocked && styles.typeButtonDisabled,
                 ]}
                 onPress={() => setEditType(accountType.value)}
+                disabled={Boolean(isEditingAccountTypeLocked)}
               >
                 <Text
                   style={[
@@ -484,6 +518,14 @@ export default function AccountsScreen({ navigation }) {
               </TouchableOpacity>
             ))}
           </View>
+
+          {isEditingAccountTypeLocked && (
+            <Text style={[styles.typeLockedText, { color: colors.text }]}>
+              Account type cannot be changed because this account already has
+              transactions.
+            </Text>
+          )}
+
           <View style={styles.editActions}>
             <TouchableOpacity
               style={styles.cancelButton}
@@ -754,5 +796,14 @@ const styles = StyleSheet.create({
   cancelButtonText: {
     color: "#666",
     fontWeight: "bold",
+  },
+  typeButtonDisabled: {
+    opacity: 0.5,
+  },
+  typeLockedText: {
+    fontSize: 13,
+    marginTop: -6,
+    marginBottom: 14,
+    opacity: 0.65,
   },
 });
