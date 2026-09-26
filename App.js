@@ -16,6 +16,7 @@ import ProfileScreen from "./screens/ProfileScreen";
 import AnalyticsScreen from "./screens/AnalyticsScreen";
 import SavingsGoalsScreen from "./screens/SavingsGoalsScreen";
 import LeanV2OnboardingScreen from "./screens/LeanV2OnboardingScreen";
+import MonthlyPlanScreen from "./screens/MonthlyPlanScreen";
 import { auth, db } from "./services/firebaseConfig";
 import { ThemeProvider } from "./ThemeContext";
 
@@ -101,6 +102,14 @@ export default function App() {
                 <Stack.Screen
                   name="AddTransaction"
                   component={AddTransactionScreen}
+                />
+
+                <Stack.Screen
+                  name="MonthlyPlan"
+                  component={MonthlyPlanScreen}
+                  options={{
+                    headerShown: false,
+                  }}
                 />
 
                 <Stack.Screen name="Analytics" component={AnalyticsScreen} />

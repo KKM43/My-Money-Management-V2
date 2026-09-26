@@ -455,11 +455,19 @@ export default function DashboardScreen({ navigation }) {
                 </Text>
               </View>
 
-              <Ionicons
-                name="wallet-outline"
-                size={22}
-                color={colors.primary}
-              />
+              <TouchableOpacity
+  style={styles.planEditButton}
+  onPress={() =>
+    navigation.navigate("MonthlyPlan")
+  }
+  accessibilityLabel="Open monthly plan"
+>
+  <Ionicons
+    name="create-outline"
+    size={22}
+    color={colors.primary}
+  />
+</TouchableOpacity>
             </View>
 
             <View style={styles.planRow}>
@@ -1293,4 +1301,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     marginTop: 0,
   },
+  planEditButton: {
+  width: 40,
+  height: 40,
+  borderRadius: 20,
+  justifyContent: "center",
+  alignItems: "center",
+  backgroundColor:
+    "rgba(77, 150, 255, 0.10)",
+},
 });
