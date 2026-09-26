@@ -31,6 +31,7 @@ import {
   getAmountPaise,
   getDaysRemainingInMonth,
   isTransactionInMonth,
+  isVariableExpenseTransaction,
 } from "../utils/finance";
 
 export default function DashboardScreen({ navigation }) {
@@ -207,15 +208,25 @@ export default function DashboardScreen({ navigation }) {
     : null;
 
   const categorySpending = transactions.reduce((totals, transaction) => {
-    if (transaction.type === "expense" && transaction.category) {
-      const amountPaise = getAmountPaise(transaction);
+    const shouldCount = isVariableExpenseTransaction(
+      transaction,
+      currentYear,
+      currentMonth,
+      now,
+    );
 
-      totals[transaction.category] =
-        (totals[transaction.category] || 0) + amountPaise / 100;
+    if (!shouldCount || !transaction.category) {
+      return totals;
     }
+
+    const amountPaise = getAmountPaise(transaction);
+
+    totals[transaction.category] =
+      (totals[transaction.category] || 0) + amountPaise / 100;
 
     return totals;
   }, {});
+
   const spendingCategories = Object.entries(categorySpending)
     .sort(([, firstAmount], [, secondAmount]) => secondAmount - firstAmount)
     .slice(0, 5);
@@ -1281,8 +1292,8 @@ const styles = StyleSheet.create({
     marginVertical: 10,
   },
   contentContainer: {
-  flex: 1,
-  paddingHorizontal: 20,
-  marginTop: 0,
-},
+    flex: 1,
+    paddingHorizontal: 20,
+    marginTop: 0,
+  },
 });

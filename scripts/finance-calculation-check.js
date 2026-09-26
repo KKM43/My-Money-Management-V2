@@ -14,7 +14,8 @@ const {
   getAmountPaise,
   getDaysRemainingInMonth,
   isTransactionInMonth,
-  parseMoneyInputToPaise
+  parseMoneyInputToPaise,
+  isVariableExpenseTransaction,
 } = require("../utils/finance");
 
 const today = new Date(2026, 8, 21, 12);
@@ -61,6 +62,65 @@ assert.strictEqual(
   calculateNetWorthPaise([cardWithOpeningDebt], [], today),
   -500000,
 );
+
+
+assert.strictEqual(
+  isVariableExpenseTransaction(
+    {
+      type: "expense",
+      amountPaise: 200000,
+      date: "2026-09-20",
+    },
+    2026,
+    8,
+    new Date("2026-09-25T12:00:00"),
+  ),
+  true,
+);
+
+assert.strictEqual(
+  isVariableExpenseTransaction(
+    {
+      type: "expense",
+      amountPaise: 1400000,
+      date: "2026-09-20",
+      fixedCommitmentId: "rent",
+    },
+    2026,
+    8,
+    new Date("2026-09-25T12:00:00"),
+  ),
+  false,
+);
+
+assert.strictEqual(
+  isVariableExpenseTransaction(
+    {
+      type: "expense",
+      amountPaise: 50000,
+      date: "2026-09-26",
+    },
+    2026,
+    8,
+    new Date("2026-09-25T12:00:00"),
+  ),
+  false,
+);
+
+assert.strictEqual(
+  isVariableExpenseTransaction(
+    {
+      type: "transfer",
+      amountPaise: 100000,
+      date: "2026-09-20",
+    },
+    2026,
+    8,
+    new Date("2026-09-25T12:00:00"),
+  ),
+  false,
+);
+
 
 // Transfer should move money without changing total net worth.
 const transferOnlyAccounts = [
