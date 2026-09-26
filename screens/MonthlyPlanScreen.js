@@ -9,7 +9,13 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { doc, onSnapshot, serverTimestamp, setDoc } from "firebase/firestore";
+import {
+  doc,
+  getDoc,
+  onSnapshot,
+  serverTimestamp,
+  setDoc,
+} from "firebase/firestore";
 import { Ionicons } from "@expo/vector-icons";
 
 import { auth, db } from "../services/firebaseConfig";
@@ -28,7 +34,26 @@ const getCurrentMonthKey = () => {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 };
 
-export default function MonthlyPlanScreen({ navigation }) {
+const getPreviousMonthKey = (monthKey) => {
+  const [year, month] = monthKey.split("-").map(Number);
+
+  const previousMonthDate = new Date(year, month - 2, 1);
+
+  return `${previousMonthDate.getFullYear()}-${String(
+    previousMonthDate.getMonth() + 1,
+  ).padStart(2, "0")}`;
+};
+
+const formatMonthKey = (monthKey) => {
+  const [year, month] = monthKey.split("-").map(Number);
+
+  return new Intl.DateTimeFormat("en-IN", {
+    month: "long",
+    year: "numeric",
+  }).format(new Date(year, month - 1, 1));
+};
+
+export default function MonthlyPlanScreen({ navigation, route, }) {
   const { colors } = useTheme();
 
   const [monthlyPlan, setMonthlyPlan] = useState(null);
@@ -39,13 +64,18 @@ export default function MonthlyPlanScreen({ navigation }) {
 
   const [isSaving, setIsSaving] = useState(false);
 
+  const [isLoadingPreviousPlan, setIsLoadingPreviousPlan] = useState(false);
+
   const [draftIncomeSources, setDraftIncomeSources] = useState([]);
 
   const [draftFixedCommitments, setDraftFixedCommitments] = useState([]);
 
   const [draftSavingsTarget, setDraftSavingsTarget] = useState("0");
 
-  const monthKey = getCurrentMonthKey();
+  const monthKey =
+  route?.params?.monthKey ||
+  getCurrentMonthKey();
+  const previousMonthKey = getPreviousMonthKey(monthKey);
 
   useEffect(() => {
     const userId = auth.currentUser?.uid;
@@ -105,6 +135,65 @@ export default function MonthlyPlanScreen({ navigation }) {
     moneyAfterFixedPaise,
     savingsTargetPaise,
   );
+
+  const draftIncomeForCalculation = draftIncomeSources
+    .map((source) => ({
+      amountPaise: parseMoneyInputToPaise(source.amount),
+    }))
+    .filter((source) => Number.isInteger(source.amountPaise));
+
+  const draftFixedForCalculation = draftFixedCommitments
+    .map((commitment) => ({
+      amountPaise: parseMoneyInputToPaise(commitment.amount),
+    }))
+    .filter((commitment) => Number.isInteger(commitment.amountPaise));
+
+  const draftTotalIncomePaise = calculatePlannedIncomePaise(
+    draftIncomeForCalculation,
+  );
+
+  const draftTotalFixedPaise = calculateFixedCommitmentsPaise(
+    draftFixedForCalculation,
+  );
+
+  const draftMoneyAfterFixedPaise = calculateMoneyAfterFixedPaise(
+    draftTotalIncomePaise,
+    draftTotalFixedPaise,
+  );
+
+  const parsedDraftSavingsTargetPaise =
+    parseMoneyInputToPaise(draftSavingsTarget);
+
+  const draftSavingsTargetPaise = Number.isInteger(
+    parsedDraftSavingsTargetPaise,
+  )
+    ? parsedDraftSavingsTargetPaise
+    : 0;
+
+  const draftPlannedSpendablePaise = calculatePlannedSpendablePaise(
+    draftMoneyAfterFixedPaise,
+    draftSavingsTargetPaise,
+  );
+
+  const displayedIncomePaise = isEditing
+    ? draftTotalIncomePaise
+    : totalIncomePaise;
+
+  const displayedFixedPaise = isEditing
+    ? draftTotalFixedPaise
+    : totalFixedPaise;
+
+  const displayedMoneyAfterFixedPaise = isEditing
+    ? draftMoneyAfterFixedPaise
+    : moneyAfterFixedPaise;
+
+  const displayedSavingsTargetPaise = isEditing
+    ? draftSavingsTargetPaise
+    : savingsTargetPaise;
+
+  const displayedSpendablePaise = isEditing
+    ? draftPlannedSpendablePaise
+    : plannedSpendablePaise;
 
   const normalizeMoneyInput = (value) => {
     const normalized = String(value).replace(/[^0-9.]/g, "");
@@ -240,6 +329,84 @@ export default function MonthlyPlanScreen({ navigation }) {
     }
   };
 
+  const handleUsePreviousMonth = async () => {
+    const userId = auth.currentUser?.uid;
+
+    if (!userId) {
+      Alert.alert("Sign in required", "Please sign in again.");
+      return;
+    }
+
+    setIsLoadingPreviousPlan(true);
+
+    try {
+      const previousPlanRef = doc(
+        db,
+        "users",
+        userId,
+        "monthlyPlans",
+        previousMonthKey,
+      );
+
+      const snapshot = await getDoc(previousPlanRef);
+
+      if (!snapshot.exists()) {
+        Alert.alert(
+          "No previous plan",
+          `No plan was found for ${formatMonthKey(previousMonthKey)}.`,
+        );
+        return;
+      }
+
+      const previousPlan = snapshot.data();
+
+      const previousIncomeSources = Array.isArray(previousPlan.incomeSources)
+        ? previousPlan.incomeSources
+        : [];
+
+      const previousFixedCommitments = Array.isArray(
+        previousPlan.fixedCommitments,
+      )
+        ? previousPlan.fixedCommitments
+        : [];
+
+      setDraftIncomeSources(
+        previousIncomeSources.map((source) => ({
+          id: source.id,
+          name: source.name || "",
+          amount: Number.isInteger(source.amountPaise)
+            ? (source.amountPaise / 100).toString()
+            : "",
+        })),
+      );
+
+      setDraftFixedCommitments(
+        previousFixedCommitments.map((commitment) => ({
+          id: commitment.id,
+          name: commitment.name || "",
+          amount: Number.isInteger(commitment.amountPaise)
+            ? (commitment.amountPaise / 100).toString()
+            : "",
+        })),
+      );
+
+      setDraftSavingsTarget(
+        Number.isInteger(previousPlan.savingsTargetPaise)
+          ? (previousPlan.savingsTargetPaise / 100).toString()
+          : "0",
+      );
+
+      setIsEditing(true);
+    } catch (error) {
+      Alert.alert(
+        "Error",
+        error.message || "Could not load the previous month's plan.",
+      );
+    } finally {
+      setIsLoadingPreviousPlan(false);
+    }
+  };
+
   const handleSavePlan = async () => {
     const userId = auth.currentUser?.uid;
 
@@ -321,6 +488,13 @@ export default function MonthlyPlanScreen({ navigation }) {
         },
       );
 
+      setMonthlyPlan({
+        id: monthKey,
+        monthKey,
+        incomeSources: normalizedIncomeSources,
+        fixedCommitments: normalizedFixedCommitments,
+        savingsTargetPaise: parsedSavingsTarget,
+      });
       setIsEditing(false);
     } catch (error) {
       Alert.alert(
@@ -371,48 +545,29 @@ export default function MonthlyPlanScreen({ navigation }) {
         </TouchableOpacity>
 
         <View style={styles.headerText}>
-  <Text
-    style={[
-      styles.title,
-      { color: colors.text },
-    ]}
-  >
-    Monthly Plan
-  </Text>
+          <Text style={[styles.title, { color: colors.text }]}>
+            Monthly Plan
+          </Text>
 
-  <Text
-    style={[
-      styles.monthText,
-      { color: colors.text },
-    ]}
-  >
-    {monthKey}
-  </Text>
-</View>
+          <Text style={[styles.monthText, { color: colors.text }]}>
+            {monthKey}
+          </Text>
+        </View>
 
-{monthlyPlan && (
-  <TouchableOpacity
-    style={styles.editButton}
-    onPress={
-      isEditing
-        ? handleCancelEditing
-        : handleStartEditing
-    }
-    disabled={isSaving}
-  >
-    <Text
-      style={[
-        styles.editButtonText,
-        { color: colors.primary },
-      ]}
-    >
-      {isEditing ? "Cancel" : "Edit"}
-    </Text>
-  </TouchableOpacity>
-)}
+        {(monthlyPlan || isEditing) && (
+          <TouchableOpacity
+            style={styles.editButton}
+            onPress={isEditing ? handleCancelEditing : handleStartEditing}
+            disabled={isSaving}
+          >
+            <Text style={[styles.editButtonText, { color: colors.primary }]}>
+              {isEditing ? "Cancel" : "Edit"}
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
 
-      {!monthlyPlan ? (
+      {!monthlyPlan && !isEditing ? (
         <View
           style={[
             styles.card,
@@ -421,16 +576,38 @@ export default function MonthlyPlanScreen({ navigation }) {
             },
           ]}
         >
-          <Text
-            style={[
-              styles.emptyTitle,
-              {
-                color: colors.text,
-              },
-            ]}
-          >
-            No monthly plan found
+          <Text style={[styles.emptyTitle, { color: colors.text }]}>
+            No plan for {formatMonthKey(monthKey)}
           </Text>
+
+          <Text style={[styles.emptyDescription, { color: colors.text }]}>
+            Use your {formatMonthKey(previousMonthKey)} plan as a starting
+            point, then adjust anything you need.
+          </Text>
+
+          <TouchableOpacity
+            style={[
+              styles.previousPlanButton,
+              {
+                backgroundColor: colors.primary,
+              },
+              isLoadingPreviousPlan && styles.disabledButton,
+            ]}
+            onPress={handleUsePreviousMonth}
+            disabled={isLoadingPreviousPlan}
+          >
+            {isLoadingPreviousPlan ? (
+              <ActivityIndicator color="white" size="small" />
+            ) : (
+              <>
+                <Ionicons name="copy-outline" size={20} color="white" />
+
+                <Text style={styles.previousPlanButtonText}>
+                  Use Previous Month
+                </Text>
+              </>
+            )}
+          </TouchableOpacity>
         </View>
       ) : (
         <>
@@ -552,7 +729,7 @@ export default function MonthlyPlanScreen({ navigation }) {
                   },
                 ]}
               >
-                {formatPaise(totalIncomePaise)}
+                {formatPaise(displayedIncomePaise)}
               </Text>
             </View>
           </View>
@@ -688,7 +865,7 @@ export default function MonthlyPlanScreen({ navigation }) {
                   },
                 ]}
               >
-                {formatPaise(totalFixedPaise)}
+                {formatPaise(displayedFixedPaise)}
               </Text>
             </View>
           </View>
@@ -710,11 +887,14 @@ export default function MonthlyPlanScreen({ navigation }) {
                 style={[
                   styles.value,
                   {
-                    color: moneyAfterFixedPaise >= 0 ? colors.text : "#D32F2F",
+                    color:
+                      displayedMoneyAfterFixedPaise >= 0
+                        ? colors.text
+                        : "#D32F2F",
                   },
                 ]}
               >
-                {formatPaise(moneyAfterFixedPaise)}
+                {formatPaise(displayedMoneyAfterFixedPaise)}
               </Text>
             </View>
 
@@ -776,11 +956,11 @@ export default function MonthlyPlanScreen({ navigation }) {
                   styles.spendableValue,
                   {
                     color:
-                      plannedSpendablePaise >= 0 ? colors.primary : "#D32F2F",
+                      displayedSpendablePaise >= 0 ? colors.primary : "#D32F2F",
                   },
                 ]}
               >
-                {formatPaise(plannedSpendablePaise)}
+                {formatPaise(displayedSpendablePaise)}
               </Text>
             </View>
 
@@ -995,5 +1175,28 @@ const styles = StyleSheet.create({
 
   disabledButton: {
     opacity: 0.6,
+  },
+  emptyDescription: {
+    fontSize: 14,
+    lineHeight: 20,
+    opacity: 0.65,
+    marginTop: 8,
+    marginBottom: 20,
+  },
+
+  previousPlanButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+  },
+
+  previousPlanButtonText: {
+    color: "white",
+    fontSize: 15,
+    fontWeight: "700",
+    marginLeft: 8,
   },
 });

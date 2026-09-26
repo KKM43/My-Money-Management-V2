@@ -423,6 +423,29 @@ export default function DashboardScreen({ navigation }) {
                 No Lean V2 plan exists for {monthNames[currentMonth]}{" "}
                 {currentYear}.
               </Text>
+              <TouchableOpacity
+  style={[
+    styles.noPlanButton,
+    {
+      backgroundColor: colors.primary,
+    },
+  ]}
+  onPress={() =>
+    navigation.navigate("MonthlyPlan", {
+      monthKey: selectedMonthKey,
+    })
+  }
+>
+  <Ionicons
+    name="add-circle-outline"
+    size={20}
+    color="white"
+  />
+
+  <Text style={styles.noPlanButtonText}>
+    Set Up This Month
+  </Text>
+</TouchableOpacity>
             </View>
           )}
         </View>
@@ -456,18 +479,20 @@ export default function DashboardScreen({ navigation }) {
               </View>
 
               <TouchableOpacity
-  style={styles.planEditButton}
-  onPress={() =>
-    navigation.navigate("MonthlyPlan")
-  }
-  accessibilityLabel="Open monthly plan"
->
-  <Ionicons
-    name="create-outline"
-    size={22}
-    color={colors.primary}
-  />
-</TouchableOpacity>
+                style={styles.planEditButton}
+                onPress={() =>
+                  navigation.navigate("MonthlyPlan", {
+                    monthKey: selectedMonthKey,
+                  })
+                }
+                accessibilityLabel="Open monthly plan"
+              >
+                <Ionicons
+                  name="create-outline"
+                  size={22}
+                  color={colors.primary}
+                />
+              </TouchableOpacity>
             </View>
 
             <View style={styles.planRow}>
@@ -1302,12 +1327,28 @@ const styles = StyleSheet.create({
     marginTop: 0,
   },
   planEditButton: {
-  width: 40,
-  height: 40,
-  borderRadius: 20,
-  justifyContent: "center",
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(77, 150, 255, 0.10)",
+  },
+  noPlanButton: {
+  flexDirection: "row",
   alignItems: "center",
-  backgroundColor:
-    "rgba(77, 150, 255, 0.10)",
+  justifyContent: "center",
+  alignSelf: "flex-start",
+  marginTop: 16,
+  paddingHorizontal: 16,
+  paddingVertical: 12,
+  borderRadius: 12,
+},
+
+noPlanButtonText: {
+  color: "white",
+  fontSize: 14,
+  fontWeight: "700",
+  marginLeft: 7,
 },
 });
