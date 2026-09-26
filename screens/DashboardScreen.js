@@ -34,7 +34,7 @@ import {
   isVariableExpenseTransaction,
 } from "../utils/finance";
 
-export default function DashboardScreen({ navigation }) {
+export default function DashboardScreen({ navigation, route }) {
   const { colors, isDark, themeMode, cycleThemeMode } = useTheme();
   const [transactions, setTransactions] = useState([]);
   const [monthlyPlan, setMonthlyPlan] = useState(null);
@@ -46,6 +46,29 @@ export default function DashboardScreen({ navigation }) {
     2,
     "0",
   )}`;
+
+  useEffect(() => {
+    const routedMonthKey = route?.params?.monthKey;
+
+    if (!routedMonthKey || !/^\d{4}-\d{2}$/.test(routedMonthKey)) {
+      return;
+    }
+
+    const [year, month] = routedMonthKey.split("-").map(Number);
+
+    if (
+      !Number.isInteger(year) ||
+      !Number.isInteger(month) ||
+      month < 1 ||
+      month > 12
+    ) {
+      return;
+    }
+
+    setCurrentYear(year);
+    setCurrentMonth(month - 1);
+  }, [route?.params?.monthKey]);
+
   const [refreshing, setRefreshing] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState("all"); // all, income, expense
   const [searchQuery, setSearchQuery] = useState("");
@@ -424,28 +447,22 @@ export default function DashboardScreen({ navigation }) {
                 {currentYear}.
               </Text>
               <TouchableOpacity
-  style={[
-    styles.noPlanButton,
-    {
-      backgroundColor: colors.primary,
-    },
-  ]}
-  onPress={() =>
-    navigation.navigate("MonthlyPlan", {
-      monthKey: selectedMonthKey,
-    })
-  }
->
-  <Ionicons
-    name="add-circle-outline"
-    size={20}
-    color="white"
-  />
+                style={[
+                  styles.noPlanButton,
+                  {
+                    backgroundColor: colors.primary,
+                  },
+                ]}
+                onPress={() =>
+                  navigation.navigate("MonthlyPlan", {
+                    monthKey: selectedMonthKey,
+                  })
+                }
+              >
+                <Ionicons name="add-circle-outline" size={20} color="white" />
 
-  <Text style={styles.noPlanButtonText}>
-    Set Up This Month
-  </Text>
-</TouchableOpacity>
+                <Text style={styles.noPlanButtonText}>Set Up This Month</Text>
+              </TouchableOpacity>
             </View>
           )}
         </View>
@@ -1335,20 +1352,20 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(77, 150, 255, 0.10)",
   },
   noPlanButton: {
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "center",
-  alignSelf: "flex-start",
-  marginTop: 16,
-  paddingHorizontal: 16,
-  paddingVertical: 12,
-  borderRadius: 12,
-},
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    alignSelf: "flex-start",
+    marginTop: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
 
-noPlanButtonText: {
-  color: "white",
-  fontSize: 14,
-  fontWeight: "700",
-  marginLeft: 7,
-},
+  noPlanButtonText: {
+    color: "white",
+    fontSize: 14,
+    fontWeight: "700",
+    marginLeft: 7,
+  },
 });
