@@ -44,6 +44,16 @@ const getPreviousMonthKey = (monthKey) => {
   ).padStart(2, "0")}`;
 };
 
+const shiftMonthKey = (monthKey, offset) => {
+  const [year, month] = monthKey.split("-").map(Number);
+
+  const shiftedDate = new Date(year, month - 1 + offset, 1);
+
+  return `${shiftedDate.getFullYear()}-${String(
+    shiftedDate.getMonth() + 1,
+  ).padStart(2, "0")}`;
+};
+
 const formatMonthKey = (monthKey) => {
   const [year, month] = monthKey.split("-").map(Number);
 
@@ -53,7 +63,7 @@ const formatMonthKey = (monthKey) => {
   }).format(new Date(year, month - 1, 1));
 };
 
-export default function MonthlyPlanScreen({ navigation, route, }) {
+export default function MonthlyPlanScreen({ navigation, route }) {
   const { colors } = useTheme();
 
   const [monthlyPlan, setMonthlyPlan] = useState(null);
@@ -72,10 +82,46 @@ export default function MonthlyPlanScreen({ navigation, route, }) {
 
   const [draftSavingsTarget, setDraftSavingsTarget] = useState("0");
 
-  const monthKey =
-  route?.params?.monthKey ||
-  getCurrentMonthKey();
+  const initialMonthKey = route?.params?.monthKey || getCurrentMonthKey();
+
+  const [selectedMonthKey, setSelectedMonthKey] = useState(initialMonthKey);
+
+  const monthKey = selectedMonthKey;
+
   const previousMonthKey = getPreviousMonthKey(monthKey);
+
+  const changeMonth = (offset) => {
+    setIsEditing(false);
+    setSelectedMonthKey(shiftMonthKey(monthKey, offset));
+  };
+
+  const handleMonthChange = (offset) => {
+    if (isSaving || isLoadingPreviousPlan) {
+      return;
+    }
+
+    if (isEditing) {
+      Alert.alert(
+        "Discard changes?",
+        "You have unsaved changes to this monthly plan.",
+        [
+          {
+            text: "Keep Editing",
+            style: "cancel",
+          },
+          {
+            text: "Discard",
+            style: "destructive",
+            onPress: () => changeMonth(offset),
+          },
+        ],
+      );
+
+      return;
+    }
+
+    changeMonth(offset);
+  };
 
   useEffect(() => {
     const userId = auth.currentUser?.uid;
@@ -506,6 +552,43 @@ export default function MonthlyPlanScreen({ navigation, route, }) {
     }
   };
 
+  const returnToDashboard = () => {
+  navigation.navigate("Dashboard", {
+    monthKey,
+  });
+};
+
+const handleBack = () => {
+  if (
+    isSaving ||
+    isLoadingPreviousPlan
+  ) {
+    return;
+  }
+
+  if (isEditing) {
+    Alert.alert(
+      "Discard changes?",
+      "You have unsaved changes to this monthly plan.",
+      [
+        {
+          text: "Keep Editing",
+          style: "cancel",
+        },
+        {
+          text: "Discard",
+          style: "destructive",
+          onPress: returnToDashboard,
+        },
+      ],
+    );
+
+    return;
+  }
+
+  returnToDashboard();
+};
+
   const formatPaise = (amountPaise) =>
     new Intl.NumberFormat("en-IN", {
       style: "currency",
@@ -538,9 +621,10 @@ export default function MonthlyPlanScreen({ navigation, route, }) {
     >
       <View style={styles.header}>
         <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
+  style={styles.backButton}
+  onPress={handleBack}
+  accessibilityLabel="Back to dashboard"
+>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
 
@@ -549,9 +633,7 @@ export default function MonthlyPlanScreen({ navigation, route, }) {
             Monthly Plan
           </Text>
 
-          <Text style={[styles.monthText, { color: colors.text }]}>
-            {monthKey}
-          </Text>
+          
         </View>
 
         {(monthlyPlan || isEditing) && (
@@ -565,6 +647,55 @@ export default function MonthlyPlanScreen({ navigation, route, }) {
             </Text>
           </TouchableOpacity>
         )}
+      </View>
+
+      <View
+        style={[
+          styles.monthNavigation,
+          {
+            backgroundColor: colors.surface,
+          },
+        ]}
+      >
+        <TouchableOpacity
+          style={styles.monthNavButton}
+          onPress={() => handleMonthChange(-1)}
+          accessibilityLabel="Previous month"
+        >
+          <Ionicons name="chevron-back" size={22} color={colors.primary} />
+        </TouchableOpacity>
+
+        <View style={styles.monthNavigationText}>
+          <Text
+            style={[
+              styles.monthNavigationTitle,
+              {
+                color: colors.text,
+              },
+            ]}
+          >
+            {formatMonthKey(monthKey)}
+          </Text>
+
+          <Text
+            style={[
+              styles.monthNavigationKey,
+              {
+                color: colors.text,
+              },
+            ]}
+          >
+            {monthKey}
+          </Text>
+        </View>
+
+        <TouchableOpacity
+          style={styles.monthNavButton}
+          onPress={() => handleMonthChange(1)}
+          accessibilityLabel="Next month"
+        >
+          <Ionicons name="chevron-forward" size={22} color={colors.primary} />
+        </TouchableOpacity>
       </View>
 
       {!monthlyPlan && !isEditing ? (
@@ -1026,12 +1157,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
 
-  monthText: {
-    fontSize: 13,
-    opacity: 0.6,
-    marginTop: 3,
-  },
-
+ 
   card: {
     borderRadius: 18,
     padding: 20,
@@ -1198,5 +1324,38 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "700",
     marginLeft: 8,
+  },
+  monthNavigation: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderRadius: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    marginBottom: 20,
+  },
+
+  monthNavButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  monthNavigationText: {
+    flex: 1,
+    alignItems: "center",
+  },
+
+  monthNavigationTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+  },
+
+  monthNavigationKey: {
+    fontSize: 11,
+    opacity: 0.5,
+    marginTop: 2,
   },
 });
