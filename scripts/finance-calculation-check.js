@@ -14,6 +14,7 @@ const {
   getAccountDisplayAmountPaise,
   getAmountPaise,
   getDaysRemainingInMonth,
+  getTransactionDateKey,
   isTransactionInMonth,
   parseMoneyInputToPaise,
   isVariableExpenseTransaction,
@@ -159,6 +160,24 @@ assert.strictEqual(
     [],
   ),
   true,
+);
+
+// When fixedCommitments is null (legacy/default), transactions carrying a fixedCommitmentId
+// remain excluded from variable spending.
+assert.strictEqual(
+  isVariableExpenseTransaction(
+    {
+      type: "expense",
+      amountPaise: 1400000,
+      date: "2026-09-20",
+      fixedCommitmentId: "rent",
+    },
+    2026,
+    8,
+    new Date("2026-09-25T12:00:00"),
+    null,
+  ),
+  false,
 );
 
 assert.strictEqual(
@@ -310,6 +329,50 @@ assert.strictEqual(isTransactionInMonth(augustTransaction, 2026, 8), false);
 assert.strictEqual(isTransactionInMonth(septemberTransaction, 2026, 8), true);
 
 assert.strictEqual(isTransactionInMonth(septemberTransaction, 2026, 7), false);
+
+// Production occurredOn field handling.
+const occurredOnTransaction = {
+  type: "expense",
+  amountPaise: 5000,
+  occurredOn: "2026-09-15",
+};
+
+assert.strictEqual(
+  isTransactionInMonth(occurredOnTransaction, 2026, 8),
+  true,
+);
+
+assert.strictEqual(
+  getTransactionDateKey(occurredOnTransaction),
+  "2026-09-15",
+);
+
+// Legacy date field compatibility for date resolution and balance calculations.
+const legacyDateTransaction = {
+  type: "income",
+  accountId: "cash",
+  amountPaise: 7500,
+  date: "2026-09-15",
+};
+
+assert.strictEqual(
+  getTransactionDateKey(legacyDateTransaction),
+  "2026-09-15",
+);
+
+assert.strictEqual(
+  isTransactionInMonth(legacyDateTransaction, 2026, 8),
+  true,
+);
+
+assert.strictEqual(
+  calculateAccountBalancePaise(
+    { id: "cash", type: "cash", openingBalancePaise: 10000 },
+    [legacyDateTransaction],
+    today,
+  ),
+  17500,
+);
 
 // Zero amount should remain zero.
 assert.strictEqual(getAmountPaise({ amountPaise: 0 }), 0);
@@ -479,6 +542,18 @@ const variableSpentWithRemovedCommitmentPaise = calculateVariableSpentPaise(
 
 assert.strictEqual(variableSpentWithRemovedCommitmentPaise, 1685000);
 
+// null fixedCommitments preserves the exclusion of fixed-linked transactions,
+// whereas [] includes them as variable spending.
+const variableSpentWithNullCommitmentsPaise = calculateVariableSpentPaise(
+  leanV2Transactions,
+  2026,
+  8,
+  leanV2Today,
+  null,
+);
+
+assert.strictEqual(variableSpentWithNullCommitmentsPaise, 285000);
+
 // ₹10,773 - ₹2,850 = ₹7,923.
 const remainingSpendablePaise = calculateRemainingSpendablePaise(
   plannedSpendablePaise,
@@ -535,6 +610,8 @@ assert.strictEqual(parseMoneyInputToPaise("10000.50"), 1000050);
 
 assert.strictEqual(parseMoneyInputToPaise("0"), 0);
 
+assert.strictEqual(parseMoneyInputToPaise("0.00"), 0);
+
 assert.strictEqual(parseMoneyInputToPaise("12.345"), null);
 
 assert.strictEqual(parseMoneyInputToPaise(""), null);
@@ -544,6 +621,8 @@ assert.strictEqual(parseMoneyInputToPaise(""), null);
 // ============================================================
 
 assert.strictEqual(getMonthKeyFromDate(new Date(2026, 8, 15)), "2026-09");
+
+assert.strictEqual(getMonthKeyFromDate(new Date(2026, 0, 15)), "2026-01");
 
 assert.strictEqual(shiftMonthKey("2026-09", 1), "2026-10");
 
