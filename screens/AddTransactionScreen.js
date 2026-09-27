@@ -33,7 +33,7 @@ import {
   parseMoneyInputToPaise,
 } from "../utils/finance";
 
-const { width, height } = Dimensions.get("window");
+const { width } = Dimensions.get("window");
 
 const ACCOUNT_TYPE_LABELS = {
   bank: "Bank",
@@ -1341,18 +1341,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     minHeight: 80,
     justifyContent: "center",
-  },
-  selectedCategoryCard: {
-    backgroundColor: "#E3F2FD",
-    borderColor: LightTheme.colors.primary,
-    shadowColor: LightTheme.colors.primary,
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
   },
   categoryIcon: {
     width: 32,
