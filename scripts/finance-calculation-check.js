@@ -18,14 +18,14 @@ const {
   isTransactionInMonth,
   parseMoneyInputToPaise,
   isVariableExpenseTransaction,
-} = require("../utils/finance");
+} = require("../src/utils/finance");
 
 const {
   formatMonthKey,
   getMonthKeyFromDate,
   getPreviousMonthKey,
   shiftMonthKey,
-} = require("../utils/month");
+} = require("../src/utils/month");
 
 const today = new Date(2026, 8, 21, 12);
 const cash = { id: "cash", type: "cash", openingBalancePaise: 10000 };

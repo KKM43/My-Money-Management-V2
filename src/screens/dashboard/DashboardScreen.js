@@ -14,12 +14,12 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { collection, onSnapshot, deleteDoc, doc } from "firebase/firestore";
-import { db, auth } from "../services/firebaseConfig";
+import { db, auth } from "../../services/firebaseConfig";
 import { signOut } from "firebase/auth";
 
-import TransactionItem from "../components/TransactionItem";
-import { LightTheme } from "../theme";
-import { useTheme } from "../ThemeContext";
+import TransactionItem from "../../components/transactions/TransactionItem";
+import { LightTheme } from "../../theme/theme";
+import { useTheme } from "../../theme/ThemeContext";
 import {
   calculateFixedCommitmentsPaise,
   calculateMoneyAfterFixedPaise,
@@ -33,13 +33,13 @@ import {
   getDaysRemainingInMonth,
   isTransactionInMonth,
   isVariableExpenseTransaction,
-} from "../utils/finance";
+} from "../../utils/finance";
 
 import {
   formatMonthKey,
   getMonthKeyFromDate,
   shiftMonthKey,
-} from "../utils/month";
+} from "../../utils/month";
 
 export default function DashboardScreen({ navigation, route }) {
   const { colors, isDark, themeMode, cycleThemeMode } = useTheme();

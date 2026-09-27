@@ -12,8 +12,8 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { collection, doc, getDocs, writeBatch } from "firebase/firestore";
-import { auth, db } from "../services/firebaseConfig";
-import { useTheme } from "../ThemeContext";
+import { auth, db } from "../../services/firebaseConfig";
+import { useTheme } from "../../theme/ThemeContext";
 
 const CONFIRMATION_TEXT = "DELETE";
 

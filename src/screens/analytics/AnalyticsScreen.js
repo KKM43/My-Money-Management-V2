@@ -10,18 +10,18 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { collection, onSnapshot } from "firebase/firestore";
 
-import { db, auth } from "../services/firebaseConfig";
-import { useTheme } from "../ThemeContext";
+import { db, auth } from "../../services/firebaseConfig";
+import { useTheme } from "../../theme/ThemeContext";
 import {
   formatPaise,
   getAmountPaise,
   isTransactionInMonth,
-} from "../utils/finance";
+} from "../../utils/finance";
 import {
   formatMonthKey,
   getCurrentMonthKey,
   shiftMonthKey,
-} from "../utils/month";
+} from "../../utils/month";
 
 export default function AnalyticsScreen({ navigation }) {
   const { colors, isDark } = useTheme();

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import SavingsGoalItem from "../components/SavingsGoalItem";
+import SavingsGoalItem from "../../components/savings/SavingsGoalItem";
 import {
   View,
   Text,
@@ -24,9 +24,9 @@ import {
 } from "firebase/firestore";
 
 
-import { db, auth } from "../services/firebaseConfig";
-import { useTheme } from "../ThemeContext";
-import { parseMoneyInputToPaise } from "../utils/finance";
+import { db, auth } from "../../services/firebaseConfig";
+import { useTheme } from "../../theme/ThemeContext";
+import { parseMoneyInputToPaise } from "../../utils/finance";
 
 export default function SavingsGoalsScreen({ navigation }) {
   const { colors, isDark } = useTheme();

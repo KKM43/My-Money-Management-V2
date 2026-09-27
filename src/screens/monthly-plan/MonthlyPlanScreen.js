@@ -18,8 +18,8 @@ import {
 } from "firebase/firestore";
 import { Ionicons } from "@expo/vector-icons";
 
-import { auth, db } from "../services/firebaseConfig";
-import { useTheme } from "../ThemeContext";
+import { auth, db } from "../../services/firebaseConfig";
+import { useTheme } from "../../theme/ThemeContext";
 import {
   calculateFixedCommitmentsPaise,
   calculateMoneyAfterFixedPaise,
@@ -27,14 +27,14 @@ import {
   calculatePlannedSpendablePaise,
   formatPaise,
   parseMoneyInputToPaise,
-} from "../utils/finance";
+} from "../../utils/finance";
 
 import {
   formatMonthKey,
   getCurrentMonthKey,
   getPreviousMonthKey,
   shiftMonthKey,
-} from "../utils/month";
+} from "../../utils/month";
 
 
 

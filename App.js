@@ -5,20 +5,20 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, onSnapshot } from "firebase/firestore";
 
-import LoginScreen from "./screens/LoginScreen";
-import SignupScreen from "./screens/SignupScreen";
-import DashboardScreen from "./screens/DashboardScreen";
-import AddTransactionScreen from "./screens/AddTransactionScreen";
-import BudgetSettingsScreen from "./screens/BudgetSettingsScreen";
-import AccountsScreen from "./screens/AccountsScreen";
-import AccountActivityScreen from "./screens/AccountActivityScreen";
-import ProfileScreen from "./screens/ProfileScreen";
-import AnalyticsScreen from "./screens/AnalyticsScreen";
-import SavingsGoalsScreen from "./screens/SavingsGoalsScreen";
-import LeanV2OnboardingScreen from "./screens/LeanV2OnboardingScreen";
-import MonthlyPlanScreen from "./screens/MonthlyPlanScreen";
-import { auth, db } from "./services/firebaseConfig";
-import { ThemeProvider } from "./ThemeContext";
+import LoginScreen from "./src/screens/auth/LoginScreen";
+import SignupScreen from "./src/screens/auth/SignupScreen";
+import DashboardScreen from "./src/screens/dashboard/DashboardScreen";
+import AddTransactionScreen from "./src/screens/transactions/AddTransactionScreen";
+import BudgetSettingsScreen from "./src/screens/legacy/BudgetSettingsScreen";
+import AccountsScreen from "./src/screens/accounts/AccountsScreen";
+import AccountActivityScreen from "./src/screens/accounts/AccountActivityScreen";
+import ProfileScreen from "./src/screens/profile/ProfileScreen";
+import AnalyticsScreen from "./src/screens/analytics/AnalyticsScreen";
+import SavingsGoalsScreen from "./src/screens/savings/SavingsGoalsScreen";
+import LeanV2OnboardingScreen from "./src/screens/onboarding/LeanV2OnboardingScreen";
+import MonthlyPlanScreen from "./src/screens/monthly-plan/MonthlyPlanScreen";
+import { auth, db } from "./src/services/firebaseConfig";
+import { ThemeProvider } from "./src/theme/ThemeContext";
 
 const Stack = createNativeStackNavigator();
 

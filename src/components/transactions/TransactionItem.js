@@ -11,8 +11,8 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useTheme } from "../ThemeContext";
-import { formatPaise } from "../utils/finance";
+import { useTheme } from "../../theme/ThemeContext";
+import { formatPaise } from "../../utils/finance";
 
 export default function TransactionItem({
   item,

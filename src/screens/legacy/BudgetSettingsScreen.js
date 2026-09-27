@@ -14,9 +14,9 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { doc, getDoc, setDoc } from "firebase/firestore";
-import { db, auth } from "../services/firebaseConfig";
-import { LightTheme } from "../theme";
-import { useTheme } from "../ThemeContext";
+import { db, auth } from "../../services/firebaseConfig";
+import { LightTheme } from "../../theme/theme";
+import { useTheme } from "../../theme/ThemeContext";
 
 const EXPENSE_CATEGORIES = [
   "Food & Dining",

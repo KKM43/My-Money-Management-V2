@@ -24,14 +24,14 @@ import {
   onSnapshot,
   deleteField,
 } from "firebase/firestore";
-import { db, auth } from "../services/firebaseConfig";
-import { LightTheme } from "../theme";
-import { useTheme } from "../ThemeContext";
-import { getMonthKeyFromDate } from "../utils/month";
+import { db, auth } from "../../services/firebaseConfig";
+import { LightTheme } from "../../theme/theme";
+import { useTheme } from "../../theme/ThemeContext";
+import { getMonthKeyFromDate } from "../../utils/month";
 import {
   getAmountPaise,
   parseMoneyInputToPaise,
-} from "../utils/finance";
+} from "../../utils/finance";
 
 const { width } = Dimensions.get("window");
 

@@ -14,9 +14,9 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import { auth } from "../services/firebaseConfig";
+import { auth } from "../../services/firebaseConfig";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { LightTheme } from "../theme";
+import { LightTheme } from "../../theme/theme";
 
 const { width, height } = Dimensions.get('window');
 

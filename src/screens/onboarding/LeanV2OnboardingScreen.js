@@ -13,8 +13,8 @@ import {
 } from "react-native";
 import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 
-import { auth, db } from "../services/firebaseConfig";
-import { useTheme } from "../ThemeContext";
+import { auth, db } from "../../services/firebaseConfig";
+import { useTheme } from "../../theme/ThemeContext";
 import {
   calculateFixedCommitmentsPaise,
   calculateMoneyAfterFixedPaise,
@@ -22,8 +22,8 @@ import {
   calculatePlannedSpendablePaise,
   calculateSavingsPercentage,
   parseMoneyInputToPaise,
-} from "../utils/finance";
-import { getCurrentMonthKey } from "../utils/month";
+} from "../../utils/finance";
+import { getCurrentMonthKey } from "../../utils/month";
 
 
 export default function LeanV2OnboardingScreen() {

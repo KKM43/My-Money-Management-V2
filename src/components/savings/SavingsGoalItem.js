@@ -13,8 +13,8 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { ProgressBar } from "react-native-paper";
 
-import { useTheme } from "../ThemeContext";
-import { formatPaise } from "../utils/finance";
+import { useTheme } from "../../theme/ThemeContext";
+import { formatPaise } from "../../utils/finance";
 
 export default function SavingsGoalItem({
   goal,

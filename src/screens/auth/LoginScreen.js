@@ -15,9 +15,9 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "../services/firebaseConfig";
-import { LightTheme } from "../theme";
-import WalletIcon from "../components/WalletIcon";
+import { auth } from "../../services/firebaseConfig";
+import { LightTheme } from "../../theme/theme";
+import WalletIcon from "../../components/common/WalletIcon";
 
 const { width, height } = Dimensions.get('window');
 

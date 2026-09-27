@@ -22,14 +22,14 @@ import {
   serverTimestamp,
   updateDoc,
 } from "firebase/firestore";
-import { auth, db } from "../services/firebaseConfig";
-import { LightTheme } from "../theme";
-import { useTheme } from "../ThemeContext";
+import { auth, db } from "../../services/firebaseConfig";
+import { LightTheme } from "../../theme/theme";
+import { useTheme } from "../../theme/ThemeContext";
 import {
   calculateAccountBalancePaise,
   formatPaise,
   getAccountDisplayAmountPaise,
-} from "../utils/finance";
+} from "../../utils/finance";
 
 const ACCOUNT_TYPES = [
   { value: "bank", label: "Bank", icon: "business-outline" },
