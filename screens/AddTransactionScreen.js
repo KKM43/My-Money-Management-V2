@@ -130,10 +130,17 @@ export default function AddTransactionScreen({ navigation, route }) {
     ) || null;
 
   useEffect(() => {
+    const userId = auth.currentUser?.uid;
+
+    if (!userId) {
+      setAccounts([]);
+      return;
+    }
+
     const accountsRef = collection(
       db,
       "users",
-      auth.currentUser.uid,
+      userId,
       "accounts",
     );
 
