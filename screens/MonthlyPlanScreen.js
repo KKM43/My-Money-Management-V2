@@ -659,17 +659,6 @@ export default function MonthlyPlanScreen({ navigation, route }) {
           >
             {formatMonthKey(monthKey)}
           </Text>
-
-          <Text
-            style={[
-              styles.monthNavigationKey,
-              {
-                color: colors.text,
-              },
-            ]}
-          >
-            {monthKey}
-          </Text>
         </View>
 
         <TouchableOpacity
@@ -1358,11 +1347,5 @@ const styles = StyleSheet.create({
   monthNavigationTitle: {
     fontSize: 16,
     fontWeight: "700",
-  },
-
-  monthNavigationKey: {
-    fontSize: 11,
-    opacity: 0.5,
-    marginTop: 2,
   },
 });

@@ -790,10 +790,6 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: LightTheme.colors.text,
   },
-  rowAction: {
-    padding: 6,
-    marginLeft: 4,
-  },
   editActions: {
     flexDirection: "row",
     alignItems: "center",

@@ -494,62 +494,6 @@ const styles = StyleSheet.create({
     opacity: 0.65,
     marginTop: 5,
   },
-
-  goalCard: {
-    borderRadius: 16,
-    padding: 18,
-    marginBottom: 14,
-  },
-
-  goalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-
-  goalName: {
-    flex: 1,
-    fontSize: 17,
-    fontWeight: "bold",
-  },
-
-  goalPercentage: {
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-
-  progressBar: {
-    height: 8,
-    borderRadius: 4,
-    marginBottom: 16,
-  },
-
-  goalAmounts: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-
-  amountRight: {
-    alignItems: "flex-end",
-  },
-
-  amountLabel: {
-    fontSize: 12,
-    opacity: 0.6,
-    marginBottom: 3,
-  },
-
-  amountValue: {
-    fontSize: 15,
-    fontWeight: "600",
-  },
-
-  remainingText: {
-    marginTop: 14,
-    fontSize: 13,
-    opacity: 0.7,
-  },
   cancelEditButton: {
     borderWidth: 1,
     borderRadius: 12,

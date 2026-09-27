@@ -10,7 +10,6 @@ import {
   Platform,
   Modal,
   ScrollView,
-  Dimensions,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
@@ -19,7 +18,6 @@ import { db, auth } from "../services/firebaseConfig";
 import { LightTheme } from "../theme";
 import { useTheme } from "../ThemeContext";
 
-const { width, height } = Dimensions.get("window");
 const EXPENSE_CATEGORIES = [
   "Food & Dining",
   "Transportation",
@@ -473,18 +471,10 @@ const styles = StyleSheet.create({
     padding: 10,
     marginBottom: 8,
   },
-  categoryButtonActive: {
-    backgroundColor: LightTheme.colors.primary,
-    borderColor: LightTheme.colors.primary,
-  },
   categoryButtonText: {
     color: "#666",
     fontSize: 13,
     textAlign: "center",
-  },
-  categoryButtonTextActive: {
-    color: "white",
-    fontWeight: "bold",
   },
   categorySelector: {
     flexDirection: "row",

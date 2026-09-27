@@ -163,7 +163,6 @@ export default function DashboardScreen({ navigation, route }) {
         style: "destructive",
         onPress: async () => {
           await signOut(auth);
-          // navigation.replace("Login");
         },
       },
     ]);
@@ -430,7 +429,7 @@ export default function DashboardScreen({ navigation, route }) {
               </Text>
 
               <Text style={[styles.noPlanText, { color: colors.text }]}>
-                No Lean V2 plan exists for {selectedMonthLabel}.
+                No monthly plan for {selectedMonthLabel}.
               </Text>
               <TouchableOpacity
                 style={[
@@ -781,7 +780,7 @@ export default function DashboardScreen({ navigation, route }) {
               keyExtractor={(item) => item.id}
               renderItem={({ item }) => (
                 <TransactionItem
-                  key={`${item.id}-${isDark ? "dark" : "light"}`}
+                  key={item.id}
                   item={item}
                   isFixedCommitmentPayment={Boolean(
                     item.fixedCommitmentId &&
