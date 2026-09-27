@@ -34,7 +34,11 @@ import {
   isVariableExpenseTransaction,
 } from "../utils/finance";
 
-import { formatMonthKey, getMonthKeyFromDate } from "../utils/month";
+import {
+  formatMonthKey,
+  getMonthKeyFromDate,
+  shiftMonthKey,
+} from "../utils/month";
 
 export default function DashboardScreen({ navigation, route }) {
   const { colors, isDark, themeMode, cycleThemeMode } = useTheme();
@@ -260,22 +264,13 @@ export default function DashboardScreen({ navigation, route }) {
   const largestCategorySpending = spendingCategories[0]?.[1] || 0;
 
   const navigateMonth = (direction) => {
-    if (direction === "prev") {
-      if (currentMonth === 0) {
-        setCurrentMonth(11);
-        setCurrentYear(currentYear - 1);
-      } else {
-        setCurrentMonth(currentMonth - 1);
-      }
-    } else {
-      if (currentMonth === 11) {
-        setCurrentMonth(0);
-        setCurrentYear(currentYear + 1);
-      } else {
-        setCurrentMonth(currentMonth + 1);
-      }
-    }
-  };
+  const offset = direction === "prev" ? -1 : 1;
+  const nextMonthKey = shiftMonthKey(selectedMonthKey, offset);
+  const [year, month] = nextMonthKey.split("-").map(Number);
+
+  setCurrentYear(year);
+  setCurrentMonth(month - 1);
+};
 
   const goToCurrentMonth = () => {
     const now = new Date();
