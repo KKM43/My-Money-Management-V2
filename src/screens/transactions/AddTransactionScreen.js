@@ -278,7 +278,15 @@ export default function AddTransactionScreen({ navigation, route }) {
   };
 
   const handleAdd = async () => {
-    if (!amount || (type !== "transfer" && !category)) {
+    const effectiveCategory =
+      type === "transfer"
+        ? "Transfer"
+        : category ||
+          (type === "expense" && selectedFixedCommitment
+            ? selectedFixedCommitment.name
+            : "");
+
+    if (!amount || (type !== "transfer" && !effectiveCategory)) {
       Alert.alert("Error", "Please enter an amount and complete the details");
       return;
     }
@@ -319,7 +327,7 @@ export default function AddTransactionScreen({ navigation, route }) {
     const transactionData = {
       type,
       amountPaise,
-      category: type === "transfer" ? "Transfer" : category,
+      category: effectiveCategory,
       note: note.trim(),
       occurredOn: formatLocalDate(selectedDate),
       updatedAt: serverTimestamp(),
