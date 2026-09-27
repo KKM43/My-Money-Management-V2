@@ -55,6 +55,13 @@ const getTransactionDate = (transaction) => {
   return new Date(transaction.date);
 };
 
+const getMonthKeyFromDate = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+
+  return `${year}-${month}`;
+};
+
 export default function AddTransactionScreen({ navigation, route }) {
   const { colors, isDark } = useTheme();
   const editingTransaction = route?.params?.transaction;
@@ -74,7 +81,13 @@ export default function AddTransactionScreen({ navigation, route }) {
   );
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
+  const [showFixedCommitmentPicker, setShowFixedCommitmentPicker] =
+    useState(false);
   const [accounts, setAccounts] = useState([]);
+  const [fixedCommitments, setFixedCommitments] = useState([]);
+  const [selectedFixedCommitmentId, setSelectedFixedCommitmentId] = useState(
+    editingTransaction?.fixedCommitmentId || "",
+  );
   const [selectedAccountId, setSelectedAccountId] = useState(
     editingTransaction?.accountId || "",
   );
@@ -84,6 +97,11 @@ export default function AddTransactionScreen({ navigation, route }) {
   const [toAccountId, setToAccountId] = useState(
     editingTransaction?.toAccountId || "",
   );
+  const selectedMonthKey = getMonthKeyFromDate(selectedDate);
+  const selectedFixedCommitment =
+    fixedCommitments.find(
+      (commitment) => commitment.id === selectedFixedCommitmentId,
+    ) || null;
 
   useEffect(() => {
     const accountsRef = collection(
@@ -108,6 +126,40 @@ export default function AddTransactionScreen({ navigation, route }) {
       },
     );
   }, []);
+
+  useEffect(() => {
+    const userId = auth.currentUser?.uid;
+
+    if (!userId) {
+      setFixedCommitments([]);
+      return;
+    }
+
+    const planRef = doc(db, "users", userId, "monthlyPlans", selectedMonthKey);
+
+    return onSnapshot(
+      planRef,
+      (snapshot) => {
+        if (!snapshot.exists()) {
+          setFixedCommitments([]);
+          return;
+        }
+
+        const planData = snapshot.data();
+
+        setFixedCommitments(
+          Array.isArray(planData.fixedCommitments)
+            ? planData.fixedCommitments
+            : [],
+        );
+      },
+      (error) => {
+        console.error("Error loading fixed commitments:", error);
+
+        setFixedCommitments([]);
+      },
+    );
+  }, [selectedMonthKey]);
 
   const selectableAccounts = accounts.filter(
     (account) =>
@@ -236,6 +288,11 @@ export default function AddTransactionScreen({ navigation, route }) {
       note: note.trim(),
       occurredOn: formatLocalDate(selectedDate),
       updatedAt: serverTimestamp(),
+      ...(type === "expense" && selectedFixedCommitment
+        ? {
+            fixedCommitmentId: selectedFixedCommitment.id,
+          }
+        : {}),
       ...(type === "transfer"
         ? {
             fromAccountId,
@@ -256,6 +313,7 @@ export default function AddTransactionScreen({ navigation, route }) {
             ? {
                 ...transactionData,
                 accountId: deleteField(),
+                fixedCommitmentId: deleteField(),
                 paymentKind: paymentKind || deleteField(),
               }
             : {
@@ -263,6 +321,10 @@ export default function AddTransactionScreen({ navigation, route }) {
                 fromAccountId: deleteField(),
                 toAccountId: deleteField(),
                 paymentKind: deleteField(),
+                fixedCommitmentId:
+                  type === "expense" && selectedFixedCommitment
+                    ? selectedFixedCommitment.id
+                    : deleteField(),
               };
 
         await updateDoc(
@@ -706,6 +768,174 @@ export default function AddTransactionScreen({ navigation, route }) {
                 </TouchableOpacity>
               </>
             )}
+
+            {type === "expense" && fixedCommitments.length > 0 && (
+              <>
+                <Text
+                  style={[
+                    styles.sectionTitle,
+                    {
+                      color: colors.text,
+                    },
+                  ]}
+                >
+                  Fixed Commitment
+                </Text>
+
+                <TouchableOpacity
+                  style={[
+                    styles.categorySelector,
+                    {
+                      backgroundColor: isDark ? "#252525" : "#F8F9FA",
+                      borderColor: isDark ? "#444" : "#E9ECEF",
+                    },
+                  ]}
+                  onPress={() => setShowFixedCommitmentPicker(true)}
+                >
+                  <Ionicons
+                    name="repeat-outline"
+                    size={20}
+                    color={colors.primary}
+                  />
+
+                  <Text
+                    style={[
+                      styles.categorySelectorText,
+                      {
+                        color: colors.text,
+                      },
+                    ]}
+                  >
+                    {selectedFixedCommitment
+                      ? selectedFixedCommitment.name
+                      : "Not a fixed commitment"}
+                  </Text>
+
+                  <Ionicons name="chevron-down" size={20} color={colors.text} />
+                </TouchableOpacity>
+              </>
+            )}
+
+            <Modal
+              visible={showFixedCommitmentPicker}
+              transparent
+              animationType="slide"
+              onRequestClose={() => setShowFixedCommitmentPicker(false)}
+            >
+              <View style={styles.categoryModalOverlay}>
+                <View
+                  style={[
+                    styles.categoryModal,
+                    {
+                      backgroundColor: colors.surface,
+                    },
+                  ]}
+                >
+                  <View style={styles.dateModalHeader}>
+                    <Text
+                      style={[
+                        styles.dateModalTitle,
+                        {
+                          color: colors.text,
+                        },
+                      ]}
+                    >
+                      Choose fixed commitment
+                    </Text>
+
+                    <TouchableOpacity
+                      onPress={() => setShowFixedCommitmentPicker(false)}
+                      accessibilityLabel="Close fixed commitment selector"
+                    >
+                      <Ionicons name="close" size={24} color={colors.text} />
+                    </TouchableOpacity>
+                  </View>
+
+                  <ScrollView showsVerticalScrollIndicator={false}>
+                    <TouchableOpacity
+                      style={[
+                        styles.categorySelector,
+                        {
+                          backgroundColor: isDark ? "#252525" : "#F8F9FA",
+                          borderColor: isDark ? "#444" : "#E9ECEF",
+                        },
+                      ]}
+                      onPress={() => {
+                        setSelectedFixedCommitmentId("");
+                        setShowFixedCommitmentPicker(false);
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.categorySelectorText,
+                          {
+                            color: colors.text,
+                          },
+                        ]}
+                      >
+                        Not a fixed commitment
+                      </Text>
+                    </TouchableOpacity>
+
+                    {fixedCommitments.map((commitment) => (
+                      <TouchableOpacity
+                        key={commitment.id}
+                        style={[
+                          styles.categorySelector,
+                          {
+                            backgroundColor:
+                              selectedFixedCommitmentId === commitment.id
+                                ? isDark
+                                  ? "#17365D"
+                                  : "#E3F2FD"
+                                : isDark
+                                  ? "#252525"
+                                  : "#F8F9FA",
+
+                            borderColor:
+                              selectedFixedCommitmentId === commitment.id
+                                ? colors.primary
+                                : isDark
+                                  ? "#444"
+                                  : "#E9ECEF",
+                          },
+                        ]}
+                        onPress={() => {
+                          setSelectedFixedCommitmentId(commitment.id);
+
+                          setShowFixedCommitmentPicker(false);
+                        }}
+                      >
+                        <Ionicons
+                          name="receipt-outline"
+                          size={20}
+                          color={colors.primary}
+                        />
+
+                        <Text
+                          style={[
+                            styles.categorySelectorText,
+                            {
+                              color: colors.text,
+                            },
+                          ]}
+                        >
+                          {commitment.name}
+                        </Text>
+
+                        {selectedFixedCommitmentId === commitment.id && (
+                          <Ionicons
+                            name="checkmark-circle"
+                            size={20}
+                            color={colors.primary}
+                          />
+                        )}
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+              </View>
+            </Modal>
 
             <Modal
               visible={showCategoryPicker}
