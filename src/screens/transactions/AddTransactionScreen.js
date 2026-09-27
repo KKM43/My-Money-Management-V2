@@ -63,11 +63,24 @@ export default function AddTransactionScreen({ navigation, route }) {
 
   const [type, setType] = useState(initialType);
   const [amount, setAmount] = useState(() => {
-    if (!editingTransaction) return "";
-    return (getAmountPaise(editingTransaction) / 100).toFixed(2);
+    if (editingTransaction) {
+      return (getAmountPaise(editingTransaction) / 100).toFixed(2);
+    }
+
+    const routedAmountPaise = route?.params?.amountPaise;
+
+    if (Number.isInteger(routedAmountPaise) && routedAmountPaise >= 0) {
+      return (routedAmountPaise / 100).toFixed(2);
+    }
+
+    return "";
   });
   const [category, setCategory] = useState(editingTransaction?.category || "");
-  const [note, setNote] = useState(editingTransaction?.note || "");
+  const [note, setNote] = useState(
+    editingTransaction
+      ? editingTransaction.note || ""
+      : route?.params?.note || "",
+  );
   const [isOther, setIsOther] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedDate, setSelectedDate] = useState(() => {
@@ -107,7 +120,9 @@ export default function AddTransactionScreen({ navigation, route }) {
   const [accounts, setAccounts] = useState([]);
   const [fixedCommitments, setFixedCommitments] = useState([]);
   const [selectedFixedCommitmentId, setSelectedFixedCommitmentId] = useState(
-    editingTransaction?.fixedCommitmentId || "",
+    editingTransaction
+      ? editingTransaction.fixedCommitmentId || ""
+      : route?.params?.fixedCommitmentId || "",
   );
   const [selectedAccountId, setSelectedAccountId] = useState(
     editingTransaction?.accountId || "",
