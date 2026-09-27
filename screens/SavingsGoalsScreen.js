@@ -26,6 +26,7 @@ import {
 
 import { db, auth } from "../services/firebaseConfig";
 import { useTheme } from "../ThemeContext";
+import { parseMoneyInputToPaise } from "../utils/finance";
 
 export default function SavingsGoalsScreen({ navigation }) {
   const { colors, isDark } = useTheme();
@@ -67,22 +68,6 @@ export default function SavingsGoalsScreen({ navigation }) {
       },
     );
   }, []);
-
-  const parseAmountToPaise = (value) => {
-    const trimmed = value.trim();
-
-    if (!trimmed) {
-      return null;
-    }
-
-    if (!/^\d+(\.\d{1,2})?$/.test(trimmed)) {
-      return null;
-    }
-
-    const [rupees, paise = ""] = trimmed.split(".");
-
-    return Number(rupees) * 100 + Number(paise.padEnd(2, "0"));
-  };
 
   const handleAmountChange = (text, setter) => {
     const cleaned = text.replace(/[^0-9.]/g, "");
@@ -134,7 +119,7 @@ export default function SavingsGoalsScreen({ navigation }) {
       return;
     }
 
-    const targetAmountPaise = parseAmountToPaise(targetAmount);
+    const targetAmountPaise = parseMoneyInputToPaise(targetAmount);
 
     if (!Number.isInteger(targetAmountPaise) || targetAmountPaise <= 0) {
       Alert.alert(
@@ -145,7 +130,7 @@ export default function SavingsGoalsScreen({ navigation }) {
     }
 
     const savedAmountPaise = savedAmount.trim()
-      ? parseAmountToPaise(savedAmount)
+      ? parseMoneyInputToPaise(savedAmount)
       : 0;
 
     if (!Number.isInteger(savedAmountPaise) || savedAmountPaise < 0) {
