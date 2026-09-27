@@ -28,40 +28,14 @@ import {
   parseMoneyInputToPaise,
 } from "../utils/finance";
 
-const getCurrentMonthKey = () => {
-  const now = new Date();
+import {
+  formatMonthKey,
+  getCurrentMonthKey,
+  getPreviousMonthKey,
+  shiftMonthKey,
+} from "../utils/month";
 
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-};
 
-const getPreviousMonthKey = (monthKey) => {
-  const [year, month] = monthKey.split("-").map(Number);
-
-  const previousMonthDate = new Date(year, month - 2, 1);
-
-  return `${previousMonthDate.getFullYear()}-${String(
-    previousMonthDate.getMonth() + 1,
-  ).padStart(2, "0")}`;
-};
-
-const shiftMonthKey = (monthKey, offset) => {
-  const [year, month] = monthKey.split("-").map(Number);
-
-  const shiftedDate = new Date(year, month - 1 + offset, 1);
-
-  return `${shiftedDate.getFullYear()}-${String(
-    shiftedDate.getMonth() + 1,
-  ).padStart(2, "0")}`;
-};
-
-const formatMonthKey = (monthKey) => {
-  const [year, month] = monthKey.split("-").map(Number);
-
-  return new Intl.DateTimeFormat("en-IN", {
-    month: "long",
-    year: "numeric",
-  }).format(new Date(year, month - 1, 1));
-};
 
 export default function MonthlyPlanScreen({ navigation, route }) {
   const { colors } = useTheme();
