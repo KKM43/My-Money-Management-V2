@@ -23,12 +23,8 @@ import {
   calculateSavingsPercentage,
   parseMoneyInputToPaise,
 } from "../utils/finance";
+import { getCurrentMonthKey } from "../utils/month";
 
-const getCurrentMonthKey = () => {
-  const now = new Date();
-
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-};
 
 export default function LeanV2OnboardingScreen() {
   const { colors, isDark } = useTheme();
