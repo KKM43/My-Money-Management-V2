@@ -13,6 +13,7 @@ import { collection, onSnapshot } from "firebase/firestore";
 import { db, auth } from "../services/firebaseConfig";
 import { useTheme } from "../ThemeContext";
 import {
+  formatPaise,
   getAmountPaise,
   isTransactionInMonth,
 } from "../utils/finance";
@@ -130,14 +131,6 @@ export default function AnalyticsScreen({ navigation }) {
     setMonthKey((current) => shiftMonthKey(current, 1));
   };
 
-  const formatCurrency = (amountPaise) =>
-    new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(amountPaise / 100);
-
   if (isLoading) {
     return (
       <View
@@ -247,7 +240,7 @@ export default function AnalyticsScreen({ navigation }) {
             </Text>
 
             <Text style={[styles.summaryValue, styles.income]}>
-              {formatCurrency(incomePaise)}
+              {formatPaise(incomePaise)}
             </Text>
           </View>
 
@@ -267,7 +260,7 @@ export default function AnalyticsScreen({ navigation }) {
             </Text>
 
             <Text style={[styles.summaryValue, styles.expense]}>
-              {formatCurrency(expensePaise)}
+              {formatPaise(expensePaise)}
             </Text>
           </View>
         </View>
@@ -299,7 +292,7 @@ export default function AnalyticsScreen({ navigation }) {
                 },
               ]}
             >
-              {formatCurrency(savingsPaise)}
+              {formatPaise(savingsPaise)}
             </Text>
           </View>
 
@@ -391,7 +384,7 @@ export default function AnalyticsScreen({ navigation }) {
                         { color: colors.text },
                       ]}
                     >
-                      {formatCurrency(amountPaise)}
+                      {formatPaise(amountPaise)}
                     </Text>
                   </View>
 

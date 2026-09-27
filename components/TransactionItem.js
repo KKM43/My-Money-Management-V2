@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../ThemeContext";
+import { formatPaise } from "../utils/finance";
 
 export default function TransactionItem({
   item,
@@ -22,14 +23,6 @@ export default function TransactionItem({
 }) {
   const { colors, isDark } = useTheme();
   const [showOptions, setShowOptions] = React.useState(false);
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(amount);
-  };
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -252,7 +245,7 @@ export default function TransactionItem({
                 ]}
               >
                 {isTransfer ? "" : item.type === "income" ? "+" : "-"}
-                {formatCurrency(amountPaise / 100)}
+                {formatPaise(amountPaise)}
               </Text>
             </View>
           </View>

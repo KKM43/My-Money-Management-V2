@@ -27,6 +27,7 @@ import { LightTheme } from "../theme";
 import { useTheme } from "../ThemeContext";
 import {
   calculateAccountBalancePaise,
+  formatPaise,
   getAccountDisplayAmountPaise,
 } from "../utils/finance";
 
@@ -56,12 +57,6 @@ function SwipeableAccountRow({
   onEdit,
   onArchive,
 }) {
-  const formatCurrency = (paise) =>
-    new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
-      minimumFractionDigits: 2,
-    }).format(paise / 100);
   const [showOptions, setShowOptions] = useState(false);
   const translateX = useRef(new Animated.Value(0)).current;
   const resetPosition = () =>
@@ -134,7 +129,7 @@ function SwipeableAccountRow({
               </Text>
             </View>
             <Text style={[styles.accountBalance, { color: colors.text }]}>
-              {formatCurrency(balancePaise)}
+              {formatPaise(balancePaise)}
             </Text>
           </View>
         </TouchableWithoutFeedback>
@@ -187,14 +182,6 @@ function SwipeableAccountRow({
     </View>
   );
 }
-
-const formatCurrency = (amountPaise) =>
-  new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amountPaise / 100);
 
 export default function AccountsScreen({ navigation }) {
   const { colors, isDark } = useTheme();

@@ -10,6 +10,7 @@ const {
   calculateSafeToSpendPerDayPaise,
   calculateSavingsPercentage,
   calculateVariableSpentPaise,
+  formatPaise,
   getAccountDisplayAmountPaise,
   getAmountPaise,
   getDaysRemainingInMonth,
@@ -556,5 +557,14 @@ assert.strictEqual(shiftMonthKey("2026-01", -1), "2025-12");
 assert.strictEqual(getPreviousMonthKey("2026-01"), "2025-12");
 
 assert.strictEqual(formatMonthKey("2026-09"), "September 2026");
+
+// ============================================================
+// CURRENCY FORMATTER CHECKS
+// ============================================================
+
+assert.strictEqual(formatPaise(100000), "₹1,000.00");
+assert.strictEqual(formatPaise(0), "₹0.00");
+assert.strictEqual(formatPaise(-100000), "-₹1,000.00");
+assert.strictEqual(formatPaise(-50), "-₹0.50");
 
 console.log("Finance calculation checks passed.");

@@ -28,6 +28,7 @@ import {
   calculateRemainingSpendablePaise,
   calculateSafeToSpendPerDayPaise,
   calculateVariableSpentPaise,
+  formatPaise,
   getAmountPaise,
   getDaysRemainingInMonth,
   isTransactionInMonth,
@@ -284,15 +285,6 @@ export default function DashboardScreen({ navigation, route }) {
     setCurrentYear(now.getFullYear());
   };
 
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(amount);
-  };
-
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <LinearGradient
@@ -372,7 +364,7 @@ export default function DashboardScreen({ navigation, route }) {
                   },
                 ]}
               >
-                {formatCurrency(remainingSpendablePaise / 100)}
+                {formatPaise(remainingSpendablePaise)}
               </Text>
 
               <View style={styles.leanHeroDivider} />
@@ -397,8 +389,8 @@ export default function DashboardScreen({ navigation, route }) {
                     ]}
                   >
                     {isCurrentMonthSelected
-                      ? formatCurrency(safeToSpendPerDayPaise / 100)
-                      : formatCurrency(plannedSpendablePaise / 100)}
+                      ? formatPaise(safeToSpendPerDayPaise)
+                      : formatPaise(plannedSpendablePaise)}
                   </Text>
                 </View>
 
@@ -503,7 +495,7 @@ export default function DashboardScreen({ navigation, route }) {
               </Text>
 
               <Text style={[styles.planValue, { color: colors.text }]}>
-                {formatCurrency(plannedIncomePaise / 100)}
+                {formatPaise(plannedIncomePaise)}
               </Text>
             </View>
 
@@ -513,7 +505,7 @@ export default function DashboardScreen({ navigation, route }) {
               </Text>
 
               <Text style={[styles.planValue, { color: colors.text }]}>
-                {formatCurrency(plannedFixedPaise / 100)}
+                {formatPaise(plannedFixedPaise)}
               </Text>
             </View>
 
@@ -523,7 +515,7 @@ export default function DashboardScreen({ navigation, route }) {
               </Text>
 
               <Text style={[styles.planValue, { color: colors.text }]}>
-                {formatCurrency(savingsTargetPaise / 100)}
+                {formatPaise(savingsTargetPaise)}
               </Text>
             </View>
 
@@ -543,7 +535,7 @@ export default function DashboardScreen({ navigation, route }) {
                   },
                 ]}
               >
-                {formatCurrency(plannedSpendablePaise / 100)}
+                {formatPaise(plannedSpendablePaise)}
               </Text>
             </View>
 
@@ -553,7 +545,7 @@ export default function DashboardScreen({ navigation, route }) {
               </Text>
 
               <Text style={[styles.planValue, { color: colors.text }]}>
-                {formatCurrency(variableSpentPaise / 100)}
+                {formatPaise(variableSpentPaise)}
               </Text>
             </View>
 
@@ -571,7 +563,7 @@ export default function DashboardScreen({ navigation, route }) {
                   },
                 ]}
               >
-                {formatCurrency(remainingSpendablePaise / 100)}
+                {formatPaise(remainingSpendablePaise)}
               </Text>
             </View>
 
@@ -624,7 +616,7 @@ export default function DashboardScreen({ navigation, route }) {
                     {category}
                   </Text>
                   <Text style={[styles.spendingAmount, { color: colors.text }]}>
-                    {formatCurrency(amount)}
+                    {formatPaise(Math.round(amount * 100))}
                   </Text>
                 </View>
                 <View style={styles.spendingTrack}>

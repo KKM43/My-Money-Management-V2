@@ -223,6 +223,14 @@ const isVariableExpenseTransaction = (
   return true;
 };
 
+const formatPaise = (amountPaise) =>
+  new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(Number(amountPaise || 0) / 100);
+
 module.exports = {
   calculateAccountBalancePaise,
   calculateFixedCommitmentsPaise,
@@ -234,6 +242,7 @@ module.exports = {
   calculateSafeToSpendPerDayPaise,
   calculateSavingsPercentage,
   calculateVariableSpentPaise,
+  formatPaise,
   getAccountDisplayAmountPaise,
   getAmountPaise,
   getDaysRemainingInMonth,
