@@ -211,12 +211,12 @@ export default function DashboardScreen({ navigation, route }) {
     currentMonth === now.getMonth() && currentYear === now.getFullYear();
 
   const variableSpentPaise = calculateVariableSpentPaise(
-  transactions,
-  currentYear,
-  currentMonth,
-  now,
-  fixedCommitments,
-);
+    transactions,
+    currentYear,
+    currentMonth,
+    now,
+    fixedCommitments,
+  );
 
   const remainingSpendablePaise = calculateRemainingSpendablePaise(
     plannedSpendablePaise,
@@ -233,12 +233,12 @@ export default function DashboardScreen({ navigation, route }) {
 
   const categorySpending = transactions.reduce((totals, transaction) => {
     const shouldCount = isVariableExpenseTransaction(
-  transaction,
-  currentYear,
-  currentMonth,
-  now,
-  fixedCommitments,
-);
+      transaction,
+      currentYear,
+      currentMonth,
+      now,
+      fixedCommitments,
+    );
     if (!shouldCount || !transaction.category) {
       return totals;
     }
@@ -798,6 +798,12 @@ export default function DashboardScreen({ navigation, route }) {
                 <TransactionItem
                   key={`${item.id}-${isDark ? "dark" : "light"}`}
                   item={item}
+                  isFixedCommitmentPayment={Boolean(
+                    item.fixedCommitmentId &&
+                    fixedCommitments.some(
+                      (commitment) => commitment.id === item.fixedCommitmentId,
+                    ),
+                  )}
                   onDelete={() => handleDelete(item.id)}
                   onEdit={() =>
                     navigation.navigate("AddTransaction", { transaction: item })
