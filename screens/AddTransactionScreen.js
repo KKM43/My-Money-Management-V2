@@ -27,6 +27,7 @@ import {
 import { db, auth } from "../services/firebaseConfig";
 import { LightTheme } from "../theme";
 import { useTheme } from "../ThemeContext";
+import { getMonthKeyFromDate } from "../utils/month";
 
 const { width, height } = Dimensions.get("window");
 
@@ -55,12 +56,7 @@ const getTransactionDate = (transaction) => {
   return new Date(transaction.date);
 };
 
-const getMonthKeyFromDate = (date) => {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
 
-  return `${year}-${month}`;
-};
 
 export default function AddTransactionScreen({ navigation, route }) {
   const { colors, isDark } = useTheme();
