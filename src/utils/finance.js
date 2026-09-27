@@ -231,8 +231,69 @@ const formatPaise = (amountPaise) =>
     maximumFractionDigits: 2,
   }).format(Number(amountPaise || 0) / 100);
 
+const calculateFixedCommitmentPaidPaise = (
+  commitmentId,
+  transactions = [],
+  year,
+  month,
+  now = new Date(),
+) => {
+  if (!commitmentId || !Array.isArray(transactions)) {
+    return 0;
+  }
+
+  return transactions.reduce((total, transaction) => {
+    if (
+      transaction?.type === "expense" &&
+      transaction?.fixedCommitmentId === commitmentId &&
+      isTransactionInMonth(transaction, year, month) &&
+      isTransactionOnOrBeforeToday(transaction, now)
+    ) {
+      return total + getAmountPaise(transaction);
+    }
+
+    return total;
+  }, 0);
+};
+
+const getFixedCommitmentPaymentStatus = (
+  commitment,
+  transactions = [],
+  year,
+  month,
+  now = new Date(),
+) => {
+  const targetPaise = getAmountPaise(commitment);
+
+  const paidPaise = calculateFixedCommitmentPaidPaise(
+    commitment?.id,
+    transactions,
+    year,
+    month,
+    now,
+  );
+
+  const remainingPaise = Math.max(0, targetPaise - paidPaise);
+
+  let status = "pending";
+
+  if (targetPaise > 0 && paidPaise >= targetPaise) {
+    status = "paid";
+  } else if (paidPaise > 0) {
+    status = "partially_paid";
+  }
+
+  return {
+    status,
+    paidPaise,
+    remainingPaise,
+    targetPaise,
+  };
+};
+
 module.exports = {
   calculateAccountBalancePaise,
+  calculateFixedCommitmentPaidPaise,
   calculateFixedCommitmentsPaise,
   calculateMoneyAfterFixedPaise,
   calculateNetWorthPaise,
@@ -246,6 +307,7 @@ module.exports = {
   getAccountDisplayAmountPaise,
   getAmountPaise,
   getDaysRemainingInMonth,
+  getFixedCommitmentPaymentStatus,
   getTransactionBalanceEffectPaise,
   getTransactionDateKey,
   isTransactionInMonth,

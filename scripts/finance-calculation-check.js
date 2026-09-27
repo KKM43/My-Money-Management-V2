@@ -1,6 +1,7 @@
 const assert = require("assert");
 const {
   calculateAccountBalancePaise,
+  calculateFixedCommitmentPaidPaise,
   calculateFixedCommitmentsPaise,
   calculateMoneyAfterFixedPaise,
   calculateNetWorthPaise,
@@ -14,6 +15,7 @@ const {
   getAccountDisplayAmountPaise,
   getAmountPaise,
   getDaysRemainingInMonth,
+  getFixedCommitmentPaymentStatus,
   getTransactionDateKey,
   isTransactionInMonth,
   parseMoneyInputToPaise,
@@ -645,5 +647,348 @@ assert.strictEqual(formatPaise(100000), "₹1,000.00");
 assert.strictEqual(formatPaise(0), "₹0.00");
 assert.strictEqual(formatPaise(-100000), "-₹1,000.00");
 assert.strictEqual(formatPaise(-50), "-₹0.50");
+
+// ============================================================
+// FIXED COMMITMENT PAYMENT TRACKING CHECKS
+// ============================================================
+
+const testNow = new Date(2026, 8, 25, 12);
+
+// calculateFixedCommitmentPaidPaise
+// 1. Empty transaction list -> 0
+assert.strictEqual(
+  calculateFixedCommitmentPaidPaise("emi", [], 2026, 8, testNow),
+  0,
+);
+
+// 2. Null transaction list -> 0
+assert.strictEqual(
+  calculateFixedCommitmentPaidPaise("emi", null, 2026, 8, testNow),
+  0,
+);
+
+// 3. One matching expense
+assert.strictEqual(
+  calculateFixedCommitmentPaidPaise(
+    "emi",
+    [
+      {
+        type: "expense",
+        fixedCommitmentId: "emi",
+        amountPaise: 200000,
+        occurredOn: "2026-09-10",
+      },
+    ],
+    2026,
+    8,
+    testNow,
+  ),
+  200000,
+);
+
+// 4. Multiple matching partial expenses sum correctly
+assert.strictEqual(
+  calculateFixedCommitmentPaidPaise(
+    "emi",
+    [
+      {
+        type: "expense",
+        fixedCommitmentId: "emi",
+        amountPaise: 200000,
+        occurredOn: "2026-09-10",
+      },
+      {
+        type: "expense",
+        fixedCommitmentId: "emi",
+        amountPaise: 305200,
+        occurredOn: "2026-09-20",
+      },
+    ],
+    2026,
+    8,
+    testNow,
+  ),
+  505200,
+);
+
+// 5. Wrong fixedCommitmentId ignored
+assert.strictEqual(
+  calculateFixedCommitmentPaidPaise(
+    "emi",
+    [
+      {
+        type: "expense",
+        fixedCommitmentId: "rent",
+        amountPaise: 500000,
+        occurredOn: "2026-09-10",
+      },
+    ],
+    2026,
+    8,
+    testNow,
+  ),
+  0,
+);
+
+// 6. income with matching fixedCommitmentId ignored
+assert.strictEqual(
+  calculateFixedCommitmentPaidPaise(
+    "emi",
+    [
+      {
+        type: "income",
+        fixedCommitmentId: "emi",
+        amountPaise: 500000,
+        occurredOn: "2026-09-10",
+      },
+    ],
+    2026,
+    8,
+    testNow,
+  ),
+  0,
+);
+
+// 7. transfer with matching fixedCommitmentId ignored
+assert.strictEqual(
+  calculateFixedCommitmentPaidPaise(
+    "emi",
+    [
+      {
+        type: "transfer",
+        fixedCommitmentId: "emi",
+        amountPaise: 500000,
+        occurredOn: "2026-09-10",
+      },
+    ],
+    2026,
+    8,
+    testNow,
+  ),
+  0,
+);
+
+// 8. Different month ignored
+assert.strictEqual(
+  calculateFixedCommitmentPaidPaise(
+    "emi",
+    [
+      {
+        type: "expense",
+        fixedCommitmentId: "emi",
+        amountPaise: 500000,
+        occurredOn: "2026-08-10",
+      },
+    ],
+    2026,
+    8,
+    testNow,
+  ),
+  0,
+);
+
+// 9. Future-dated current-month linked expense ignored
+assert.strictEqual(
+  calculateFixedCommitmentPaidPaise(
+    "emi",
+    [
+      {
+        type: "expense",
+        fixedCommitmentId: "emi",
+        amountPaise: 500000,
+        occurredOn: "2026-09-28",
+      },
+    ],
+    2026,
+    8,
+    testNow,
+  ),
+  0,
+);
+
+// 10. Past-month linked expense counted when evaluating that past month
+assert.strictEqual(
+  calculateFixedCommitmentPaidPaise(
+    "emi",
+    [
+      {
+        type: "expense",
+        fixedCommitmentId: "emi",
+        amountPaise: 450000,
+        occurredOn: "2026-08-15",
+      },
+    ],
+    2026,
+    7,
+    testNow,
+  ),
+  450000,
+);
+
+// 11. occurredOn supported
+assert.strictEqual(
+  calculateFixedCommitmentPaidPaise(
+    "emi",
+    [
+      {
+        type: "expense",
+        fixedCommitmentId: "emi",
+        amountPaise: 350000,
+        occurredOn: "2026-09-15",
+      },
+    ],
+    2026,
+    8,
+    testNow,
+  ),
+  350000,
+);
+
+// 12. Legacy date supported
+assert.strictEqual(
+  calculateFixedCommitmentPaidPaise(
+    "emi",
+    [
+      {
+        type: "expense",
+        fixedCommitmentId: "emi",
+        amountPaise: 350000,
+        date: "2026-09-15T10:00:00Z",
+      },
+    ],
+    2026,
+    8,
+    testNow,
+  ),
+  350000,
+);
+
+// getFixedCommitmentPaymentStatus
+const emiCommitment = {
+  id: "emi",
+  name: "EMI",
+  amountPaise: 500000,
+};
+
+// ₹0 paid
+// -> pending
+// -> paidPaise 0
+// -> remainingPaise 500000
+assert.deepStrictEqual(
+  getFixedCommitmentPaymentStatus(emiCommitment, [], 2026, 8, testNow),
+  {
+    status: "pending",
+    paidPaise: 0,
+    remainingPaise: 500000,
+    targetPaise: 500000,
+  },
+);
+
+// ₹2,000 paid
+// -> partially_paid
+// -> paidPaise 200000
+// -> remainingPaise 300000
+assert.deepStrictEqual(
+  getFixedCommitmentPaymentStatus(
+    emiCommitment,
+    [
+      {
+        type: "expense",
+        fixedCommitmentId: "emi",
+        amountPaise: 200000,
+        occurredOn: "2026-09-10",
+      },
+    ],
+    2026,
+    8,
+    testNow,
+  ),
+  {
+    status: "partially_paid",
+    paidPaise: 200000,
+    remainingPaise: 300000,
+    targetPaise: 500000,
+  },
+);
+
+// ₹5,000 paid across multiple payments
+// -> paid
+// -> remainingPaise 0
+assert.deepStrictEqual(
+  getFixedCommitmentPaymentStatus(
+    emiCommitment,
+    [
+      {
+        type: "expense",
+        fixedCommitmentId: "emi",
+        amountPaise: 200000,
+        occurredOn: "2026-09-10",
+      },
+      {
+        type: "expense",
+        fixedCommitmentId: "emi",
+        amountPaise: 300000,
+        occurredOn: "2026-09-15",
+      },
+    ],
+    2026,
+    8,
+    testNow,
+  ),
+  {
+    status: "paid",
+    paidPaise: 500000,
+    remainingPaise: 0,
+    targetPaise: 500000,
+  },
+);
+
+// ₹6,000 paid
+// -> paid
+// -> paidPaise 600000
+// -> remainingPaise 0
+assert.deepStrictEqual(
+  getFixedCommitmentPaymentStatus(
+    emiCommitment,
+    [
+      {
+        type: "expense",
+        fixedCommitmentId: "emi",
+        amountPaise: 600000,
+        occurredOn: "2026-09-10",
+      },
+    ],
+    2026,
+    8,
+    testNow,
+  ),
+  {
+    status: "paid",
+    paidPaise: 600000,
+    remainingPaise: 0,
+    targetPaise: 500000,
+  },
+);
+
+// zero-value commitment:
+// targetPaise = 0
+// paidPaise = 0
+// status = pending
+// remainingPaise = 0
+const zeroCommitment = {
+  id: "zero",
+  name: "Zero",
+  amountPaise: 0,
+};
+
+assert.deepStrictEqual(
+  getFixedCommitmentPaymentStatus(zeroCommitment, [], 2026, 8, testNow),
+  {
+    status: "pending",
+    paidPaise: 0,
+    remainingPaise: 0,
+    targetPaise: 0,
+  },
+);
 
 console.log("Finance calculation checks passed.");
