@@ -28,6 +28,7 @@ import { db, auth } from "../services/firebaseConfig";
 import { LightTheme } from "../theme";
 import { useTheme } from "../ThemeContext";
 import { getMonthKeyFromDate } from "../utils/month";
+import { getAmountPaise } from "../utils/finance";
 
 const { width, height } = Dimensions.get("window");
 
@@ -38,13 +39,6 @@ const ACCOUNT_TYPE_LABELS = {
   creditCard: "Credit card",
 };
 
-const getTransactionAmountPaise = (transaction) => {
-  if (!transaction) return 0;
-
-  return Number.isInteger(transaction.amountPaise)
-    ? transaction.amountPaise
-    : Math.round(Number(transaction.amount || 0) * 100);
-};
 
 const getTransactionDate = (transaction) => {
   if (!transaction) return new Date();
@@ -69,7 +63,7 @@ export default function AddTransactionScreen({ navigation, route }) {
   const [type, setType] = useState(initialType);
   const [amount, setAmount] = useState(() => {
     if (!editingTransaction) return "";
-    return (getTransactionAmountPaise(editingTransaction) / 100).toFixed(2);
+    return (getAmountPaise(editingTransaction) / 100).toFixed(2);
   });
   const [category, setCategory] = useState(editingTransaction?.category || "");
   const [note, setNote] = useState(editingTransaction?.note || "");
