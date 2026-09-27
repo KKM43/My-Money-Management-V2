@@ -119,7 +119,14 @@ export default function DashboardScreen({ navigation, route }) {
   }, [selectedMonthKey]);
 
   useEffect(() => {
-    const q = collection(db, "users", auth.currentUser.uid, "transactions");
+    const userId = auth.currentUser?.uid;
+
+    if (!userId) {
+      setTransactions([]);
+      return;
+    }
+
+    const q = collection(db, "users", userId, "transactions");
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map((item) => ({
