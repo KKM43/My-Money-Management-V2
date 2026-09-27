@@ -230,6 +230,72 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
   },
+
+  commitmentItem: {
+    paddingVertical: 8,
+  },
+
+  commitmentHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+
+  paymentStatusContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 6,
+  },
+
+  paymentInfoCol: {
+    flex: 1,
+    marginRight: 10,
+  },
+
+  paymentStatusText: {
+    fontSize: 13,
+    fontWeight: "600",
+  },
+
+  statusPaidText: {
+    color: "#16A34A",
+  },
+
+  statusPartialText: {
+    color: "#D97706",
+  },
+
+  statusPendingText: {
+    color: "#64748B",
+  },
+
+  paymentProgressText: {
+    fontSize: 12,
+    opacity: 0.65,
+    marginTop: 2,
+  },
+
+  paymentActionButton: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  paymentActionButtonText: {
+    fontSize: 12,
+    fontWeight: "600",
+  },
+
+  commitmentDivider: {
+    height: 1,
+    backgroundColor: "#94A3B8",
+    opacity: 0.15,
+    marginTop: 8,
+  },
 });
 
 export default styles;

@@ -9,6 +9,7 @@ import {
   View,
 } from "react-native";
 import {
+  collection,
   doc,
   getDoc,
   onSnapshot,
@@ -26,6 +27,8 @@ import {
   calculatePlannedIncomePaise,
   calculatePlannedSpendablePaise,
   formatPaise,
+  getFixedCommitmentPaymentStatus,
+  isTransactionInMonth,
   parseMoneyInputToPaise,
 } from "../../utils/finance";
 
@@ -42,6 +45,8 @@ export default function MonthlyPlanScreen({ navigation, route }) {
   const { colors } = useTheme();
 
   const [monthlyPlan, setMonthlyPlan] = useState(null);
+
+  const [transactions, setTransactions] = useState([]);
 
   const [isLoading, setIsLoading] = useState(true);
 
@@ -64,6 +69,28 @@ export default function MonthlyPlanScreen({ navigation, route }) {
   const monthKey = selectedMonthKey;
 
   const previousMonthKey = getPreviousMonthKey(monthKey);
+
+  const [selectedYear, selectedMonthNumber] = monthKey
+    .split("-")
+    .map(Number);
+
+  const selectedMonthIndex = selectedMonthNumber - 1;
+
+  const isFutureMonth = monthKey > getCurrentMonthKey();
+
+  const handlePayFixedCommitment = (commitment, payment) => {
+    if (!commitment || !payment || payment.remainingPaise <= 0) {
+      return;
+    }
+
+    navigation.navigate("AddTransaction", {
+      initialType: "expense",
+      monthKey,
+      fixedCommitmentId: commitment.id,
+      amountPaise: payment.remainingPaise,
+      note: commitment.name,
+    });
+  };
 
   const changeMonth = (offset) => {
     setIsEditing(false);
@@ -127,6 +154,43 @@ export default function MonthlyPlanScreen({ navigation, route }) {
 
         setMonthlyPlan(null);
         setIsLoading(false);
+      },
+    );
+  }, [monthKey]);
+
+  useEffect(() => {
+    const userId = auth.currentUser?.uid;
+
+    if (!userId) {
+      setTransactions([]);
+      return;
+    }
+
+    const [targetYear, targetMonthNumber] = monthKey
+      .split("-")
+      .map(Number);
+
+    const targetMonthIndex = targetMonthNumber - 1;
+
+    const transactionsRef = collection(db, "users", userId, "transactions");
+
+    return onSnapshot(
+      transactionsRef,
+      (snapshot) => {
+        const data = snapshot.docs.map((item) => ({
+          id: item.id,
+          ...item.data(),
+        }));
+
+        const selectedMonthData = data.filter((item) =>
+          isTransactionInMonth(item, targetYear, targetMonthIndex),
+        );
+
+        setTransactions(selectedMonthData);
+      },
+      (error) => {
+        console.error("Error loading transactions:", error);
+        setTransactions([]);
       },
     );
   }, [monthKey]);
@@ -951,17 +1015,103 @@ export default function MonthlyPlanScreen({ navigation, route }) {
                 No fixed commitments
               </Text>
             ) : (
-              fixedCommitments.map((commitment) => (
-                <View key={commitment.id} style={styles.row}>
-                  <Text style={[styles.label, { color: colors.text }]}>
-                    {commitment.name}
-                  </Text>
+              fixedCommitments.map((commitment, index) => {
+                const payment = getFixedCommitmentPaymentStatus(
+                  commitment,
+                  transactions,
+                  selectedYear,
+                  selectedMonthIndex,
+                );
 
-                  <Text style={[styles.value, { color: colors.text }]}>
-                    {formatPaise(commitment.amountPaise)}
-                  </Text>
-                </View>
-              ))
+                return (
+                  <View key={commitment.id} style={styles.commitmentItem}>
+                    <View style={styles.commitmentHeaderRow}>
+                      <Text style={[styles.label, { color: colors.text }]}>
+                        {commitment.name}
+                      </Text>
+
+                      <Text style={[styles.value, { color: colors.text }]}>
+                        {formatPaise(commitment.amountPaise)}
+                      </Text>
+                    </View>
+
+                    <View style={styles.paymentStatusContainer}>
+                      <View style={styles.paymentInfoCol}>
+                        <Text
+                          style={[
+                            styles.paymentStatusText,
+                            payment.status === "paid"
+                              ? styles.statusPaidText
+                              : payment.status === "partially_paid"
+                                ? styles.statusPartialText
+                                : styles.statusPendingText,
+                          ]}
+                        >
+                          {payment.status === "paid"
+                            ? "Paid ✓"
+                            : payment.status === "partially_paid"
+                              ? "Partially paid"
+                              : "Pending"}
+                        </Text>
+
+                        {payment.status === "partially_paid" ? (
+                          <Text
+                            style={[
+                              styles.paymentProgressText,
+                              { color: colors.text },
+                            ]}
+                          >
+                            Paid {formatPaise(payment.paidPaise)} of{" "}
+                            {formatPaise(payment.targetPaise)}
+                          </Text>
+                        ) : payment.status === "paid" ? (
+                          <Text
+                            style={[
+                              styles.paymentProgressText,
+                              { color: colors.text },
+                            ]}
+                          >
+                            Paid {formatPaise(payment.paidPaise)}
+                          </Text>
+                        ) : null}
+                      </View>
+
+                      {!isFutureMonth &&
+                        (payment.status === "pending" ||
+                          payment.status === "partially_paid") && (
+                          <TouchableOpacity
+                            style={[
+                              styles.paymentActionButton,
+                              {
+                                borderColor: colors.primary,
+                              },
+                            ]}
+                            onPress={() =>
+                              handlePayFixedCommitment(commitment, payment)
+                            }
+                          >
+                            <Text
+                              style={[
+                                styles.paymentActionButtonText,
+                                {
+                                  color: colors.primary,
+                                },
+                              ]}
+                            >
+                              {payment.status === "partially_paid"
+                                ? "Pay remaining"
+                                : "Mark as paid"}
+                            </Text>
+                          </TouchableOpacity>
+                        )}
+                    </View>
+
+                    {index < fixedCommitments.length - 1 && (
+                      <View style={styles.commitmentDivider} />
+                    )}
+                  </View>
+                );
+              })
             )}
 
             <View style={styles.divider} />
