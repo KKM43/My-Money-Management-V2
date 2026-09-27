@@ -211,11 +211,12 @@ export default function DashboardScreen({ navigation, route }) {
     currentMonth === now.getMonth() && currentYear === now.getFullYear();
 
   const variableSpentPaise = calculateVariableSpentPaise(
-    transactions,
-    currentYear,
-    currentMonth,
-    now,
-  );
+  transactions,
+  currentYear,
+  currentMonth,
+  now,
+  fixedCommitments,
+);
 
   const remainingSpendablePaise = calculateRemainingSpendablePaise(
     plannedSpendablePaise,
@@ -232,12 +233,12 @@ export default function DashboardScreen({ navigation, route }) {
 
   const categorySpending = transactions.reduce((totals, transaction) => {
     const shouldCount = isVariableExpenseTransaction(
-      transaction,
-      currentYear,
-      currentMonth,
-      now,
-    );
-
+  transaction,
+  currentYear,
+  currentMonth,
+  now,
+  fixedCommitments,
+);
     if (!shouldCount || !transaction.category) {
       return totals;
     }

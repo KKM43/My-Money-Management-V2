@@ -122,9 +122,18 @@ const calculateVariableSpentPaise = (
   year,
   month,
   now = new Date(),
+  fixedCommitments = null,
 ) => {
   return transactions.reduce((total, transaction) => {
-    if (!isVariableExpenseTransaction(transaction, year, month, now)) {
+    if (
+      !isVariableExpenseTransaction(
+        transaction,
+        year,
+        month,
+        now,
+        fixedCommitments,
+      )
+    ) {
       return total;
     }
 
@@ -185,13 +194,22 @@ const isVariableExpenseTransaction = (
   year,
   month,
   now = new Date(),
+  fixedCommitments = null,
 ) => {
   if (transaction?.type !== "expense") {
     return false;
   }
 
   if (transaction?.fixedCommitmentId) {
-    return false;
+    const hasMatchingFixedCommitment =
+      fixedCommitments === null ||
+      fixedCommitments.some(
+        (commitment) => commitment.id === transaction.fixedCommitmentId,
+      );
+
+    if (hasMatchingFixedCommitment) {
+      return false;
+    }
   }
 
   if (!isTransactionInMonth(transaction, year, month)) {

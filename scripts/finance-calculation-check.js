@@ -24,12 +24,45 @@ const bank = { id: "bank", type: "bank", openingBalancePaise: 0 };
 const card = { id: "card", type: "creditCard", openingBalancePaise: 0 };
 
 const transactions = [
-  { type: "income", accountId: "cash", amountPaise: 50000, occurredOn: "2026-09-20" },
-  { type: "expense", accountId: "cash", amountPaise: 1250, occurredOn: "2026-09-21" },
-  { type: "transfer", fromAccountId: "cash", toAccountId: "bank", amountPaise: 2000, occurredOn: "2026-09-21" },
-  { type: "expense", accountId: "card", amountPaise: 3000, occurredOn: "2026-09-20" },
-  { type: "transfer", fromAccountId: "cash", toAccountId: "card", amountPaise: 1000, paymentKind: "cardPayment", occurredOn: "2026-09-21" },
-  { type: "income", accountId: "cash", amountPaise: 9000, occurredOn: "2026-09-22" },
+  {
+    type: "income",
+    accountId: "cash",
+    amountPaise: 50000,
+    occurredOn: "2026-09-20",
+  },
+  {
+    type: "expense",
+    accountId: "cash",
+    amountPaise: 1250,
+    occurredOn: "2026-09-21",
+  },
+  {
+    type: "transfer",
+    fromAccountId: "cash",
+    toAccountId: "bank",
+    amountPaise: 2000,
+    occurredOn: "2026-09-21",
+  },
+  {
+    type: "expense",
+    accountId: "card",
+    amountPaise: 3000,
+    occurredOn: "2026-09-20",
+  },
+  {
+    type: "transfer",
+    fromAccountId: "cash",
+    toAccountId: "card",
+    amountPaise: 1000,
+    paymentKind: "cardPayment",
+    occurredOn: "2026-09-21",
+  },
+  {
+    type: "income",
+    accountId: "cash",
+    amountPaise: 9000,
+    occurredOn: "2026-09-22",
+  },
 ];
 
 const cardWithOpeningDebt = {
@@ -38,9 +71,18 @@ const cardWithOpeningDebt = {
   openingBalancePaise: -500000,
 };
 
-assert.strictEqual(calculateAccountBalancePaise(cash, transactions, today), 55750);
-assert.strictEqual(calculateAccountBalancePaise(bank, transactions, today), 2000);
-assert.strictEqual(calculateAccountBalancePaise(card, transactions, today), -2000);
+assert.strictEqual(
+  calculateAccountBalancePaise(cash, transactions, today),
+  55750,
+);
+assert.strictEqual(
+  calculateAccountBalancePaise(bank, transactions, today),
+  2000,
+);
+assert.strictEqual(
+  calculateAccountBalancePaise(card, transactions, today),
+  -2000,
+);
 assert.strictEqual(getAccountDisplayAmountPaise(card, -2000), 2000);
 assert.strictEqual(
   calculateNetWorthPaise([cash, bank, card], transactions, today),
@@ -62,7 +104,6 @@ assert.strictEqual(
   calculateNetWorthPaise([cardWithOpeningDebt], [], today),
   -500000,
 );
-
 
 assert.strictEqual(
   isVariableExpenseTransaction(
@@ -89,8 +130,27 @@ assert.strictEqual(
     2026,
     8,
     new Date("2026-09-25T12:00:00"),
+    [{ id: "rent" }],
   ),
   false,
+);
+
+// A stale fixedCommitmentId should become variable spending
+// when that commitment no longer exists in the monthly plan.
+assert.strictEqual(
+  isVariableExpenseTransaction(
+    {
+      type: "expense",
+      amountPaise: 1400000,
+      date: "2026-09-20",
+      fixedCommitmentId: "rent",
+    },
+    2026,
+    8,
+    new Date("2026-09-25T12:00:00"),
+    [],
+  ),
+  true,
 );
 
 assert.strictEqual(
@@ -120,7 +180,6 @@ assert.strictEqual(
   ),
   false,
 );
-
 
 // Transfer should move money without changing total net worth.
 const transferOnlyAccounts = [
@@ -157,14 +216,9 @@ assert.strictEqual(
 );
 
 assert.strictEqual(
-  calculateNetWorthPaise(
-    transferOnlyAccounts,
-    transferOnlyTransactions,
-    today,
-  ),
+  calculateNetWorthPaise(transferOnlyAccounts, transferOnlyTransactions, today),
   100000,
 );
-
 
 // Multiple transfers should calculate correctly.
 const multipleTransferTransactions = [
@@ -211,7 +265,6 @@ assert.strictEqual(
   100000,
 );
 
-
 // Future transaction should not affect today's account balance.
 const futureIncome = {
   type: "income",
@@ -225,11 +278,7 @@ assert.strictEqual(
   10000,
 );
 
-assert.strictEqual(
-  isTransactionInMonth(futureIncome, 2026, 8),
-  true,
-);
-
+assert.strictEqual(isTransactionInMonth(futureIncome, 2026, 8), true);
 
 // Month boundary checks.
 const augustTransaction = {
@@ -246,38 +295,18 @@ const septemberTransaction = {
   occurredOn: "2026-09-01",
 };
 
-assert.strictEqual(
-  isTransactionInMonth(augustTransaction, 2026, 7),
-  true,
-);
+assert.strictEqual(isTransactionInMonth(augustTransaction, 2026, 7), true);
 
-assert.strictEqual(
-  isTransactionInMonth(augustTransaction, 2026, 8),
-  false,
-);
+assert.strictEqual(isTransactionInMonth(augustTransaction, 2026, 8), false);
 
-assert.strictEqual(
-  isTransactionInMonth(septemberTransaction, 2026, 8),
-  true,
-);
+assert.strictEqual(isTransactionInMonth(septemberTransaction, 2026, 8), true);
 
-assert.strictEqual(
-  isTransactionInMonth(septemberTransaction, 2026, 7),
-  false,
-);
-
+assert.strictEqual(isTransactionInMonth(septemberTransaction, 2026, 7), false);
 
 // Zero amount should remain zero.
-assert.strictEqual(
-  getAmountPaise({ amountPaise: 0 }),
-  0,
-);
+assert.strictEqual(getAmountPaise({ amountPaise: 0 }), 0);
 
-assert.strictEqual(
-  getAmountPaise({ amount: 0 }),
-  0,
-);
-
+assert.strictEqual(getAmountPaise({ amount: 0 }), 0);
 
 // Archived accounts are currently still included in net worth.
 // This test documents the current product behavior.
@@ -288,10 +317,7 @@ const archivedAccount = {
   isArchived: true,
 };
 
-assert.strictEqual(
-  calculateNetWorthPaise([archivedAccount], [], today),
-  50000,
-);
+assert.strictEqual(calculateNetWorthPaise([archivedAccount], [], today), 50000);
 
 // ============================================================
 // LEAN V2 MONTHLY MONEY PLAN CHECKS
@@ -313,14 +339,9 @@ const incomeSources = [
   },
 ];
 
-const totalIncomePaise =
-  calculatePlannedIncomePaise(incomeSources);
+const totalIncomePaise = calculatePlannedIncomePaise(incomeSources);
 
-assert.strictEqual(
-  totalIncomePaise,
-  3500000,
-);
-
+assert.strictEqual(totalIncomePaise, 3500000);
 
 // Fixed commitments from the real Lean V2 example.
 const fixedCommitments = [
@@ -341,64 +362,36 @@ const fixedCommitments = [
   },
 ];
 
-const totalFixedPaise =
-  calculateFixedCommitmentsPaise(
-    fixedCommitments,
-  );
+const totalFixedPaise = calculateFixedCommitmentsPaise(fixedCommitments);
 
-assert.strictEqual(
-  totalFixedPaise,
-  2022700,
-);
-
+assert.strictEqual(totalFixedPaise, 2022700);
 
 // ₹35,000 - ₹20,227 = ₹14,773.
-const moneyAfterFixedPaise =
-  calculateMoneyAfterFixedPaise(
-    totalIncomePaise,
-    totalFixedPaise,
-  );
-
-assert.strictEqual(
-  moneyAfterFixedPaise,
-  1477300,
+const moneyAfterFixedPaise = calculateMoneyAfterFixedPaise(
+  totalIncomePaise,
+  totalFixedPaise,
 );
 
+assert.strictEqual(moneyAfterFixedPaise, 1477300);
 
 // Protect ₹4,000 as savings.
 const savingsTargetPaise = 400000;
 
-const plannedSpendablePaise =
-  calculatePlannedSpendablePaise(
-    moneyAfterFixedPaise,
-    savingsTargetPaise,
-  );
-
-assert.strictEqual(
-  plannedSpendablePaise,
-  1077300,
+const plannedSpendablePaise = calculatePlannedSpendablePaise(
+  moneyAfterFixedPaise,
+  savingsTargetPaise,
 );
 
+assert.strictEqual(plannedSpendablePaise, 1077300);
 
 // ₹4,000 is 11.43% of ₹35,000.
 assert.strictEqual(
-  calculateSavingsPercentage(
-    totalIncomePaise,
-    savingsTargetPaise,
-  ),
+  calculateSavingsPercentage(totalIncomePaise, savingsTargetPaise),
   11.43,
 );
 
-
 // No income means savings percentage should be safe.
-assert.strictEqual(
-  calculateSavingsPercentage(
-    0,
-    400000,
-  ),
-  0,
-);
-
+assert.strictEqual(calculateSavingsPercentage(0, 400000), 0);
 
 // Actual variable spending.
 //
@@ -458,149 +451,84 @@ const leanV2Transactions = [
   },
 ];
 
-const variableSpentPaise =
-  calculateVariableSpentPaise(
-    leanV2Transactions,
-    2026,
-    8,
-    leanV2Today,
-  );
-
-assert.strictEqual(
-  variableSpentPaise,
-  285000,
+const variableSpentPaise = calculateVariableSpentPaise(
+  leanV2Transactions,
+  2026,
+  8,
+  leanV2Today,
+  fixedCommitments,
 );
 
+assert.strictEqual(variableSpentPaise, 285000);
+
+const variableSpentWithRemovedCommitmentPaise = calculateVariableSpentPaise(
+  leanV2Transactions,
+  2026,
+  8,
+  leanV2Today,
+  [],
+);
+
+assert.strictEqual(variableSpentWithRemovedCommitmentPaise, 1685000);
 
 // ₹10,773 - ₹2,850 = ₹7,923.
-const remainingSpendablePaise =
-  calculateRemainingSpendablePaise(
-    plannedSpendablePaise,
-    variableSpentPaise,
-  );
-
-assert.strictEqual(
-  remainingSpendablePaise,
-  792300,
+const remainingSpendablePaise = calculateRemainingSpendablePaise(
+  plannedSpendablePaise,
+  variableSpentPaise,
 );
 
+assert.strictEqual(remainingSpendablePaise, 792300);
 
 // September 25 through September 30 = 6 days.
-assert.strictEqual(
-  getDaysRemainingInMonth(
-    leanV2Today,
-  ),
-  6,
-);
-
+assert.strictEqual(getDaysRemainingInMonth(leanV2Today), 6);
 
 // ₹7,923 / 6 = ₹1,320.50 per day.
 assert.strictEqual(
-  calculateSafeToSpendPerDayPaise(
-    remainingSpendablePaise,
-    leanV2Today,
-  ),
+  calculateSafeToSpendPerDayPaise(remainingSpendablePaise, leanV2Today),
   132050,
 );
 
-
 // Last day of the month should still count as one day.
-const lastDayOfSeptember =
-  new Date(2026, 8, 30, 12);
+const lastDayOfSeptember = new Date(2026, 8, 30, 12);
+
+assert.strictEqual(getDaysRemainingInMonth(lastDayOfSeptember), 1);
 
 assert.strictEqual(
-  getDaysRemainingInMonth(
-    lastDayOfSeptember,
-  ),
-  1,
-);
-
-assert.strictEqual(
-  calculateSafeToSpendPerDayPaise(
-    50000,
-    lastDayOfSeptember,
-  ),
+  calculateSafeToSpendPerDayPaise(50000, lastDayOfSeptember),
   50000,
 );
 
-
 // Fixed commitments may exceed income.
 // We preserve the negative financial position.
-assert.strictEqual(
-  calculateMoneyAfterFixedPaise(
-    1000000,
-    1200000,
-  ),
-  -200000,
-);
-
+assert.strictEqual(calculateMoneyAfterFixedPaise(1000000, 1200000), -200000);
 
 // Savings may exceed money after fixed.
 // Do not silently clamp the result.
-assert.strictEqual(
-  calculatePlannedSpendablePaise(
-    500000,
-    600000,
-  ),
-  -100000,
-);
-
+assert.strictEqual(calculatePlannedSpendablePaise(500000, 600000), -100000);
 
 // Overspending must remain negative.
-assert.strictEqual(
-  calculateRemainingSpendablePaise(
-    1000000,
-    1150000,
-  ),
-  -150000,
-);
-
+assert.strictEqual(calculateRemainingSpendablePaise(1000000, 1150000), -150000);
 
 // A negative Safe-to-Spend result should also
 // remain visible rather than being changed to zero.
 assert.strictEqual(
-  calculateSafeToSpendPerDayPaise(
-    -150000,
-    new Date(2026, 8, 25, 12),
-  ),
+  calculateSafeToSpendPerDayPaise(-150000, new Date(2026, 8, 25, 12)),
   -25000,
 );
 
-
 // Empty plans should be safe.
-assert.strictEqual(
-  calculatePlannedIncomePaise([]),
-  0,
-);
+assert.strictEqual(calculatePlannedIncomePaise([]), 0);
 
-assert.strictEqual(
-  calculateFixedCommitmentsPaise([]),
-  0,
-);
+assert.strictEqual(calculateFixedCommitmentsPaise([]), 0);
 
-assert.strictEqual(
-  parseMoneyInputToPaise("35000"),
-  3500000,
-);
+assert.strictEqual(parseMoneyInputToPaise("35000"), 3500000);
 
-assert.strictEqual(
-  parseMoneyInputToPaise("10000.50"),
-  1000050,
-);
+assert.strictEqual(parseMoneyInputToPaise("10000.50"), 1000050);
 
-assert.strictEqual(
-  parseMoneyInputToPaise("0"),
-  0,
-);
+assert.strictEqual(parseMoneyInputToPaise("0"), 0);
 
-assert.strictEqual(
-  parseMoneyInputToPaise("12.345"),
-  null,
-);
+assert.strictEqual(parseMoneyInputToPaise("12.345"), null);
 
-assert.strictEqual(
-  parseMoneyInputToPaise(""),
-  null,
-);
+assert.strictEqual(parseMoneyInputToPaise(""), null);
 
 console.log("Finance calculation checks passed.");
