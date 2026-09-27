@@ -67,7 +67,10 @@ export default function AddTransactionScreen({ navigation, route }) {
   const editingTransaction = route?.params?.transaction;
   const isEditing = Boolean(editingTransaction);
 
-  const [type, setType] = useState(editingTransaction?.type || "expense");
+  const initialType =
+    editingTransaction?.type || route?.params?.initialType || "expense";
+
+  const [type, setType] = useState(initialType);
   const [amount, setAmount] = useState(() => {
     if (!editingTransaction) return "";
     return (getTransactionAmountPaise(editingTransaction) / 100).toFixed(2);
@@ -76,9 +79,36 @@ export default function AddTransactionScreen({ navigation, route }) {
   const [note, setNote] = useState(editingTransaction?.note || "");
   const [isOther, setIsOther] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(() =>
-    getTransactionDate(editingTransaction),
-  );
+  const [selectedDate, setSelectedDate] = useState(() => {
+    if (editingTransaction) {
+      return getTransactionDate(editingTransaction);
+    }
+
+    const routedMonthKey = route?.params?.monthKey;
+
+    if (!routedMonthKey || !/^\d{4}-\d{2}$/.test(routedMonthKey)) {
+      return new Date();
+    }
+
+    const [year, month] = routedMonthKey.split("-").map(Number);
+
+    if (
+      !Number.isInteger(year) ||
+      !Number.isInteger(month) ||
+      month < 1 ||
+      month > 12
+    ) {
+      return new Date();
+    }
+
+    const today = new Date();
+
+    const lastDayOfTargetMonth = new Date(year, month, 0).getDate();
+
+    const day = Math.min(today.getDate(), lastDayOfTargetMonth);
+
+    return new Date(year, month - 1, day);
+  });
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [showFixedCommitmentPicker, setShowFixedCommitmentPicker] =
@@ -384,7 +414,13 @@ export default function AddTransactionScreen({ navigation, route }) {
               <Ionicons name="arrow-back" size={24} color="white" />
             </TouchableOpacity>
             <Text style={styles.title}>
-              {isEditing ? "Edit Transaction" : "Add Transaction"}
+              {isEditing
+                ? "Edit Transaction"
+                : type === "expense"
+                  ? "Add Expense"
+                  : type === "income"
+                    ? "Add Income"
+                    : "Add Transfer"}
             </Text>
             <View style={styles.placeholder} />
           </View>
@@ -1082,7 +1118,11 @@ export default function AddTransactionScreen({ navigation, route }) {
                       ? "Saving..."
                       : isEditing
                         ? "Update Transaction"
-                        : "Save Transaction"}
+                        : type === "expense"
+                          ? "Save Expense"
+                          : type === "income"
+                            ? "Save Income"
+                            : "Save Transfer"}
                   </Text>
                 </>
               )}

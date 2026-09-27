@@ -665,14 +665,20 @@ export default function DashboardScreen({ navigation, route }) {
         <View style={styles.quickActions}>
           <TouchableOpacity
             style={styles.quickActionButton}
-            onPress={() => navigation.navigate("AddTransaction")}
+            onPress={() =>
+              navigation.navigate("AddTransaction", {
+                initialType: "expense",
+                monthKey: selectedMonthKey,
+              })
+            }
           >
             <LinearGradient
               colors={[colors.primary, colors.secondary]}
               style={styles.quickActionGradient}
             >
-              <Ionicons name="add" size={24} color="white" />
-              <Text style={styles.quickActionText}>Add Transaction</Text>
+              <Ionicons name="remove-circle-outline" size={24} color="white" />
+
+              <Text style={styles.quickActionText}>Add Expense</Text>
             </LinearGradient>
           </TouchableOpacity>
         </View>
