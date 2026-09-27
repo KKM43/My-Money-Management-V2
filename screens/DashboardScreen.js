@@ -34,6 +34,8 @@ import {
   isVariableExpenseTransaction,
 } from "../utils/finance";
 
+import { formatMonthKey, getMonthKeyFromDate } from "../utils/month";
+
 export default function DashboardScreen({ navigation, route }) {
   const { colors, isDark, themeMode, cycleThemeMode } = useTheme();
   const [transactions, setTransactions] = useState([]);
@@ -42,10 +44,11 @@ export default function DashboardScreen({ navigation, route }) {
 
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
-  const selectedMonthKey = `${currentYear}-${String(currentMonth + 1).padStart(
-    2,
-    "0",
-  )}`;
+  const selectedMonthKey = getMonthKeyFromDate(
+    new Date(currentYear, currentMonth, 1),
+  );
+
+  const selectedMonthLabel = formatMonthKey(selectedMonthKey);
 
   useEffect(() => {
     const routedMonthKey = route?.params?.monthKey;
@@ -256,21 +259,6 @@ export default function DashboardScreen({ navigation, route }) {
     .slice(0, 5);
   const largestCategorySpending = spendingCategories[0]?.[1] || 0;
 
-  const monthNames = [
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December",
-  ];
-
   const navigateMonth = (direction) => {
     if (direction === "prev") {
       if (currentMonth === 0) {
@@ -315,9 +303,7 @@ export default function DashboardScreen({ navigation, route }) {
           <View style={styles.headerTop}>
             <View style={styles.headerLeft}>
               <Text style={styles.greeting}>Welcome back!</Text>
-              <Text style={styles.monthTitle}>
-                {monthNames[currentMonth]} {currentYear}
-              </Text>
+              <Text style={styles.monthTitle}>{selectedMonthLabel}</Text>
             </View>
             <View style={styles.headerActions}>
               <TouchableOpacity
@@ -348,9 +334,7 @@ export default function DashboardScreen({ navigation, route }) {
                 size={16}
                 color="rgba(255, 255, 255, 0.8)"
               />
-              <Text style={styles.monthDisplayText}>
-                {monthNames[currentMonth]} {currentYear}
-              </Text>
+              <Text style={styles.monthDisplayText}>{selectedMonthLabel}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -444,8 +428,7 @@ export default function DashboardScreen({ navigation, route }) {
               </Text>
 
               <Text style={[styles.noPlanText, { color: colors.text }]}>
-                No Lean V2 plan exists for {monthNames[currentMonth]}{" "}
-                {currentYear}.
+                No Lean V2 plan exists for {selectedMonthLabel}.
               </Text>
               <TouchableOpacity
                 style={[
@@ -492,7 +475,7 @@ export default function DashboardScreen({ navigation, route }) {
                 <Text
                   style={[styles.planSummarySubtitle, { color: colors.text }]}
                 >
-                  {monthNames[currentMonth]} {currentYear}
+                  {selectedMonthLabel}
                 </Text>
               </View>
 
