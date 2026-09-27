@@ -283,6 +283,20 @@ export default function MonthlyPlanScreen({ navigation, route }) {
     setIsEditing(false);
   };
 
+  const handleStartFromScratch = () => {
+    setDraftIncomeSources([
+      {
+        id: `income-${Date.now()}`,
+        name: "",
+        amount: "",
+      },
+    ]);
+
+    setDraftFixedCommitments([]);
+    setDraftSavingsTarget("0");
+    setIsEditing(true);
+  };
+
   const updateIncomeSource = (id, field, value) => {
     let nextValue = value;
 
@@ -553,41 +567,38 @@ export default function MonthlyPlanScreen({ navigation, route }) {
   };
 
   const returnToDashboard = () => {
-  navigation.navigate("Dashboard", {
-    monthKey,
-  });
-};
+    navigation.navigate("Dashboard", {
+      monthKey,
+    });
+  };
 
-const handleBack = () => {
-  if (
-    isSaving ||
-    isLoadingPreviousPlan
-  ) {
-    return;
-  }
+  const handleBack = () => {
+    if (isSaving || isLoadingPreviousPlan) {
+      return;
+    }
 
-  if (isEditing) {
-    Alert.alert(
-      "Discard changes?",
-      "You have unsaved changes to this monthly plan.",
-      [
-        {
-          text: "Keep Editing",
-          style: "cancel",
-        },
-        {
-          text: "Discard",
-          style: "destructive",
-          onPress: returnToDashboard,
-        },
-      ],
-    );
+    if (isEditing) {
+      Alert.alert(
+        "Discard changes?",
+        "You have unsaved changes to this monthly plan.",
+        [
+          {
+            text: "Keep Editing",
+            style: "cancel",
+          },
+          {
+            text: "Discard",
+            style: "destructive",
+            onPress: returnToDashboard,
+          },
+        ],
+      );
 
-    return;
-  }
+      return;
+    }
 
-  returnToDashboard();
-};
+    returnToDashboard();
+  };
 
   const formatPaise = (amountPaise) =>
     new Intl.NumberFormat("en-IN", {
@@ -621,10 +632,10 @@ const handleBack = () => {
     >
       <View style={styles.header}>
         <TouchableOpacity
-  style={styles.backButton}
-  onPress={handleBack}
-  accessibilityLabel="Back to dashboard"
->
+          style={styles.backButton}
+          onPress={handleBack}
+          accessibilityLabel="Back to dashboard"
+        >
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
 
@@ -632,8 +643,6 @@ const handleBack = () => {
           <Text style={[styles.title, { color: colors.text }]}>
             Monthly Plan
           </Text>
-
-          
         </View>
 
         {(monthlyPlan || isEditing) && (
@@ -713,7 +722,7 @@ const handleBack = () => {
 
           <Text style={[styles.emptyDescription, { color: colors.text }]}>
             Use your {formatMonthKey(previousMonthKey)} plan as a starting
-            point, then adjust anything you need.
+            point, or create a fresh plan for this month.
           </Text>
 
           <TouchableOpacity
@@ -738,6 +747,31 @@ const handleBack = () => {
                 </Text>
               </>
             )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.previousPlanButton,
+              {
+                borderWidth: 1,
+                borderColor: colors.primary,
+                marginTop: 12,
+              },
+            ]}
+            onPress={handleStartFromScratch}
+          >
+            <Ionicons name="create-outline" size={20} color={colors.primary} />
+
+            <Text
+              style={[
+                styles.previousPlanButtonText,
+                {
+                  color: colors.primary,
+                },
+              ]}
+            >
+              Start From Scratch
+            </Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -1157,7 +1191,6 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
 
- 
   card: {
     borderRadius: 18,
     padding: 20,
