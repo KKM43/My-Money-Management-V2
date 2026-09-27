@@ -20,10 +20,17 @@ export default function AccountActivityScreen({ navigation, route }) {
   const [transactions, setTransactions] = useState([]);
 
   useEffect(() => {
+    const userId = auth.currentUser?.uid;
+
+    if (!userId) {
+      setTransactions([]);
+      return;
+    }
+
     const transactionsRef = collection(
       db,
       "users",
-      auth.currentUser.uid,
+      userId,
       "transactions",
     );
 

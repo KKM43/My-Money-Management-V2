@@ -47,10 +47,18 @@ export default function AnalyticsScreen({ navigation }) {
   );
 
   useEffect(() => {
+    const userId = auth.currentUser?.uid;
+
+    if (!userId) {
+      setTransactions([]);
+      setIsLoading(false);
+      return;
+    }
+
     const transactionsRef = collection(
       db,
       "users",
-      auth.currentUser.uid,
+      userId,
       "transactions",
     );
 

@@ -209,10 +209,17 @@ export default function AccountsScreen({ navigation }) {
   const [editType, setEditType] = useState("bank");
 
   useEffect(() => {
+    const userId = auth.currentUser?.uid;
+
+    if (!userId) {
+      setAccounts([]);
+      return;
+    }
+
     const accountsRef = collection(
       db,
       "users",
-      auth.currentUser.uid,
+      userId,
       "accounts",
     );
 
@@ -233,10 +240,17 @@ export default function AccountsScreen({ navigation }) {
   }, []);
 
   useEffect(() => {
+    const userId = auth.currentUser?.uid;
+
+    if (!userId) {
+      setTransactions([]);
+      return;
+    }
+
     const transactionsRef = collection(
       db,
       "users",
-      auth.currentUser.uid,
+      userId,
       "transactions",
     );
 
