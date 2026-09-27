@@ -28,7 +28,10 @@ import { db, auth } from "../services/firebaseConfig";
 import { LightTheme } from "../theme";
 import { useTheme } from "../ThemeContext";
 import { getMonthKeyFromDate } from "../utils/month";
-import { getAmountPaise } from "../utils/finance";
+import {
+  getAmountPaise,
+  parseMoneyInputToPaise,
+} from "../utils/finance";
 
 const { width, height } = Dimensions.get("window");
 
@@ -219,14 +222,6 @@ export default function AddTransactionScreen({ navigation, route }) {
   const currentCategories =
     type === "expense" ? expenseCategories : incomeCategories;
 
-  const parseAmountToPaise = (value) => {
-    if (!/^\d+(\.\d{1,2})?$/.test(value)) {
-      return null;
-    }
-
-    const [rupees, paise = ""] = value.split(".");
-    return Number(rupees) * 100 + Number(paise.padEnd(2, "0"));
-  };
 
   const formatLocalDate = (date) => {
     const year = date.getFullYear();
@@ -275,7 +270,7 @@ export default function AddTransactionScreen({ navigation, route }) {
       return;
     }
 
-    const amountPaise = parseAmountToPaise(amount);
+    const amountPaise = parseMoneyInputToPaise(amount);
     if (!Number.isInteger(amountPaise) || amountPaise <= 0) {
       Alert.alert("Error", "Please enter a valid amount");
       return;
