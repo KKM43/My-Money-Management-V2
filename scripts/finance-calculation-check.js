@@ -18,6 +18,13 @@ const {
   isVariableExpenseTransaction,
 } = require("../utils/finance");
 
+const {
+  formatMonthKey,
+  getMonthKeyFromDate,
+  getPreviousMonthKey,
+  shiftMonthKey,
+} = require("../utils/month");
+
 const today = new Date(2026, 8, 21, 12);
 const cash = { id: "cash", type: "cash", openingBalancePaise: 10000 };
 const bank = { id: "bank", type: "bank", openingBalancePaise: 0 };
@@ -530,5 +537,24 @@ assert.strictEqual(parseMoneyInputToPaise("0"), 0);
 assert.strictEqual(parseMoneyInputToPaise("12.345"), null);
 
 assert.strictEqual(parseMoneyInputToPaise(""), null);
+
+// ============================================================
+// MONTH HELPER CHECKS
+// ============================================================
+
+assert.strictEqual(getMonthKeyFromDate(new Date(2026, 8, 15)), "2026-09");
+
+assert.strictEqual(shiftMonthKey("2026-09", 1), "2026-10");
+
+assert.strictEqual(shiftMonthKey("2026-09", -1), "2026-08");
+
+// Year boundaries.
+assert.strictEqual(shiftMonthKey("2026-12", 1), "2027-01");
+
+assert.strictEqual(shiftMonthKey("2026-01", -1), "2025-12");
+
+assert.strictEqual(getPreviousMonthKey("2026-01"), "2025-12");
+
+assert.strictEqual(formatMonthKey("2026-09"), "September 2026");
 
 console.log("Finance calculation checks passed.");
