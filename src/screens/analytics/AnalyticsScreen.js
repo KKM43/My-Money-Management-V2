@@ -10,27 +10,18 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { collection, onSnapshot } from "firebase/firestore";
 
-import { db, auth } from "../services/firebaseConfig";
-import { useTheme } from "../ThemeContext";
+import { db, auth } from "../../services/firebaseConfig";
+import { useTheme } from "../../theme/ThemeContext";
 import {
+  formatPaise,
   getAmountPaise,
   isTransactionInMonth,
-} from "../utils/finance";
-
-const MONTH_NAMES = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
-];
+} from "../../utils/finance";
+import {
+  formatMonthKey,
+  getCurrentMonthKey,
+  shiftMonthKey,
+} from "../../utils/month";
 
 export default function AnalyticsScreen({ navigation }) {
   const { colors, isDark } = useTheme();
@@ -38,19 +29,27 @@ export default function AnalyticsScreen({ navigation }) {
   const [transactions, setTransactions] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const [currentMonth, setCurrentMonth] = useState(
-    new Date().getMonth(),
-  );
+  const [monthKey, setMonthKey] = useState(getCurrentMonthKey());
 
-  const [currentYear, setCurrentYear] = useState(
-    new Date().getFullYear(),
-  );
+  const [currentYear, currentMonthNumber] = monthKey
+    .split("-")
+    .map(Number);
+
+  const currentMonth = currentMonthNumber - 1;
 
   useEffect(() => {
+    const userId = auth.currentUser?.uid;
+
+    if (!userId) {
+      setTransactions([]);
+      setIsLoading(false);
+      return;
+    }
+
     const transactionsRef = collection(
       db,
       "users",
-      auth.currentUser.uid,
+      userId,
       "transactions",
     );
 
@@ -125,31 +124,12 @@ export default function AnalyticsScreen({ navigation }) {
 
   const navigateMonth = (direction) => {
     if (direction === "prev") {
-      if (currentMonth === 0) {
-        setCurrentMonth(11);
-        setCurrentYear(currentYear - 1);
-      } else {
-        setCurrentMonth(currentMonth - 1);
-      }
-
+      setMonthKey((current) => shiftMonthKey(current, -1));
       return;
     }
 
-    if (currentMonth === 11) {
-      setCurrentMonth(0);
-      setCurrentYear(currentYear + 1);
-    } else {
-      setCurrentMonth(currentMonth + 1);
-    }
+    setMonthKey((current) => shiftMonthKey(current, 1));
   };
-
-  const formatCurrency = (amountPaise) =>
-    new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(amountPaise / 100);
 
   if (isLoading) {
     return (
@@ -229,7 +209,7 @@ export default function AnalyticsScreen({ navigation }) {
               { color: colors.text },
             ]}
           >
-            {MONTH_NAMES[currentMonth]} {currentYear}
+            {formatMonthKey(monthKey)}
           </Text>
 
           <TouchableOpacity
@@ -260,7 +240,7 @@ export default function AnalyticsScreen({ navigation }) {
             </Text>
 
             <Text style={[styles.summaryValue, styles.income]}>
-              {formatCurrency(incomePaise)}
+              {formatPaise(incomePaise)}
             </Text>
           </View>
 
@@ -280,7 +260,7 @@ export default function AnalyticsScreen({ navigation }) {
             </Text>
 
             <Text style={[styles.summaryValue, styles.expense]}>
-              {formatCurrency(expensePaise)}
+              {formatPaise(expensePaise)}
             </Text>
           </View>
         </View>
@@ -312,7 +292,7 @@ export default function AnalyticsScreen({ navigation }) {
                 },
               ]}
             >
-              {formatCurrency(savingsPaise)}
+              {formatPaise(savingsPaise)}
             </Text>
           </View>
 
@@ -404,7 +384,7 @@ export default function AnalyticsScreen({ navigation }) {
                         { color: colors.text },
                       ]}
                     >
-                      {formatCurrency(amountPaise)}
+                      {formatPaise(amountPaise)}
                     </Text>
                   </View>
 

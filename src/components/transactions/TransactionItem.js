@@ -11,24 +11,18 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useTheme } from "../ThemeContext";
+import { useTheme } from "../../theme/ThemeContext";
+import { formatPaise } from "../../utils/finance";
 
 export default function TransactionItem({
   item,
   onDelete,
   onEdit,
   showActions = true,
+  isFixedCommitmentPayment = false,
 }) {
   const { colors, isDark } = useTheme();
   const [showOptions, setShowOptions] = React.useState(false);
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(amount);
-  };
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -165,7 +159,9 @@ export default function TransactionItem({
           },
         ]}
       >
-        <TouchableWithoutFeedback onLongPress={showActions ? handleLongPress : undefined}>
+        <TouchableWithoutFeedback
+          onLongPress={showActions ? handleLongPress : undefined}
+        >
           <View
             style={[
               styles.cardContent,
@@ -175,43 +171,83 @@ export default function TransactionItem({
               },
             ]}
           >
-      <View style={styles.leftSection}>
-        <View
-          style={[
-            styles.iconContainer,
-            { backgroundColor: getCategoryColor(item.category) },
-          ]}
-        >
-          <Ionicons
-            name={getCategoryIcon(item.category)}
-            size={20}
-            color="white"
-          />
-        </View>
-        <View style={styles.details}>
-          <Text style={[styles.category, { color: colors.text }]}>
-            {isCardPayment ? "Card payment" : isTransfer ? "Transfer" : item.category}
-          </Text>
-          {item.note && (
-            <Text style={[styles.note, { color: colors.text }]}>{item.note}</Text>
-          )}
-          <Text style={[styles.date, { color: colors.text }]}>
-            {formatDate(occurredOn)}
-          </Text>
-        </View>
-      </View>
-      <View style={styles.rightSection}>
-        <Text
-          style={[
-            styles.amount,
-            { color: isTransfer ? "#4D96FF" : item.type === "income" ? "#4ECDC4" : "#FF6B6B" },
-          ]}
-        >
-          {isTransfer ? "" : item.type === "income" ? "+" : "-"}
-          {formatCurrency(amountPaise / 100)}
-        </Text>
+            <View style={styles.leftSection}>
+              <View
+                style={[
+                  styles.iconContainer,
+                  { backgroundColor: getCategoryColor(item.category) },
+                ]}
+              >
+                <Ionicons
+                  name={getCategoryIcon(item.category)}
+                  size={20}
+                  color="white"
+                />
+              </View>
+              <View style={styles.details}>
+                <Text style={[styles.category, { color: colors.text }]}>
+                  {isCardPayment
+                    ? "Card payment"
+                    : isTransfer
+                      ? "Transfer"
+                      : item.category}
+                </Text>
+                {item.note && (
+                  <Text style={[styles.note, { color: colors.text }]}>
+                    {item.note}
+                  </Text>
+                )}
 
-      </View>
+                {isFixedCommitmentPayment && (
+                  <View
+                    style={[
+                      styles.fixedCommitmentBadge,
+                      {
+                        borderColor: colors.primary,
+                      },
+                    ]}
+                  >
+                    <Ionicons
+                      name="lock-closed-outline"
+                      size={12}
+                      color={colors.primary}
+                    />
+
+                    <Text
+                      style={[
+                        styles.fixedCommitmentBadgeText,
+                        {
+                          color: colors.primary,
+                        },
+                      ]}
+                    >
+                      Fixed commitment
+                    </Text>
+                  </View>
+                )}
+
+                <Text style={[styles.date, { color: colors.text }]}>
+                  {formatDate(occurredOn)}
+                </Text>
+              </View>
+            </View>
+            <View style={styles.rightSection}>
+              <Text
+                style={[
+                  styles.amount,
+                  {
+                    color: isTransfer
+                      ? "#4D96FF"
+                      : item.type === "income"
+                        ? "#4ECDC4"
+                        : "#FF6B6B",
+                  },
+                ]}
+              >
+                {isTransfer ? "" : item.type === "income" ? "+" : "-"}
+                {formatPaise(amountPaise)}
+              </Text>
+            </View>
           </View>
         </TouchableWithoutFeedback>
       </Animated.View>
@@ -222,7 +258,9 @@ export default function TransactionItem({
         onRequestClose={() => setShowOptions(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.optionsModal, { backgroundColor: colors.surface }]}>
+          <View
+            style={[styles.optionsModal, { backgroundColor: colors.surface }]}
+          >
             <TouchableOpacity
               style={styles.closeButton}
               onPress={() => setShowOptions(false)}
@@ -241,7 +279,9 @@ export default function TransactionItem({
               }}
             >
               <Ionicons name="pencil-outline" size={20} color={colors.text} />
-              <Text style={[styles.optionText, { color: colors.text }]}>Edit</Text>
+              <Text style={[styles.optionText, { color: colors.text }]}>
+                Edit
+              </Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.optionButton}
@@ -251,7 +291,9 @@ export default function TransactionItem({
               }}
             >
               <Ionicons name="trash-outline" size={20} color="#D32F2F" />
-              <Text style={[styles.optionText, { color: "#D32F2F" }]}>Delete</Text>
+              <Text style={[styles.optionText, { color: "#D32F2F" }]}>
+                Delete
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -363,6 +405,23 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#666",
     marginBottom: 2,
+  },
+  fixedCommitmentBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    marginTop: 2,
+    marginBottom: 4,
+  },
+
+  fixedCommitmentBadgeText: {
+    fontSize: 11,
+    fontWeight: "600",
+    marginLeft: 4,
   },
   date: {
     fontSize: 12,

@@ -12,8 +12,8 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { collection, doc, getDocs, writeBatch } from "firebase/firestore";
-import { auth, db } from "../services/firebaseConfig";
-import { useTheme } from "../ThemeContext";
+import { auth, db } from "../../services/firebaseConfig";
+import { useTheme } from "../../theme/ThemeContext";
 
 const CONFIRMATION_TEXT = "DELETE";
 
@@ -28,13 +28,16 @@ export default function ProfileScreen({ navigation }) {
       throw new Error("You must be signed in to reset your data.");
     }
 
-    const [accountsSnapshot, transactionsSnapshot] = await Promise.all([
-      getDocs(collection(db, "users", userId, "accounts")),
-      getDocs(collection(db, "users", userId, "transactions")),
-    ]);
+    const [accountsSnapshot, transactionsSnapshot, monthlyPlansSnapshot] =
+      await Promise.all([
+        getDocs(collection(db, "users", userId, "accounts")),
+        getDocs(collection(db, "users", userId, "transactions")),
+        getDocs(collection(db, "users", userId, "monthlyPlans")),
+      ]);
     const references = [
       ...accountsSnapshot.docs.map((item) => item.ref),
       ...transactionsSnapshot.docs.map((item) => item.ref),
+      ...monthlyPlansSnapshot.docs.map((item) => item.ref),
       doc(db, "users", userId, "settings", "budget"),
     ];
 
@@ -49,13 +52,16 @@ export default function ProfileScreen({ navigation }) {
 
   const handleReset = () => {
     if (confirmation !== CONFIRMATION_TEXT) {
-      Alert.alert("Confirmation required", `Type ${CONFIRMATION_TEXT} to continue.`);
+      Alert.alert(
+        "Confirmation required",
+        `Type ${CONFIRMATION_TEXT} to continue.`,
+      );
       return;
     }
 
     Alert.alert(
       "Delete all financial data?",
-      "This permanently deletes your accounts, transactions, budgets, and history.",
+      "This permanently deletes your accounts, transactions, monthly plans, budgets, and history.",
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -66,7 +72,10 @@ export default function ProfileScreen({ navigation }) {
             try {
               await deleteAllUserData();
               setConfirmation("");
-              Alert.alert("Data deleted", "Your financial data has been reset.");
+              Alert.alert(
+                "Data deleted",
+                "Your financial data has been reset.",
+              );
             } catch (error) {
               Alert.alert("Error", error.message);
             } finally {
@@ -96,8 +105,8 @@ export default function ProfileScreen({ navigation }) {
             Reset financial data
           </Text>
           <Text style={[styles.description, { color: colors.text }]}>
-            Permanently delete all accounts, transactions, budgets, and history.
-            Your sign-in account will remain active.
+            Permanently delete all accounts, transactions, monthly plans,
+            budgets, and history. Your sign-in account will remain active.
           </Text>
           <TextInput
             style={[styles.input, { color: colors.text, borderColor: "#888" }]}

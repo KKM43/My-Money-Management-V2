@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import SavingsGoalItem from "../components/SavingsGoalItem";
+import SavingsGoalItem from "../../components/savings/SavingsGoalItem";
 import {
   View,
   Text,
@@ -24,8 +24,9 @@ import {
 } from "firebase/firestore";
 
 
-import { db, auth } from "../services/firebaseConfig";
-import { useTheme } from "../ThemeContext";
+import { db, auth } from "../../services/firebaseConfig";
+import { useTheme } from "../../theme/ThemeContext";
+import { parseMoneyInputToPaise } from "../../utils/finance";
 
 export default function SavingsGoalsScreen({ navigation }) {
   const { colors, isDark } = useTheme();
@@ -67,22 +68,6 @@ export default function SavingsGoalsScreen({ navigation }) {
       },
     );
   }, []);
-
-  const parseAmountToPaise = (value) => {
-    const trimmed = value.trim();
-
-    if (!trimmed) {
-      return null;
-    }
-
-    if (!/^\d+(\.\d{1,2})?$/.test(trimmed)) {
-      return null;
-    }
-
-    const [rupees, paise = ""] = trimmed.split(".");
-
-    return Number(rupees) * 100 + Number(paise.padEnd(2, "0"));
-  };
 
   const handleAmountChange = (text, setter) => {
     const cleaned = text.replace(/[^0-9.]/g, "");
@@ -134,7 +119,7 @@ export default function SavingsGoalsScreen({ navigation }) {
       return;
     }
 
-    const targetAmountPaise = parseAmountToPaise(targetAmount);
+    const targetAmountPaise = parseMoneyInputToPaise(targetAmount);
 
     if (!Number.isInteger(targetAmountPaise) || targetAmountPaise <= 0) {
       Alert.alert(
@@ -145,7 +130,7 @@ export default function SavingsGoalsScreen({ navigation }) {
     }
 
     const savedAmountPaise = savedAmount.trim()
-      ? parseAmountToPaise(savedAmount)
+      ? parseMoneyInputToPaise(savedAmount)
       : 0;
 
     if (!Number.isInteger(savedAmountPaise) || savedAmountPaise < 0) {
@@ -508,62 +493,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     opacity: 0.65,
     marginTop: 5,
-  },
-
-  goalCard: {
-    borderRadius: 16,
-    padding: 18,
-    marginBottom: 14,
-  },
-
-  goalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-
-  goalName: {
-    flex: 1,
-    fontSize: 17,
-    fontWeight: "bold",
-  },
-
-  goalPercentage: {
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-
-  progressBar: {
-    height: 8,
-    borderRadius: 4,
-    marginBottom: 16,
-  },
-
-  goalAmounts: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-
-  amountRight: {
-    alignItems: "flex-end",
-  },
-
-  amountLabel: {
-    fontSize: 12,
-    opacity: 0.6,
-    marginBottom: 3,
-  },
-
-  amountValue: {
-    fontSize: 15,
-    fontWeight: "600",
-  },
-
-  remainingText: {
-    marginTop: 14,
-    fontSize: 13,
-    opacity: 0.7,
   },
   cancelEditButton: {
     borderWidth: 1,

@@ -9,10 +9,10 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { collection, onSnapshot } from "firebase/firestore";
-import { auth, db } from "../services/firebaseConfig";
-import { LightTheme } from "../theme";
-import TransactionItem from "../components/TransactionItem";
-import { useTheme } from "../ThemeContext";
+import { auth, db } from "../../services/firebaseConfig";
+import { LightTheme } from "../../theme/theme";
+import TransactionItem from "../../components/transactions/TransactionItem";
+import { useTheme } from "../../theme/ThemeContext";
 
 export default function AccountActivityScreen({ navigation, route }) {
   const { colors } = useTheme();
@@ -20,10 +20,17 @@ export default function AccountActivityScreen({ navigation, route }) {
   const [transactions, setTransactions] = useState([]);
 
   useEffect(() => {
+    const userId = auth.currentUser?.uid;
+
+    if (!userId) {
+      setTransactions([]);
+      return;
+    }
+
     const transactionsRef = collection(
       db,
       "users",
-      auth.currentUser.uid,
+      userId,
       "transactions",
     );
 

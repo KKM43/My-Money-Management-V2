@@ -13,7 +13,8 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { ProgressBar } from "react-native-paper";
 
-import { useTheme } from "../ThemeContext";
+import { useTheme } from "../../theme/ThemeContext";
+import { formatPaise } from "../../utils/finance";
 
 export default function SavingsGoalItem({
   goal,
@@ -48,13 +49,6 @@ export default function SavingsGoalItem({
     0,
   );
 
-  const formatCurrency = (amountPaise) =>
-    new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format((amountPaise || 0) / 100);
 
   const handleDelete = () => {
     Alert.alert(
@@ -181,7 +175,7 @@ export default function SavingsGoalItem({
                     { color: colors.text },
                   ]}
                 >
-                  {formatCurrency(savedPaise)}
+                  {formatPaise(savedPaise)}
                 </Text>
               </View>
 
@@ -201,7 +195,7 @@ export default function SavingsGoalItem({
                     { color: colors.text },
                   ]}
                 >
-                  {formatCurrency(targetPaise)}
+                  {formatPaise(targetPaise)}
                 </Text>
               </View>
             </View>
@@ -214,7 +208,7 @@ export default function SavingsGoalItem({
             >
               {remainingPaise === 0
                 ? "Goal reached"
-                : `${formatCurrency(
+                : `${formatPaise(
                     remainingPaise,
                   )} remaining`}
             </Text>

@@ -3,14 +3,12 @@ import {
   View,
   Text,
   TextInput,
-  StyleSheet,
   Alert,
   TouchableOpacity,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
-  Dimensions,
   Modal,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
@@ -24,11 +22,16 @@ import {
   onSnapshot,
   deleteField,
 } from "firebase/firestore";
-import { db, auth } from "../services/firebaseConfig";
-import { LightTheme } from "../theme";
-import { useTheme } from "../ThemeContext";
+import { db, auth } from "../../services/firebaseConfig";
+import { LightTheme } from "../../theme/theme";
+import styles from "./AddTransactionScreen.styles";
+import { useTheme } from "../../theme/ThemeContext";
+import { getMonthKeyFromDate } from "../../utils/month";
+import {
+  getAmountPaise,
+  parseMoneyInputToPaise,
+} from "../../utils/finance";
 
-const { width, height } = Dimensions.get("window");
 
 const ACCOUNT_TYPE_LABELS = {
   bank: "Bank",
@@ -37,13 +40,6 @@ const ACCOUNT_TYPE_LABELS = {
   creditCard: "Credit card",
 };
 
-const getTransactionAmountPaise = (transaction) => {
-  if (!transaction) return 0;
-
-  return Number.isInteger(transaction.amountPaise)
-    ? transaction.amountPaise
-    : Math.round(Number(transaction.amount || 0) * 100);
-};
 
 const getTransactionDate = (transaction) => {
   if (!transaction) return new Date();
@@ -55,26 +51,79 @@ const getTransactionDate = (transaction) => {
   return new Date(transaction.date);
 };
 
+
+
 export default function AddTransactionScreen({ navigation, route }) {
   const { colors, isDark } = useTheme();
   const editingTransaction = route?.params?.transaction;
   const isEditing = Boolean(editingTransaction);
 
-  const [type, setType] = useState(editingTransaction?.type || "expense");
+  const initialType =
+    editingTransaction?.type || route?.params?.initialType || "expense";
+
+  const [type, setType] = useState(initialType);
   const [amount, setAmount] = useState(() => {
-    if (!editingTransaction) return "";
-    return (getTransactionAmountPaise(editingTransaction) / 100).toFixed(2);
+    if (editingTransaction) {
+      return (getAmountPaise(editingTransaction) / 100).toFixed(2);
+    }
+
+    const routedAmountPaise = route?.params?.amountPaise;
+
+    if (Number.isInteger(routedAmountPaise) && routedAmountPaise >= 0) {
+      return (routedAmountPaise / 100).toFixed(2);
+    }
+
+    return "";
   });
   const [category, setCategory] = useState(editingTransaction?.category || "");
-  const [note, setNote] = useState(editingTransaction?.note || "");
+  const [note, setNote] = useState(
+    editingTransaction
+      ? editingTransaction.note || ""
+      : route?.params?.note || "",
+  );
   const [isOther, setIsOther] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(() =>
-    getTransactionDate(editingTransaction),
-  );
+  const [selectedDate, setSelectedDate] = useState(() => {
+    if (editingTransaction) {
+      return getTransactionDate(editingTransaction);
+    }
+
+    const routedMonthKey = route?.params?.monthKey;
+
+    if (!routedMonthKey || !/^\d{4}-\d{2}$/.test(routedMonthKey)) {
+      return new Date();
+    }
+
+    const [year, month] = routedMonthKey.split("-").map(Number);
+
+    if (
+      !Number.isInteger(year) ||
+      !Number.isInteger(month) ||
+      month < 1 ||
+      month > 12
+    ) {
+      return new Date();
+    }
+
+    const today = new Date();
+
+    const lastDayOfTargetMonth = new Date(year, month, 0).getDate();
+
+    const day = Math.min(today.getDate(), lastDayOfTargetMonth);
+
+    return new Date(year, month - 1, day);
+  });
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
+  const [showFixedCommitmentPicker, setShowFixedCommitmentPicker] =
+    useState(false);
   const [accounts, setAccounts] = useState([]);
+  const [fixedCommitments, setFixedCommitments] = useState([]);
+  const [selectedFixedCommitmentId, setSelectedFixedCommitmentId] = useState(
+    editingTransaction
+      ? editingTransaction.fixedCommitmentId || ""
+      : route?.params?.fixedCommitmentId || "",
+  );
   const [selectedAccountId, setSelectedAccountId] = useState(
     editingTransaction?.accountId || "",
   );
@@ -84,12 +133,24 @@ export default function AddTransactionScreen({ navigation, route }) {
   const [toAccountId, setToAccountId] = useState(
     editingTransaction?.toAccountId || "",
   );
+  const selectedMonthKey = getMonthKeyFromDate(selectedDate);
+  const selectedFixedCommitment =
+    fixedCommitments.find(
+      (commitment) => commitment.id === selectedFixedCommitmentId,
+    ) || null;
 
   useEffect(() => {
+    const userId = auth.currentUser?.uid;
+
+    if (!userId) {
+      setAccounts([]);
+      return;
+    }
+
     const accountsRef = collection(
       db,
       "users",
-      auth.currentUser.uid,
+      userId,
       "accounts",
     );
 
@@ -108,6 +169,40 @@ export default function AddTransactionScreen({ navigation, route }) {
       },
     );
   }, []);
+
+  useEffect(() => {
+    const userId = auth.currentUser?.uid;
+
+    if (!userId) {
+      setFixedCommitments([]);
+      return;
+    }
+
+    const planRef = doc(db, "users", userId, "monthlyPlans", selectedMonthKey);
+
+    return onSnapshot(
+      planRef,
+      (snapshot) => {
+        if (!snapshot.exists()) {
+          setFixedCommitments([]);
+          return;
+        }
+
+        const planData = snapshot.data();
+
+        setFixedCommitments(
+          Array.isArray(planData.fixedCommitments)
+            ? planData.fixedCommitments
+            : [],
+        );
+      },
+      (error) => {
+        console.error("Error loading fixed commitments:", error);
+
+        setFixedCommitments([]);
+      },
+    );
+  }, [selectedMonthKey]);
 
   const selectableAccounts = accounts.filter(
     (account) =>
@@ -140,14 +235,6 @@ export default function AddTransactionScreen({ navigation, route }) {
   const currentCategories =
     type === "expense" ? expenseCategories : incomeCategories;
 
-  const parseAmountToPaise = (value) => {
-    if (!/^\d+(\.\d{1,2})?$/.test(value)) {
-      return null;
-    }
-
-    const [rupees, paise = ""] = value.split(".");
-    return Number(rupees) * 100 + Number(paise.padEnd(2, "0"));
-  };
 
   const formatLocalDate = (date) => {
     const year = date.getFullYear();
@@ -191,12 +278,20 @@ export default function AddTransactionScreen({ navigation, route }) {
   };
 
   const handleAdd = async () => {
-    if (!amount || (type !== "transfer" && !category)) {
+    const effectiveCategory =
+      type === "transfer"
+        ? "Transfer"
+        : category ||
+          (type === "expense" && selectedFixedCommitment
+            ? selectedFixedCommitment.name
+            : "");
+
+    if (!amount || (type !== "transfer" && !effectiveCategory)) {
       Alert.alert("Error", "Please enter an amount and complete the details");
       return;
     }
 
-    const amountPaise = parseAmountToPaise(amount);
+    const amountPaise = parseMoneyInputToPaise(amount);
     if (!Number.isInteger(amountPaise) || amountPaise <= 0) {
       Alert.alert("Error", "Please enter a valid amount");
       return;
@@ -232,10 +327,15 @@ export default function AddTransactionScreen({ navigation, route }) {
     const transactionData = {
       type,
       amountPaise,
-      category: type === "transfer" ? "Transfer" : category,
+      category: effectiveCategory,
       note: note.trim(),
       occurredOn: formatLocalDate(selectedDate),
       updatedAt: serverTimestamp(),
+      ...(type === "expense" && selectedFixedCommitment
+        ? {
+            fixedCommitmentId: selectedFixedCommitment.id,
+          }
+        : {}),
       ...(type === "transfer"
         ? {
             fromAccountId,
@@ -256,6 +356,7 @@ export default function AddTransactionScreen({ navigation, route }) {
             ? {
                 ...transactionData,
                 accountId: deleteField(),
+                fixedCommitmentId: deleteField(),
                 paymentKind: paymentKind || deleteField(),
               }
             : {
@@ -263,6 +364,10 @@ export default function AddTransactionScreen({ navigation, route }) {
                 fromAccountId: deleteField(),
                 toAccountId: deleteField(),
                 paymentKind: deleteField(),
+                fixedCommitmentId:
+                  type === "expense" && selectedFixedCommitment
+                    ? selectedFixedCommitment.id
+                    : deleteField(),
               };
 
         await updateDoc(
@@ -322,7 +427,13 @@ export default function AddTransactionScreen({ navigation, route }) {
               <Ionicons name="arrow-back" size={24} color="white" />
             </TouchableOpacity>
             <Text style={styles.title}>
-              {isEditing ? "Edit Transaction" : "Add Transaction"}
+              {isEditing
+                ? "Edit Transaction"
+                : type === "expense"
+                  ? "Add Expense"
+                  : type === "income"
+                    ? "Add Income"
+                    : "Add Transfer"}
             </Text>
             <View style={styles.placeholder} />
           </View>
@@ -707,6 +818,174 @@ export default function AddTransactionScreen({ navigation, route }) {
               </>
             )}
 
+            {type === "expense" && fixedCommitments.length > 0 && (
+              <>
+                <Text
+                  style={[
+                    styles.sectionTitle,
+                    {
+                      color: colors.text,
+                    },
+                  ]}
+                >
+                  Fixed Commitment
+                </Text>
+
+                <TouchableOpacity
+                  style={[
+                    styles.categorySelector,
+                    {
+                      backgroundColor: isDark ? "#252525" : "#F8F9FA",
+                      borderColor: isDark ? "#444" : "#E9ECEF",
+                    },
+                  ]}
+                  onPress={() => setShowFixedCommitmentPicker(true)}
+                >
+                  <Ionicons
+                    name="repeat-outline"
+                    size={20}
+                    color={colors.primary}
+                  />
+
+                  <Text
+                    style={[
+                      styles.categorySelectorText,
+                      {
+                        color: colors.text,
+                      },
+                    ]}
+                  >
+                    {selectedFixedCommitment
+                      ? selectedFixedCommitment.name
+                      : "Not a fixed commitment"}
+                  </Text>
+
+                  <Ionicons name="chevron-down" size={20} color={colors.text} />
+                </TouchableOpacity>
+              </>
+            )}
+
+            <Modal
+              visible={showFixedCommitmentPicker}
+              transparent
+              animationType="slide"
+              onRequestClose={() => setShowFixedCommitmentPicker(false)}
+            >
+              <View style={styles.categoryModalOverlay}>
+                <View
+                  style={[
+                    styles.categoryModal,
+                    {
+                      backgroundColor: colors.surface,
+                    },
+                  ]}
+                >
+                  <View style={styles.dateModalHeader}>
+                    <Text
+                      style={[
+                        styles.dateModalTitle,
+                        {
+                          color: colors.text,
+                        },
+                      ]}
+                    >
+                      Choose fixed commitment
+                    </Text>
+
+                    <TouchableOpacity
+                      onPress={() => setShowFixedCommitmentPicker(false)}
+                      accessibilityLabel="Close fixed commitment selector"
+                    >
+                      <Ionicons name="close" size={24} color={colors.text} />
+                    </TouchableOpacity>
+                  </View>
+
+                  <ScrollView showsVerticalScrollIndicator={false}>
+                    <TouchableOpacity
+                      style={[
+                        styles.categorySelector,
+                        {
+                          backgroundColor: isDark ? "#252525" : "#F8F9FA",
+                          borderColor: isDark ? "#444" : "#E9ECEF",
+                        },
+                      ]}
+                      onPress={() => {
+                        setSelectedFixedCommitmentId("");
+                        setShowFixedCommitmentPicker(false);
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.categorySelectorText,
+                          {
+                            color: colors.text,
+                          },
+                        ]}
+                      >
+                        Not a fixed commitment
+                      </Text>
+                    </TouchableOpacity>
+
+                    {fixedCommitments.map((commitment) => (
+                      <TouchableOpacity
+                        key={commitment.id}
+                        style={[
+                          styles.categorySelector,
+                          {
+                            backgroundColor:
+                              selectedFixedCommitmentId === commitment.id
+                                ? isDark
+                                  ? "#17365D"
+                                  : "#E3F2FD"
+                                : isDark
+                                  ? "#252525"
+                                  : "#F8F9FA",
+
+                            borderColor:
+                              selectedFixedCommitmentId === commitment.id
+                                ? colors.primary
+                                : isDark
+                                  ? "#444"
+                                  : "#E9ECEF",
+                          },
+                        ]}
+                        onPress={() => {
+                          setSelectedFixedCommitmentId(commitment.id);
+
+                          setShowFixedCommitmentPicker(false);
+                        }}
+                      >
+                        <Ionicons
+                          name="receipt-outline"
+                          size={20}
+                          color={colors.primary}
+                        />
+
+                        <Text
+                          style={[
+                            styles.categorySelectorText,
+                            {
+                              color: colors.text,
+                            },
+                          ]}
+                        >
+                          {commitment.name}
+                        </Text>
+
+                        {selectedFixedCommitmentId === commitment.id && (
+                          <Ionicons
+                            name="checkmark-circle"
+                            size={20}
+                            color={colors.primary}
+                          />
+                        )}
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+              </View>
+            </Modal>
+
             <Modal
               visible={showCategoryPicker}
               transparent
@@ -852,7 +1131,11 @@ export default function AddTransactionScreen({ navigation, route }) {
                       ? "Saving..."
                       : isEditing
                         ? "Update Transaction"
-                        : "Save Transaction"}
+                        : type === "expense"
+                          ? "Save Expense"
+                          : type === "income"
+                            ? "Save Income"
+                            : "Save Transfer"}
                   </Text>
                 </>
               )}
@@ -863,391 +1146,3 @@ export default function AddTransactionScreen({ navigation, route }) {
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  gradient: {
-    flex: 1,
-  },
-  scrollContainer: {
-    flexGrow: 1,
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-  },
-  headerSection: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 18,
-    paddingTop: 10,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "white",
-    textAlign: "center",
-  },
-  placeholder: {
-    width: 40,
-  },
-  formCard: {
-    backgroundColor: "white",
-    borderRadius: 20,
-    padding: 18,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 10,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 20,
-    elevation: 15,
-  },
-  typeToggleContainer: {
-    flexDirection: "row",
-    backgroundColor: "#F8F9FA",
-    borderRadius: 12,
-    padding: 4,
-    marginBottom: 16,
-  },
-  typeButton: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-  },
-  typeButtonActive: {
-    backgroundColor: "white",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  expenseButton: {
-    backgroundColor: "#FF6B6B",
-  },
-  incomeButton: {
-    backgroundColor: "#4ECDC4",
-  },
-  transferButton: {
-    backgroundColor: LightTheme.colors.primary,
-  },
-  typeButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    marginLeft: 8,
-    color: "#666",
-  },
-  typeButtonTextActive: {
-    color: "white",
-  },
-  inputContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#F8F9FA",
-    borderRadius: 12,
-    marginBottom: 20,
-    paddingHorizontal: 15,
-    borderWidth: 1,
-    borderColor: "#E9ECEF",
-  },
-  inputIcon: {
-    marginRight: 12,
-  },
-  input: {
-    flex: 1,
-    paddingVertical: 15,
-    fontSize: 16,
-    color: LightTheme.colors.text,
-  },
-  amountInput: {
-    flex: 1,
-    paddingVertical: 15,
-    fontSize: 24,
-    fontWeight: "bold",
-    color: LightTheme.colors.text,
-    textAlign: "center",
-  },
-  currencySymbol: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: LightTheme.colors.primary,
-    marginLeft: 8,
-  },
-  accountHint: {
-    color: "#777",
-    flex: 1,
-    marginLeft: 10,
-    marginBottom: 0,
-    lineHeight: 20,
-  },
-  noAccountCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 20,
-  },
-  createAccountButton: {
-    backgroundColor: LightTheme.colors.primary,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  createAccountButtonText: {
-    color: "white",
-    fontWeight: "bold",
-  },
-  accountLabel: {
-    color: "#666",
-    fontSize: 14,
-    fontWeight: "600",
-    marginBottom: 8,
-  },
-  accountsGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    marginBottom: 20,
-  },
-  accountCard: {
-    width: "48%",
-    backgroundColor: "#F8F9FA",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#E9ECEF",
-    padding: 12,
-    marginBottom: 10,
-  },
-  selectedAccountCard: {
-    backgroundColor: LightTheme.colors.primary,
-    borderColor: LightTheme.colors.primary,
-  },
-  accountName: {
-    color: LightTheme.colors.text,
-    fontSize: 15,
-    fontWeight: "bold",
-    marginTop: 6,
-  },
-  accountType: {
-    color: "#777",
-    fontSize: 12,
-    marginTop: 2,
-  },
-  selectedAccountText: {
-    color: "white",
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: LightTheme.colors.text,
-    marginBottom: 15,
-  },
-  categoriesGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    marginBottom: 20,
-    paddingHorizontal: 5,
-  },
-  categoryCard: {
-    width: (width - 100) / 2,
-    backgroundColor: "#F8F9FA",
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 10,
-    borderWidth: 2,
-    borderColor: "#E9ECEF",
-    alignItems: "center",
-    minHeight: 80,
-    justifyContent: "center",
-  },
-  selectedCategoryCard: {
-    backgroundColor: "#E3F2FD",
-    borderColor: LightTheme.colors.primary,
-    shadowColor: LightTheme.colors.primary,
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  categoryIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 6,
-  },
-  categoryName: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: "#666",
-    textAlign: "center",
-    lineHeight: 14,
-  },
-  categorySelector: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    marginBottom: 16,
-  },
-  categorySelectorText: {
-    flex: 1,
-    fontSize: 16,
-    marginLeft: 10,
-  },
-  categoryModalOverlay: {
-    flex: 1,
-    justifyContent: "flex-end",
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-  },
-  categoryModal: {
-    maxHeight: "72%",
-    borderTopLeftRadius: 22,
-    borderTopRightRadius: 22,
-    padding: 20,
-  },
-  selectedCategoryName: {
-    color: LightTheme.colors.primary,
-    fontWeight: "bold",
-  },
-  noteInput: {
-    minHeight: 80,
-    textAlignVertical: "top",
-  },
-  saveButton: {
-    backgroundColor: LightTheme.colors.primary,
-    borderRadius: 12,
-    paddingVertical: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 10,
-    shadowColor: LightTheme.colors.primary,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  saveButtonDisabled: {
-    backgroundColor: "#B0BEC5",
-    shadowOpacity: 0,
-    elevation: 0,
-  },
-  saveButtonText: {
-    color: "white",
-    fontSize: 18,
-    fontWeight: "bold",
-    marginLeft: 8,
-  },
-
-  dateSelector: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#F8F9FA",
-    borderRadius: 12,
-    marginBottom: 20,
-    paddingHorizontal: 15,
-    paddingVertical: 15,
-    borderWidth: 1,
-    borderColor: "#E9ECEF",
-  },
-  dateSelectorText: {
-    flex: 1,
-    fontSize: 16,
-    color: LightTheme.colors.text,
-    marginLeft: 12,
-  },
-  dateModalOverlay: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    padding: 24,
-  },
-  dateModal: {
-    width: "100%",
-    maxWidth: 380,
-    borderRadius: 18,
-    padding: 22,
-  },
-  dateModalHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  dateModalTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-  },
-  dateModalValue: {
-    fontSize: 28,
-    fontWeight: "bold",
-    textAlign: "center",
-    marginVertical: 26,
-  },
-  dateAdjustRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  dateAdjustButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: LightTheme.colors.primary,
-  },
-  todayButton: {
-    borderWidth: 1,
-    borderColor: LightTheme.colors.primary,
-    borderRadius: 10,
-    paddingHorizontal: 22,
-    paddingVertical: 12,
-  },
-  todayButtonText: {
-    color: LightTheme.colors.primary,
-    fontWeight: "bold",
-  },
-  dateDoneButton: {
-    alignItems: "center",
-    backgroundColor: LightTheme.colors.primary,
-    borderRadius: 10,
-    paddingVertical: 14,
-    marginTop: 24,
-  },
-  dateDoneButtonText: {
-    color: "white",
-    fontWeight: "bold",
-    fontSize: 16,
-  },
-});

@@ -22,13 +22,14 @@ import {
   serverTimestamp,
   updateDoc,
 } from "firebase/firestore";
-import { auth, db } from "../services/firebaseConfig";
-import { LightTheme } from "../theme";
-import { useTheme } from "../ThemeContext";
+import { auth, db } from "../../services/firebaseConfig";
+import { LightTheme } from "../../theme/theme";
+import { useTheme } from "../../theme/ThemeContext";
 import {
   calculateAccountBalancePaise,
+  formatPaise,
   getAccountDisplayAmountPaise,
-} from "../utils/finance";
+} from "../../utils/finance";
 
 const ACCOUNT_TYPES = [
   { value: "bank", label: "Bank", icon: "business-outline" },
@@ -56,12 +57,6 @@ function SwipeableAccountRow({
   onEdit,
   onArchive,
 }) {
-  const formatCurrency = (paise) =>
-    new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
-      minimumFractionDigits: 2,
-    }).format(paise / 100);
   const [showOptions, setShowOptions] = useState(false);
   const translateX = useRef(new Animated.Value(0)).current;
   const resetPosition = () =>
@@ -134,7 +129,7 @@ function SwipeableAccountRow({
               </Text>
             </View>
             <Text style={[styles.accountBalance, { color: colors.text }]}>
-              {formatCurrency(balancePaise)}
+              {formatPaise(balancePaise)}
             </Text>
           </View>
         </TouchableWithoutFeedback>
@@ -188,14 +183,6 @@ function SwipeableAccountRow({
   );
 }
 
-const formatCurrency = (amountPaise) =>
-  new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amountPaise / 100);
-
 export default function AccountsScreen({ navigation }) {
   const { colors, isDark } = useTheme();
   const [accounts, setAccounts] = useState([]);
@@ -209,10 +196,17 @@ export default function AccountsScreen({ navigation }) {
   const [editType, setEditType] = useState("bank");
 
   useEffect(() => {
+    const userId = auth.currentUser?.uid;
+
+    if (!userId) {
+      setAccounts([]);
+      return;
+    }
+
     const accountsRef = collection(
       db,
       "users",
-      auth.currentUser.uid,
+      userId,
       "accounts",
     );
 
@@ -233,10 +227,17 @@ export default function AccountsScreen({ navigation }) {
   }, []);
 
   useEffect(() => {
+    const userId = auth.currentUser?.uid;
+
+    if (!userId) {
+      setTransactions([]);
+      return;
+    }
+
     const transactionsRef = collection(
       db,
       "users",
-      auth.currentUser.uid,
+      userId,
       "transactions",
     );
 
@@ -775,10 +776,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "bold",
     color: LightTheme.colors.text,
-  },
-  rowAction: {
-    padding: 6,
-    marginLeft: 4,
   },
   editActions: {
     flexDirection: "row",
