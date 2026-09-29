@@ -14,7 +14,6 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { collection, onSnapshot, deleteDoc, doc } from "firebase/firestore";
 import { db, auth } from "../../services/firebaseConfig";
-import { signOut } from "firebase/auth";
 
 import TransactionItem from "../../components/transactions/TransactionItem";
 import styles from "./DashboardScreen.styles";
@@ -41,7 +40,7 @@ import {
 } from "../../utils/month";
 
 export default function DashboardScreen({ navigation, route }) {
-  const { colors, isDark, themeMode, cycleThemeMode } = useTheme();
+  const { colors } = useTheme();
   const [transactions, setTransactions] = useState([]);
   const [monthlyPlan, setMonthlyPlan] = useState(null);
   const [isPlanLoading, setIsPlanLoading] = useState(true);
@@ -155,18 +154,6 @@ export default function DashboardScreen({ navigation, route }) {
     }
   };
 
-  const handleLogout = async () => {
-    Alert.alert("Logout", "Are you sure you want to logout?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Logout",
-        style: "destructive",
-        onPress: async () => {
-          await signOut(auth);
-        },
-      },
-    ]);
-  };
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -815,8 +802,9 @@ export default function DashboardScreen({ navigation, route }) {
               </TouchableOpacity>
             </View>
             {[
-              ["person-outline", "Profile", "Profile"],
+              ["calendar-outline", "Monthly Plan", "MonthlyPlan"],
               ["wallet-outline", "Accounts", "Accounts"],
+              ["person-outline", "Profile", "Profile"],
             ].map(([icon, label, routeName]) => (
               <TouchableOpacity
                 key={routeName}
@@ -832,39 +820,6 @@ export default function DashboardScreen({ navigation, route }) {
                 </Text>
               </TouchableOpacity>
             ))}
-            <TouchableOpacity
-              style={styles.drawerItem}
-              onPress={cycleThemeMode}
-              accessibilityLabel={`Theme mode: ${themeMode}`}
-            >
-              <Ionicons
-                name={
-                  themeMode === "system"
-                    ? "contrast-outline"
-                    : isDark
-                      ? "moon-outline"
-                      : "sunny-outline"
-                }
-                size={21}
-                color={colors.primary}
-              />
-              <Text style={[styles.drawerItemText, { color: colors.text }]}>
-                Theme: {themeMode}
-              </Text>
-            </TouchableOpacity>
-            <View style={styles.drawerDivider} />
-            <TouchableOpacity
-              style={styles.drawerItem}
-              onPress={() => {
-                setShowDrawer(false);
-                handleLogout();
-              }}
-            >
-              <Ionicons name="log-out-outline" size={21} color="#D32F2F" />
-              <Text style={[styles.drawerItemText, { color: "#D32F2F" }]}>
-                Sign out
-              </Text>
-            </TouchableOpacity>
           </View>
           <TouchableOpacity
             style={styles.drawerBackdrop}
