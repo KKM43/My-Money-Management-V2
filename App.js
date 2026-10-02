@@ -1,9 +1,13 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import * as SplashScreen from "expo-splash-screen";
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, onSnapshot } from "firebase/firestore";
+
+// Prevent native splash screen from hiding before initialization + minimum duration
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 import LoginScreen from "./src/screens/auth/LoginScreen";
 import SignupScreen from "./src/screens/auth/SignupScreen";
@@ -26,6 +30,43 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [isOnboardingComplete, setIsOnboardingComplete] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const appStartTimeRef = useRef(Date.now());
+  const splashHiddenRef = useRef(false);
+
+  useEffect(() => {
+    if (isLoading) return;
+
+    const hideSplash = async () => {
+      if (splashHiddenRef.current) return;
+      splashHiddenRef.current = true;
+      try {
+        await SplashScreen.hideAsync();
+      } catch (error) {
+        // Ignore if already hidden or failed
+      }
+    };
+
+    const elapsed = Date.now() - appStartTimeRef.current;
+    const remainingTime = Math.max(0, 1500 - elapsed);
+
+    const timer = setTimeout(hideSplash, remainingTime);
+
+    return () => clearTimeout(timer);
+  }, [isLoading]);
+
+  // Safety fallback: ensure splash is eventually hidden even if initialization fails/hangs
+  useEffect(() => {
+    const safetyTimer = setTimeout(async () => {
+      if (!splashHiddenRef.current) {
+        splashHiddenRef.current = true;
+        try {
+          await SplashScreen.hideAsync();
+        } catch (error) {}
+      }
+    }, 8000);
+
+    return () => clearTimeout(safetyTimer);
+  }, []);
 
   useEffect(() => {
     let unsubscribeUserDocument = null;

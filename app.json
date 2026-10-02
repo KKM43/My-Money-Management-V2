@@ -4,21 +4,32 @@
     "slug": "my-money",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "icon": "./assets/branding/app-icon.png",
+    "userInterfaceStyle": "automatic",
     "newArchEnabled": false,
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
+    "plugins": [
+      "expo-system-ui",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/branding/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#F7F8FA",
+          "dark": {
+            "image": "./assets/branding/splash-icon.png",
+            "backgroundColor": "#0B0F14"
+          }
+        }
+      ]
+    ],
     "ios": {
       "supportsTablet": true
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/branding/adaptive-icon-foreground.png",
+        "backgroundColor": "#F4F8F4"
       },
       "edgeToEdgeEnabled": true,
       "package": "com.kaustubhexpo.mymoney"
