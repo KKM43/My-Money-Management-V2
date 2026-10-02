@@ -104,7 +104,7 @@ export default function MonthlyPlanScreen({ navigation, route }) {
       return;
     }
 
-    if (isEditing) {
+    if (isEditing && isPlanDirty) {
       Alert.alert(
         "Discard changes?",
         "You have unsaved changes to this monthly plan.",
@@ -282,6 +282,69 @@ export default function MonthlyPlanScreen({ navigation, route }) {
     ? draftPlannedSpendablePaise
     : plannedSpendablePaise;
 
+  const isRowListDirty = (draftRows = [], persistedRows = []) => {
+    const persistedMap = new Map();
+    persistedRows.forEach((row) => {
+      persistedMap.set(row.id, row);
+    });
+
+    const isBlankRow = (row) =>
+      !row.name?.trim() && !String(row.amount ?? "").trim();
+
+    const activeDraftRows = draftRows.filter(
+      (draft) => persistedMap.has(draft.id) || !isBlankRow(draft),
+    );
+
+    if (activeDraftRows.length !== persistedRows.length) {
+      return true;
+    }
+
+    for (let i = 0; i < activeDraftRows.length; i++) {
+      const draft = activeDraftRows[i];
+      const persisted = persistedRows[i];
+
+      if (!persisted || draft.id !== persisted.id) {
+        return true;
+      }
+
+      if ((draft.name || "").trim() !== (persisted.name || "").trim()) {
+        return true;
+      }
+
+      const draftPaise = parseMoneyInputToPaise(draft.amount);
+      const persistedPaise = Number.isInteger(persisted.amountPaise)
+        ? persisted.amountPaise
+        : 0;
+
+      if (draftPaise !== persistedPaise) {
+        return true;
+      }
+    }
+
+    return false;
+  };
+
+  const isSavingsTargetDirty = () => {
+    const persistedPaise = Number.isInteger(monthlyPlan?.savingsTargetPaise)
+      ? monthlyPlan.savingsTargetPaise
+      : 0;
+
+    const trimmed = String(draftSavingsTarget ?? "").trim();
+
+    if ((trimmed === "" || trimmed === "0") && persistedPaise === 0) {
+      return false;
+    }
+
+    const parsedPaise = parseMoneyInputToPaise(draftSavingsTarget);
+
+    return parsedPaise !== persistedPaise;
+  };
+
+  const isPlanDirty =
+    isRowListDirty(draftIncomeSources, incomeSources) ||
+    isRowListDirty(draftFixedCommitments, fixedCommitments) ||
+    isSavingsTargetDirty();
+
   const normalizeMoneyInput = (value) => {
     const normalized = String(value).replace(/[^0-9.]/g, "");
 
@@ -321,6 +384,29 @@ export default function MonthlyPlanScreen({ navigation, route }) {
   };
 
   const handleCancelEditing = () => {
+    if (isSaving) {
+      return;
+    }
+
+    if (isPlanDirty) {
+      Alert.alert(
+        "Discard changes?",
+        "Your changes haven't been saved.",
+        [
+          {
+            text: "Keep editing",
+            style: "cancel",
+          },
+          {
+            text: "Discard changes",
+            style: "destructive",
+            onPress: () => setIsEditing(false),
+          },
+        ],
+      );
+      return;
+    }
+
     setIsEditing(false);
   };
 
@@ -339,6 +425,10 @@ export default function MonthlyPlanScreen({ navigation, route }) {
   };
 
   const updateIncomeSource = (id, field, value) => {
+    if (isSaving) {
+      return;
+    }
+
     let nextValue = value;
 
     if (field === "amount") {
@@ -364,6 +454,10 @@ export default function MonthlyPlanScreen({ navigation, route }) {
   };
 
   const addIncomeSource = () => {
+    if (isSaving) {
+      return;
+    }
+
     setDraftIncomeSources((current) => [
       ...current,
       {
@@ -375,12 +469,53 @@ export default function MonthlyPlanScreen({ navigation, route }) {
   };
 
   const removeIncomeSource = (id) => {
-    setDraftIncomeSources((current) =>
-      current.filter((source) => source.id !== id),
+    if (isSaving) {
+      return;
+    }
+
+    const target = draftIncomeSources.find((source) => source.id === id);
+    if (!target) {
+      return;
+    }
+
+    const isBlank =
+      !target.name?.trim() && !String(target.amount ?? "").trim();
+
+    if (isBlank) {
+      setDraftIncomeSources((current) =>
+        current.filter((source) => source.id !== id),
+      );
+      return;
+    }
+
+    const displayName = target.name?.trim() || "this income source";
+
+    Alert.alert(
+      "Remove income source?",
+      `Remove "${displayName}" from this monthly plan?`,
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Remove",
+          style: "destructive",
+          onPress: () => {
+            setDraftIncomeSources((current) =>
+              current.filter((source) => source.id !== id),
+            );
+          },
+        },
+      ],
     );
   };
 
   const updateFixedCommitment = (id, field, value) => {
+    if (isSaving) {
+      return;
+    }
+
     let nextValue = value;
 
     if (field === "amount") {
@@ -406,6 +541,10 @@ export default function MonthlyPlanScreen({ navigation, route }) {
   };
 
   const addFixedCommitment = () => {
+    if (isSaving) {
+      return;
+    }
+
     setDraftFixedCommitments((current) => [
       ...current,
       {
@@ -417,12 +556,55 @@ export default function MonthlyPlanScreen({ navigation, route }) {
   };
 
   const removeFixedCommitment = (id) => {
-    setDraftFixedCommitments((current) =>
-      current.filter((commitment) => commitment.id !== id),
+    if (isSaving) {
+      return;
+    }
+
+    const target = draftFixedCommitments.find(
+      (commitment) => commitment.id === id,
+    );
+    if (!target) {
+      return;
+    }
+
+    const isBlank =
+      !target.name?.trim() && !String(target.amount ?? "").trim();
+
+    if (isBlank) {
+      setDraftFixedCommitments((current) =>
+        current.filter((commitment) => commitment.id !== id),
+      );
+      return;
+    }
+
+    const displayName = target.name?.trim() || "this commitment";
+
+    Alert.alert(
+      "Remove fixed commitment?",
+      `Remove "${displayName}" from this monthly plan?\n\nRemoving a commitment can change how linked payments are counted in your spending.`,
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Remove",
+          style: "destructive",
+          onPress: () => {
+            setDraftFixedCommitments((current) =>
+              current.filter((commitment) => commitment.id !== id),
+            );
+          },
+        },
+      ],
     );
   };
 
   const handleSavingsChange = (value) => {
+    if (isSaving) {
+      return;
+    }
+
     const normalized = normalizeMoneyInput(value);
 
     if (normalized !== null) {
@@ -509,6 +691,10 @@ export default function MonthlyPlanScreen({ navigation, route }) {
   };
 
   const handleSavePlan = async () => {
+    if (isSaving || !isPlanDirty) {
+      return;
+    }
+
     const userId = auth.currentUser?.uid;
 
     if (!userId) {
@@ -618,7 +804,7 @@ export default function MonthlyPlanScreen({ navigation, route }) {
       return;
     }
 
-    if (isEditing) {
+    if (isEditing && isPlanDirty) {
       Alert.alert(
         "Discard changes?",
         "You have unsaved changes to this monthly plan.",
@@ -853,6 +1039,7 @@ export default function MonthlyPlanScreen({ navigation, route }) {
                       placeholder="Income source"
                       placeholderTextColor={colors.text + "55"}
                       value={source.name}
+                      editable={!isSaving}
                       onChangeText={(value) =>
                         updateIncomeSource(source.id, "name", value)
                       }
@@ -870,13 +1057,18 @@ export default function MonthlyPlanScreen({ navigation, route }) {
                       placeholderTextColor={colors.text + "55"}
                       keyboardType="decimal-pad"
                       value={source.amount}
+                      editable={!isSaving}
                       onChangeText={(value) =>
                         updateIncomeSource(source.id, "amount", value)
                       }
                     />
                     <TouchableOpacity
-                      style={styles.removeButton}
+                      style={[
+                        styles.removeButton,
+                        isSaving && styles.disabledButton,
+                      ]}
                       onPress={() => removeIncomeSource(source.id)}
+                      disabled={isSaving}
                     >
                       <Ionicons
                         name="trash-outline"
@@ -887,8 +1079,12 @@ export default function MonthlyPlanScreen({ navigation, route }) {
                   </View>
                 ))}
                 <TouchableOpacity
-                  style={styles.addButton}
+                  style={[
+                    styles.addButton,
+                    isSaving && styles.disabledButton,
+                  ]}
                   onPress={addIncomeSource}
+                  disabled={isSaving}
                 >
                   <Ionicons
                     name="add-circle-outline"
@@ -976,6 +1172,7 @@ export default function MonthlyPlanScreen({ navigation, route }) {
                       placeholder="Commitment"
                       placeholderTextColor={colors.text + "55"}
                       value={commitment.name}
+                      editable={!isSaving}
                       onChangeText={(value) =>
                         updateFixedCommitment(commitment.id, "name", value)
                       }
@@ -993,13 +1190,18 @@ export default function MonthlyPlanScreen({ navigation, route }) {
                       placeholderTextColor={colors.text + "55"}
                       keyboardType="decimal-pad"
                       value={commitment.amount}
+                      editable={!isSaving}
                       onChangeText={(value) =>
                         updateFixedCommitment(commitment.id, "amount", value)
                       }
                     />
                     <TouchableOpacity
-                      style={styles.removeButton}
+                      style={[
+                        styles.removeButton,
+                        isSaving && styles.disabledButton,
+                      ]}
                       onPress={() => removeFixedCommitment(commitment.id)}
+                      disabled={isSaving}
                     >
                       <Ionicons
                         name="trash-outline"
@@ -1010,8 +1212,12 @@ export default function MonthlyPlanScreen({ navigation, route }) {
                   </View>
                 ))}
                 <TouchableOpacity
-                  style={styles.addButton}
+                  style={[
+                    styles.addButton,
+                    isSaving && styles.disabledButton,
+                  ]}
                   onPress={addFixedCommitment}
+                  disabled={isSaving}
                 >
                   <Ionicons
                     name="add-circle-outline"
@@ -1203,6 +1409,7 @@ export default function MonthlyPlanScreen({ navigation, route }) {
                   ]}
                   keyboardType="decimal-pad"
                   value={draftSavingsTarget}
+                  editable={!isSaving}
                   onChangeText={handleSavingsChange}
                 />
               ) : (
@@ -1254,10 +1461,10 @@ export default function MonthlyPlanScreen({ navigation, route }) {
                   {
                     backgroundColor: colors.primary,
                   },
-                  isSaving && styles.disabledButton,
+                  (isSaving || !isPlanDirty) && styles.disabledButton,
                 ]}
                 onPress={handleSavePlan}
-                disabled={isSaving}
+                disabled={isSaving || !isPlanDirty}
               >
                 {isSaving ? (
                   <ActivityIndicator color="white" size="small" />
