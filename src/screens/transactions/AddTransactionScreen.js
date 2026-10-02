@@ -38,6 +38,30 @@ const ACCOUNT_TYPE_LABELS = {
   creditCard: "Credit card",
 };
 
+const getAccountIconName = (type) => {
+  switch (type) {
+    case "bank":
+      return "business-outline";
+    case "creditCard":
+      return "card-outline";
+    case "cash":
+      return "cash-outline";
+    case "wallet":
+      return "wallet-outline";
+    default:
+      return "wallet-outline";
+  }
+};
+
+const getAccountAccessibilityLabel = (account, roleContext) => {
+  const typeLabel = ACCOUNT_TYPE_LABELS[account.type] || "Account";
+  const base =
+    account.type === "creditCard"
+      ? `Select ${account.name} credit card`
+      : `Select ${account.name} ${typeLabel} account`;
+  return roleContext ? `${base} as ${roleContext}` : base;
+};
+
 
 const getTransactionDate = (transaction) => {
   if (!transaction) return new Date();
@@ -411,6 +435,7 @@ export default function AddTransactionScreen({ navigation, route }) {
       <ScrollView
         contentContainerStyle={styles.scrollContainer}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
         {/* Header Section */}
         <View style={styles.headerSection}>
@@ -624,7 +649,7 @@ export default function AddTransactionScreen({ navigation, route }) {
           </TouchableOpacity>
         </View>
 
-        {/* Amount Section Card */}
+        {/* Amount Hero Section */}
         <View
           style={[
             styles.sectionCard,
@@ -636,12 +661,17 @@ export default function AddTransactionScreen({ navigation, route }) {
             },
           ]}
         >
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+          <Text
+            style={[
+              styles.amountHeroLabel,
+              { color: isDark ? "#94A3B8" : "#64748B" },
+            ]}
+          >
             Amount
           </Text>
           <View
             style={[
-              styles.inputContainer,
+              styles.amountHeroContainer,
               {
                 backgroundColor: isDark
                   ? "rgba(255, 255, 255, 0.04)"
@@ -649,25 +679,25 @@ export default function AddTransactionScreen({ navigation, route }) {
                 borderColor: isDark
                   ? "rgba(255, 255, 255, 0.08)"
                   : "#E2E8F0",
-                marginBottom: 0,
               },
             ]}
           >
-            <Ionicons
-              name="cash"
-              size={20}
-              color={colors.primary}
-              style={styles.inputIcon}
-            />
+            <Text style={[styles.amountHeroCurrency, { color: colors.primary }]}>
+              ₹
+            </Text>
             <TextInput
-              style={[styles.amountInput, { color: colors.text }]}
+              style={[styles.amountHeroInput, { color: colors.text }]}
               placeholder="0.00"
-              placeholderTextColor="#999"
-              keyboardType="numeric"
+              placeholderTextColor={
+                isDark ? "rgba(255, 255, 255, 0.28)" : "#94A3B8"
+              }
+              keyboardType="decimal-pad"
+              inputMode="decimal"
               value={amount}
               onChangeText={handleAmountChange}
+              adjustsFontSizeToFit
+              numberOfLines={1}
             />
-            <Text style={[styles.currencySymbol, { color: colors.primary }]}>₹</Text>
           </View>
         </View>
 
@@ -724,156 +754,290 @@ export default function AddTransactionScreen({ navigation, route }) {
             </View>
           ) : type === "transfer" ? (
             <>
-              <Text
-                style={[
-                  styles.accountLabel,
-                  { color: isDark ? "#CBD5E1" : "#475569" },
-                ]}
-              >
-                From account
-              </Text>
-              <View style={styles.accountsGrid}>
-                {selectableAccounts.map((account) => (
-                  <TouchableOpacity
-                    key={`from-${account.id}`}
-                    style={[
-                      styles.accountCard,
-                      {
-                        backgroundColor: isDark
-                          ? "rgba(255, 255, 255, 0.04)"
-                          : "#F8FAFC",
-                        borderColor: isDark
-                          ? "rgba(255, 255, 255, 0.08)"
-                          : "#E2E8F0",
-                      },
-                      fromAccountId === account.id && [
-                        styles.selectedAccountCard,
-                        {
-                          backgroundColor: colors.primary,
-                          borderColor: colors.primary,
-                        },
-                      ],
-                    ]}
-                    onPress={() => setFromAccountId(account.id)}
-                  >
-                    <Text
-                      style={[
-                        styles.accountName,
-                        { color: colors.text },
-                        fromAccountId === account.id &&
-                          styles.selectedAccountText,
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {account.name}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+              <View style={styles.transferSectionHeader}>
+                <Ionicons
+                  name="arrow-up-circle-outline"
+                  size={16}
+                  color={colors.primary}
+                  style={styles.transferHeaderIcon}
+                />
+                <Text
+                  style={[
+                    styles.accountLabel,
+                    { color: isDark ? "#CBD5E1" : "#475569", marginBottom: 0 },
+                  ]}
+                >
+                  From account
+                </Text>
               </View>
-              <Text
-                style={[
-                  styles.accountLabel,
-                  { color: isDark ? "#CBD5E1" : "#475569" },
-                ]}
-              >
-                To account
-              </Text>
-              <View style={[styles.accountsGrid, { marginBottom: 0 }]}>
-                {selectableAccounts.map((account) => (
-                  <TouchableOpacity
-                    key={`to-${account.id}`}
-                    style={[
-                      styles.accountCard,
-                      {
-                        backgroundColor: isDark
-                          ? "rgba(255, 255, 255, 0.04)"
-                          : "#F8FAFC",
-                        borderColor: isDark
-                          ? "rgba(255, 255, 255, 0.08)"
-                          : "#E2E8F0",
-                      },
-                      toAccountId === account.id && [
-                        styles.selectedAccountCard,
-                        {
-                          backgroundColor: colors.primary,
-                          borderColor: colors.primary,
-                        },
-                      ],
-                    ]}
-                    onPress={() => setToAccountId(account.id)}
-                  >
-                    <Text
+              <View style={styles.accountsGrid}>
+                {selectableAccounts.map((account) => {
+                  const isSelected = fromAccountId === account.id;
+                  const accountTypeLabel =
+                    ACCOUNT_TYPE_LABELS[account.type] || "Account";
+
+                  return (
+                    <TouchableOpacity
+                      key={`from-${account.id}`}
                       style={[
-                        styles.accountName,
-                        { color: colors.text },
-                        toAccountId === account.id &&
-                          styles.selectedAccountText,
+                        styles.accountCardCompact,
+                        {
+                          backgroundColor: isDark
+                            ? "rgba(255, 255, 255, 0.04)"
+                            : "#F8FAFC",
+                          borderColor: isDark
+                            ? "rgba(255, 255, 255, 0.08)"
+                            : "#E2E8F0",
+                        },
+                        isSelected && [
+                          styles.selectedAccountCard,
+                          {
+                            backgroundColor: colors.primary,
+                            borderColor: colors.primary,
+                          },
+                        ],
                       ]}
-                      numberOfLines={1}
+                      onPress={() => setFromAccountId(account.id)}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: isSelected }}
+                      accessibilityLabel={getAccountAccessibilityLabel(
+                        account,
+                        "source account",
+                      )}
                     >
-                      {account.name}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+                      <View style={styles.accountCardTopRow}>
+                        <Ionicons
+                          name={getAccountIconName(account.type)}
+                          size={16}
+                          color={isSelected ? "#FFFFFF" : colors.primary}
+                          style={styles.accountCardIcon}
+                        />
+                        <Text
+                          style={[
+                            styles.accountNameCompact,
+                            { color: isSelected ? "#FFFFFF" : colors.text },
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {account.name}
+                        </Text>
+                      </View>
+                      <Text
+                        style={[
+                          styles.accountTypeCompact,
+                          {
+                            color: isSelected
+                              ? "rgba(255, 255, 255, 0.85)"
+                              : isDark
+                              ? "#94A3B8"
+                              : "#64748B",
+                          },
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {accountTypeLabel}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+              <View style={styles.transferDivider}>
+                <View
+                  style={[
+                    styles.transferDividerLine,
+                    {
+                      backgroundColor: isDark
+                        ? "rgba(255, 255, 255, 0.08)"
+                        : "#E2E8F0",
+                    },
+                  ]}
+                />
+                <View
+                  style={[
+                    styles.transferArrowBadge,
+                    {
+                      backgroundColor: isDark
+                        ? "rgba(255, 255, 255, 0.06)"
+                        : "#F1F5F9",
+                      borderColor: isDark
+                        ? "rgba(255, 255, 255, 0.12)"
+                        : "#CBD5E1",
+                    },
+                  ]}
+                >
+                  <Ionicons
+                    name="arrow-down"
+                    size={14}
+                    color={colors.primary}
+                  />
+                </View>
+                <View
+                  style={[
+                    styles.transferDividerLine,
+                    {
+                      backgroundColor: isDark
+                        ? "rgba(255, 255, 255, 0.08)"
+                        : "#E2E8F0",
+                    },
+                  ]}
+                />
+              </View>
+              <View style={styles.transferSectionHeader}>
+                <Ionicons
+                  name="arrow-down-circle-outline"
+                  size={16}
+                  color={colors.primary}
+                  style={styles.transferHeaderIcon}
+                />
+                <Text
+                  style={[
+                    styles.accountLabel,
+                    { color: isDark ? "#CBD5E1" : "#475569", marginBottom: 0 },
+                  ]}
+                >
+                  To account
+                </Text>
+              </View>
+              <View style={[styles.accountsGrid, { marginBottom: 0 }]}>
+                {selectableAccounts.map((account) => {
+                  const isSelected = toAccountId === account.id;
+                  const accountTypeLabel =
+                    ACCOUNT_TYPE_LABELS[account.type] || "Account";
+
+                  return (
+                    <TouchableOpacity
+                      key={`to-${account.id}`}
+                      style={[
+                        styles.accountCardCompact,
+                        {
+                          backgroundColor: isDark
+                            ? "rgba(255, 255, 255, 0.04)"
+                            : "#F8FAFC",
+                          borderColor: isDark
+                            ? "rgba(255, 255, 255, 0.08)"
+                            : "#E2E8F0",
+                        },
+                        isSelected && [
+                          styles.selectedAccountCard,
+                          {
+                            backgroundColor: colors.primary,
+                            borderColor: colors.primary,
+                          },
+                        ],
+                      ]}
+                      onPress={() => setToAccountId(account.id)}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: isSelected }}
+                      accessibilityLabel={getAccountAccessibilityLabel(
+                        account,
+                        "destination account",
+                      )}
+                    >
+                      <View style={styles.accountCardTopRow}>
+                        <Ionicons
+                          name={getAccountIconName(account.type)}
+                          size={16}
+                          color={isSelected ? "#FFFFFF" : colors.primary}
+                          style={styles.accountCardIcon}
+                        />
+                        <Text
+                          style={[
+                            styles.accountNameCompact,
+                            { color: isSelected ? "#FFFFFF" : colors.text },
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {account.name}
+                        </Text>
+                      </View>
+                      <Text
+                        style={[
+                          styles.accountTypeCompact,
+                          {
+                            color: isSelected
+                              ? "rgba(255, 255, 255, 0.85)"
+                              : isDark
+                              ? "#94A3B8"
+                              : "#64748B",
+                          },
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {accountTypeLabel}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             </>
           ) : (
             <View style={[styles.accountsGrid, { marginBottom: 0 }]}>
-              {selectableAccounts.map((account) => (
-                <TouchableOpacity
-                  key={account.id}
-                  style={[
-                    styles.accountCard,
-                    {
-                      backgroundColor: isDark
-                        ? "rgba(255, 255, 255, 0.04)"
-                        : "#F8FAFC",
-                      borderColor: isDark
-                        ? "rgba(255, 255, 255, 0.08)"
-                        : "#E2E8F0",
-                    },
-                    selectedAccountId === account.id && [
-                      styles.selectedAccountCard,
+              {selectableAccounts.map((account) => {
+                const isSelected = selectedAccountId === account.id;
+                const accountTypeLabel =
+                  ACCOUNT_TYPE_LABELS[account.type] || "Account";
+
+                return (
+                  <TouchableOpacity
+                    key={account.id}
+                    style={[
+                      styles.accountCardCompact,
                       {
-                        backgroundColor: colors.primary,
-                        borderColor: colors.primary,
+                        backgroundColor: isDark
+                          ? "rgba(255, 255, 255, 0.04)"
+                          : "#F8FAFC",
+                        borderColor: isDark
+                          ? "rgba(255, 255, 255, 0.08)"
+                          : "#E2E8F0",
                       },
-                    ],
-                  ]}
-                  onPress={() => setSelectedAccountId(account.id)}
-                >
-                  <Ionicons
-                    name="wallet-outline"
-                    size={18}
-                    color={
-                      selectedAccountId === account.id
-                        ? "white"
-                        : colors.primary
-                    }
-                  />
-                  <Text
-                    style={[
-                      styles.accountName,
-                      { color: colors.text },
-                      selectedAccountId === account.id &&
-                        styles.selectedAccountText,
+                      isSelected && [
+                        styles.selectedAccountCard,
+                        {
+                          backgroundColor: colors.primary,
+                          borderColor: colors.primary,
+                        },
+                      ],
                     ]}
-                    numberOfLines={1}
+                    onPress={() => setSelectedAccountId(account.id)}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: isSelected }}
+                    accessibilityLabel={getAccountAccessibilityLabel(account)}
                   >
-                    {account.name}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.accountType,
-                      { color: isDark ? "#94A3B8" : "#64748B" },
-                      selectedAccountId === account.id &&
-                        styles.selectedAccountText,
-                    ]}
-                  >
-                    {ACCOUNT_TYPE_LABELS[account.type] || "Account"}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+                    <View style={styles.accountCardTopRow}>
+                      <Ionicons
+                        name={getAccountIconName(account.type)}
+                        size={16}
+                        color={isSelected ? "#FFFFFF" : colors.primary}
+                        style={styles.accountCardIcon}
+                      />
+                      <Text
+                        style={[
+                          styles.accountNameCompact,
+                          { color: isSelected ? "#FFFFFF" : colors.text },
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {account.name}
+                      </Text>
+                    </View>
+                    <Text
+                      style={[
+                        styles.accountTypeCompact,
+                        {
+                          color: isSelected
+                            ? "rgba(255, 255, 255, 0.85)"
+                            : isDark
+                            ? "#94A3B8"
+                            : "#64748B",
+                        },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {accountTypeLabel}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           )}
         </View>

@@ -10,7 +10,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingHorizontal: 16,
     paddingTop: Platform.OS === "ios" ? 12 : 8,
-    paddingBottom: 40,
+    paddingBottom: 60,
   },
   headerSection: {
     flexDirection: "row",
@@ -95,6 +95,30 @@ const styles = StyleSheet.create({
   typeButtonTextActive: {
     fontWeight: "700",
   },
+  amountHeroLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    marginBottom: 8,
+  },
+  amountHeroContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderWidth: 1,
+  },
+  amountHeroCurrency: {
+    fontSize: 28,
+    fontWeight: "800",
+    marginRight: 8,
+  },
+  amountHeroInput: {
+    flex: 1,
+    fontSize: 32,
+    fontWeight: "800",
+    paddingVertical: 8,
+  },
   inputContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -153,11 +177,37 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginBottom: 8,
   },
+  transferSectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  transferHeaderIcon: {
+    marginRight: 6,
+  },
+  transferDivider: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: 8,
+  },
+  transferDividerLine: {
+    flex: 1,
+    height: 1,
+  },
+  transferArrowBadge: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    marginHorizontal: 10,
+  },
   accountsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
-    marginBottom: 14,
+    marginBottom: 8,
   },
   accountCard: {
     width: "48%",
@@ -165,6 +215,33 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     padding: 12,
     marginBottom: 10,
+  },
+  accountCardCompact: {
+    width: "48%",
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    marginBottom: 8,
+    minHeight: 52,
+    justifyContent: "center",
+  },
+  accountCardTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  accountCardIcon: {
+    marginRight: 6,
+  },
+  accountNameCompact: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  accountTypeCompact: {
+    fontSize: 11,
+    marginLeft: 22,
+    marginTop: 2,
   },
   selectedAccountCard: {},
   accountName: {
