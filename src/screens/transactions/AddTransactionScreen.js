@@ -105,6 +105,7 @@ export default function AddTransactionScreen({ navigation, route }) {
   );
   const [isOther, setIsOther] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [hasAttemptedSave, setHasAttemptedSave] = useState(false);
   const [selectedDate, setSelectedDate] = useState(() => {
     if (editingTransaction) {
       return getTransactionDate(editingTransaction);
@@ -160,6 +161,42 @@ export default function AddTransactionScreen({ navigation, route }) {
     fixedCommitments.find(
       (commitment) => commitment.id === selectedFixedCommitmentId,
     ) || null;
+
+  const isFixedPaymentFlow =
+    !isEditing &&
+    Boolean(route?.params?.fixedCommitmentId) &&
+    Boolean(selectedFixedCommitment) &&
+    type === "expense";
+
+  const parsedAmountPaise = parseMoneyInputToPaise(amount);
+  const isAmountValid =
+    Number.isInteger(parsedAmountPaise) && parsedAmountPaise > 0;
+  const isAmountInvalid = hasAttemptedSave && !isAmountValid;
+
+  const effectiveCategory =
+    type === "transfer"
+      ? "Transfer"
+      : category ||
+        (type === "expense" && selectedFixedCommitment
+          ? selectedFixedCommitment.name
+          : "");
+
+  const isCategoryInvalid =
+    hasAttemptedSave && type !== "transfer" && !effectiveCategory;
+
+  const isAccountInvalid =
+    hasAttemptedSave && type !== "transfer" && !selectedAccountId;
+
+  const isTransferFromMissing =
+    hasAttemptedSave && type === "transfer" && !fromAccountId;
+  const isTransferToMissing =
+    hasAttemptedSave && type === "transfer" && !toAccountId;
+  const isTransferSameAccount =
+    hasAttemptedSave &&
+    type === "transfer" &&
+    Boolean(fromAccountId) &&
+    Boolean(toAccountId) &&
+    fromAccountId === toAccountId;
 
   useEffect(() => {
     const userId = auth.currentUser?.uid;
@@ -300,6 +337,8 @@ export default function AddTransactionScreen({ navigation, route }) {
   };
 
   const handleAdd = async () => {
+    setHasAttemptedSave(true);
+
     const effectiveCategory =
       type === "transfer"
         ? "Transfer"
@@ -496,7 +535,10 @@ export default function AddTransactionScreen({ navigation, route }) {
                 },
               ],
             ]}
-            onPress={() => setType("expense")}
+            onPress={() => {
+              setHasAttemptedSave(false);
+              setType("expense");
+            }}
             accessibilityRole="button"
             accessibilityLabel="Expense"
             accessibilityState={{ selected: type === "expense" }}
@@ -553,7 +595,10 @@ export default function AddTransactionScreen({ navigation, route }) {
                 },
               ],
             ]}
-            onPress={() => setType("income")}
+            onPress={() => {
+              setHasAttemptedSave(false);
+              setType("income");
+            }}
             accessibilityRole="button"
             accessibilityLabel="Income"
             accessibilityState={{ selected: type === "income" }}
@@ -610,7 +655,10 @@ export default function AddTransactionScreen({ navigation, route }) {
                 },
               ],
             ]}
-            onPress={() => setType("transfer")}
+            onPress={() => {
+              setHasAttemptedSave(false);
+              setType("transfer");
+            }}
             accessibilityRole="button"
             accessibilityLabel="Transfer"
             accessibilityState={{ selected: type === "transfer" }}
@@ -649,6 +697,71 @@ export default function AddTransactionScreen({ navigation, route }) {
           </TouchableOpacity>
         </View>
 
+        {/* Fixed Commitment Payment Context Card */}
+        {isFixedPaymentFlow && (
+          <View
+            style={[
+              styles.fixedContextCard,
+              {
+                backgroundColor: isDark
+                  ? "rgba(59, 130, 246, 0.12)"
+                  : "#EFF6FF",
+                borderColor: isDark
+                  ? "rgba(59, 130, 246, 0.3)"
+                  : "#BFDBFE",
+              },
+            ]}
+            accessibilityRole="region"
+            accessibilityLabel={`Paying fixed commitment ${selectedFixedCommitment.name}`}
+          >
+            <View style={styles.fixedContextBadgeRow}>
+              <Ionicons
+                name="receipt"
+                size={14}
+                color={colors.primary}
+              />
+              <Text
+                style={[
+                  styles.fixedContextBadgeText,
+                  { color: colors.primary },
+                ]}
+              >
+                Paying fixed commitment
+              </Text>
+            </View>
+            <Text
+              style={[
+                styles.fixedContextName,
+                { color: colors.text },
+              ]}
+              numberOfLines={1}
+            >
+              {selectedFixedCommitment.name}
+            </Text>
+            <View style={styles.fixedContextMetaRow}>
+              <Text
+                style={[
+                  styles.fixedContextMetaText,
+                  { color: isDark ? "#94A3B8" : "#475569" },
+                ]}
+              >
+                Payment amount: ₹{amount || "0.00"}
+              </Text>
+              <Text
+                style={[
+                  styles.fixedContextMetaText,
+                  { color: isDark ? "#94A3B8" : "#64748B" },
+                ]}
+              >
+                {new Intl.DateTimeFormat("en-IN", {
+                  month: "long",
+                  year: "numeric",
+                }).format(selectedDate)}
+              </Text>
+            </View>
+          </View>
+        )}
+
         {/* Amount Hero Section */}
         <View
           style={[
@@ -676,9 +789,11 @@ export default function AddTransactionScreen({ navigation, route }) {
                 backgroundColor: isDark
                   ? "rgba(255, 255, 255, 0.04)"
                   : "#F8FAFC",
-                borderColor: isDark
-                  ? "rgba(255, 255, 255, 0.08)"
-                  : "#E2E8F0",
+                borderColor: isAmountInvalid
+                  ? colors.error
+                  : isDark
+                    ? "rgba(255, 255, 255, 0.08)"
+                    : "#E2E8F0",
               },
             ]}
           >
@@ -699,6 +814,11 @@ export default function AddTransactionScreen({ navigation, route }) {
               numberOfLines={1}
             />
           </View>
+          {isAmountInvalid && (
+            <Text style={[styles.inlineErrorText, { color: colors.error }]}>
+              Please enter a valid amount greater than 0
+            </Text>
+          )}
         </View>
 
         {/* Account Section Card */}
@@ -707,17 +827,47 @@ export default function AddTransactionScreen({ navigation, route }) {
             styles.sectionCard,
             {
               backgroundColor: colors.surface,
-              borderColor: isDark
-                ? "rgba(255, 255, 255, 0.08)"
-                : "#E2E8F0",
+              borderColor: isAccountInvalid
+                ? colors.error
+                : isDark
+                  ? "rgba(255, 255, 255, 0.08)"
+                  : "#E2E8F0",
             },
           ]}
         >
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>
-            {type === "transfer"
-              ? "Transfer Between Accounts"
-              : "Select Account"}
-          </Text>
+          <View style={styles.sectionTitleRow}>
+            <Text style={[styles.sectionTitle, { color: colors.text, marginBottom: 0 }]}>
+              {type === "transfer"
+                ? "Transfer Between Accounts"
+                : "Select Account"}
+            </Text>
+            {type !== "transfer" && selectableAccounts.length > 0 && (
+              <Text
+                style={[
+                  styles.fieldRequirementText,
+                  {
+                    color: isAccountInvalid
+                      ? colors.error
+                      : isDark
+                        ? "#94A3B8"
+                        : "#64748B",
+                  },
+                ]}
+              >
+                {isAccountInvalid ? "Account required" : "Required"}
+              </Text>
+            )}
+          </View>
+          {isAccountInvalid && selectableAccounts.length > 0 && (
+            <Text
+              style={[
+                styles.inlineErrorText,
+                { color: colors.error, marginBottom: 10 },
+              ]}
+            >
+              Please select an account
+            </Text>
+          )}
           {selectableAccounts.length === 0 ? (
             <View
               style={[
@@ -758,18 +908,50 @@ export default function AddTransactionScreen({ navigation, route }) {
                 <Ionicons
                   name="arrow-up-circle-outline"
                   size={16}
-                  color={colors.primary}
+                  color={isTransferFromMissing ? colors.error : colors.primary}
                   style={styles.transferHeaderIcon}
                 />
                 <Text
                   style={[
                     styles.accountLabel,
-                    { color: isDark ? "#CBD5E1" : "#475569", marginBottom: 0 },
+                    {
+                      color: isTransferFromMissing
+                        ? colors.error
+                        : isDark
+                          ? "#CBD5E1"
+                          : "#475569",
+                      marginBottom: 0,
+                    },
                   ]}
                 >
                   From account
                 </Text>
+                <Text
+                  style={[
+                    styles.fieldRequirementText,
+                    {
+                      marginLeft: "auto",
+                      color: isTransferFromMissing
+                        ? colors.error
+                        : isDark
+                          ? "#94A3B8"
+                          : "#64748B",
+                    },
+                  ]}
+                >
+                  Required
+                </Text>
               </View>
+              {isTransferFromMissing && (
+                <Text
+                  style={[
+                    styles.inlineErrorText,
+                    { color: colors.error, marginBottom: 8 },
+                  ]}
+                >
+                  Please select source account
+                </Text>
+              )}
               <View style={styles.accountsGrid}>
                 {selectableAccounts.map((account) => {
                   const isSelected = fromAccountId === account.id;
@@ -792,8 +974,12 @@ export default function AddTransactionScreen({ navigation, route }) {
                         isSelected && [
                           styles.selectedAccountCard,
                           {
-                            backgroundColor: colors.primary,
-                            borderColor: colors.primary,
+                            backgroundColor: isTransferSameAccount
+                              ? colors.error
+                              : colors.primary,
+                            borderColor: isTransferSameAccount
+                              ? colors.error
+                              : colors.primary,
                           },
                         ],
                       ]}
@@ -856,19 +1042,25 @@ export default function AddTransactionScreen({ navigation, route }) {
                   style={[
                     styles.transferArrowBadge,
                     {
-                      backgroundColor: isDark
-                        ? "rgba(255, 255, 255, 0.06)"
-                        : "#F1F5F9",
-                      borderColor: isDark
-                        ? "rgba(255, 255, 255, 0.12)"
-                        : "#CBD5E1",
+                      backgroundColor: isTransferSameAccount
+                        ? isDark
+                          ? "rgba(239, 68, 68, 0.2)"
+                          : "#FEE2E2"
+                        : isDark
+                          ? "rgba(255, 255, 255, 0.06)"
+                          : "#F1F5F9",
+                      borderColor: isTransferSameAccount
+                        ? colors.error
+                        : isDark
+                          ? "rgba(255, 255, 255, 0.12)"
+                          : "#CBD5E1",
                     },
                   ]}
                 >
                   <Ionicons
                     name="arrow-down"
                     size={14}
-                    color={colors.primary}
+                    color={isTransferSameAccount ? colors.error : colors.primary}
                   />
                 </View>
                 <View
@@ -882,22 +1074,68 @@ export default function AddTransactionScreen({ navigation, route }) {
                   ]}
                 />
               </View>
+              {isTransferSameAccount && (
+                <Text
+                  style={[
+                    styles.inlineErrorText,
+                    {
+                      color: colors.error,
+                      textAlign: "center",
+                      marginBottom: 8,
+                    },
+                  ]}
+                >
+                  Source and destination accounts must be different
+                </Text>
+              )}
               <View style={styles.transferSectionHeader}>
                 <Ionicons
                   name="arrow-down-circle-outline"
                   size={16}
-                  color={colors.primary}
+                  color={isTransferToMissing ? colors.error : colors.primary}
                   style={styles.transferHeaderIcon}
                 />
                 <Text
                   style={[
                     styles.accountLabel,
-                    { color: isDark ? "#CBD5E1" : "#475569", marginBottom: 0 },
+                    {
+                      color: isTransferToMissing
+                        ? colors.error
+                        : isDark
+                          ? "#CBD5E1"
+                          : "#475569",
+                      marginBottom: 0,
+                    },
                   ]}
                 >
                   To account
                 </Text>
+                <Text
+                  style={[
+                    styles.fieldRequirementText,
+                    {
+                      marginLeft: "auto",
+                      color: isTransferToMissing
+                        ? colors.error
+                        : isDark
+                          ? "#94A3B8"
+                          : "#64748B",
+                    },
+                  ]}
+                >
+                  Required
+                </Text>
               </View>
+              {isTransferToMissing && (
+                <Text
+                  style={[
+                    styles.inlineErrorText,
+                    { color: colors.error, marginBottom: 8 },
+                  ]}
+                >
+                  Please select destination account
+                </Text>
+              )}
               <View style={[styles.accountsGrid, { marginBottom: 0 }]}>
                 {selectableAccounts.map((account) => {
                   const isSelected = toAccountId === account.id;
@@ -920,8 +1158,12 @@ export default function AddTransactionScreen({ navigation, route }) {
                         isSelected && [
                           styles.selectedAccountCard,
                           {
-                            backgroundColor: colors.primary,
-                            borderColor: colors.primary,
+                            backgroundColor: isTransferSameAccount
+                              ? colors.error
+                              : colors.primary,
+                            borderColor: isTransferSameAccount
+                              ? colors.error
+                              : colors.primary,
                           },
                         ],
                       ]}
@@ -1076,6 +1318,8 @@ export default function AddTransactionScreen({ navigation, route }) {
               },
             ]}
             onPress={() => setShowDatePicker(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Change transaction date"
           >
             <Ionicons
               name="calendar-outline"
@@ -1183,14 +1427,42 @@ export default function AddTransactionScreen({ navigation, route }) {
           {type !== "transfer" && (
             <>
               {/* Category Selection */}
-              <Text
-                style={[
-                  styles.sectionTitle,
-                  { color: colors.text, marginTop: 14 },
-                ]}
-              >
-                Select Category
-              </Text>
+              <View style={styles.sectionTitleRow}>
+                <Text
+                  style={[
+                    styles.sectionTitle,
+                    { color: colors.text, marginTop: 14, marginBottom: 0 },
+                  ]}
+                >
+                  Select Category
+                </Text>
+                {selectedFixedCommitment ? (
+                  <Text
+                    style={[
+                      styles.fieldRequirementText,
+                      { color: isDark ? "#94A3B8" : "#64748B", marginTop: 14 },
+                    ]}
+                  >
+                    Optional (uses commitment name)
+                  </Text>
+                ) : (
+                  <Text
+                    style={[
+                      styles.fieldRequirementText,
+                      {
+                        color: isCategoryInvalid
+                          ? colors.error
+                          : isDark
+                            ? "#94A3B8"
+                            : "#64748B",
+                        marginTop: 14,
+                      },
+                    ]}
+                  >
+                    {isCategoryInvalid ? "Category required" : "Required"}
+                  </Text>
+                )}
+              </View>
               <TouchableOpacity
                 style={[
                   styles.categorySelector,
@@ -1198,9 +1470,11 @@ export default function AddTransactionScreen({ navigation, route }) {
                     backgroundColor: isDark
                       ? "rgba(255, 255, 255, 0.04)"
                       : "#F8FAFC",
-                    borderColor: isDark
-                      ? "rgba(255, 255, 255, 0.08)"
-                      : "#E2E8F0",
+                    borderColor: isCategoryInvalid
+                      ? colors.error
+                      : isDark
+                        ? "rgba(255, 255, 255, 0.08)"
+                        : "#E2E8F0",
                     marginBottom:
                       (type === "expense" && fixedCommitments.length > 0) ||
                       isOther
@@ -1209,6 +1483,8 @@ export default function AddTransactionScreen({ navigation, route }) {
                   },
                 ]}
                 onPress={() => setShowCategoryPicker(true)}
+                accessibilityRole="button"
+                accessibilityLabel="Select transaction category"
               >
                 <Ionicons
                   name="pricetag-outline"
@@ -1229,6 +1505,16 @@ export default function AddTransactionScreen({ navigation, route }) {
                   color={isDark ? "#94A3B8" : "#64748B"}
                 />
               </TouchableOpacity>
+              {isCategoryInvalid && (
+                <Text
+                  style={[
+                    styles.inlineErrorText,
+                    { color: colors.error, marginBottom: 8 },
+                  ]}
+                >
+                  Please select a category
+                </Text>
+              )}
             </>
           )}
 
@@ -1296,6 +1582,8 @@ export default function AddTransactionScreen({ navigation, route }) {
                   },
                 ]}
                 onPress={() => setShowFixedCommitmentPicker(true)}
+                accessibilityRole="button"
+                accessibilityLabel="Select fixed commitment"
               >
                 <Ionicons
                   name="repeat-outline"
@@ -1539,9 +1827,19 @@ export default function AddTransactionScreen({ navigation, route }) {
             },
           ]}
         >
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>
-            Note
-          </Text>
+          <View style={styles.sectionTitleRow}>
+            <Text style={[styles.sectionTitle, { color: colors.text, marginBottom: 0 }]}>
+              Note
+            </Text>
+            <Text
+              style={[
+                styles.fieldRequirementText,
+                { color: isDark ? "#94A3B8" : "#64748B" },
+              ]}
+            >
+              Optional
+            </Text>
+          </View>
           <View
             style={[
               styles.inputContainer,
@@ -1585,13 +1883,15 @@ export default function AddTransactionScreen({ navigation, route }) {
           disabled={isLoading}
           accessibilityRole="button"
           accessibilityLabel={
-            isEditing
-              ? "Update Transaction"
-              : type === "expense"
-                ? "Save Expense"
-                : type === "income"
-                  ? "Save Income"
-                  : "Save Transfer"
+            isLoading
+              ? "Saving transaction"
+              : isEditing
+                ? "Update transaction"
+                : type === "expense"
+                  ? "Save expense"
+                  : type === "income"
+                    ? "Save income"
+                    : "Save transfer"
           }
         >
           {isLoading ? (

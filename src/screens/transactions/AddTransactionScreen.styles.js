@@ -95,6 +95,38 @@ const styles = StyleSheet.create({
   typeButtonTextActive: {
     fontWeight: "700",
   },
+  fixedContextCard: {
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 12,
+    marginBottom: 14,
+  },
+  fixedContextBadgeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  fixedContextBadgeText: {
+    fontSize: 11,
+    fontWeight: "700",
+    marginLeft: 6,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  fixedContextName: {
+    fontSize: 15,
+    fontWeight: "800",
+    marginBottom: 4,
+  },
+  fixedContextMetaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  fixedContextMetaText: {
+    fontSize: 12,
+    fontWeight: "600",
+  },
   amountHeroLabel: {
     fontSize: 13,
     fontWeight: "600",
@@ -256,10 +288,25 @@ const styles = StyleSheet.create({
   selectedAccountText: {
     color: "white",
   },
+  sectionTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
   sectionTitle: {
     fontSize: 15,
     fontWeight: "700",
     marginBottom: 12,
+  },
+  fieldRequirementText: {
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  inlineErrorText: {
+    fontSize: 12,
+    fontWeight: "600",
+    marginTop: 6,
   },
   categoriesGrid: {
     flexDirection: "row",
