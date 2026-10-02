@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   Text,
   TextInput,
@@ -655,12 +657,16 @@ export default function MonthlyPlanScreen({ navigation, route }) {
   }
 
   return (
-    <ScrollView
-      style={{
-        backgroundColor: colors.background,
-      }}
-      contentContainerStyle={styles.container}
+    <KeyboardAvoidingView
+      style={{ flex: 1, backgroundColor: colors.background }}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
+      <ScrollView
+        style={{ backgroundColor: colors.background }}
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
+      >
+      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
@@ -689,6 +695,7 @@ export default function MonthlyPlanScreen({ navigation, route }) {
         )}
       </View>
 
+      {/* Month Navigation */}
       <View
         style={[
           styles.monthNavigation,
@@ -796,6 +803,7 @@ export default function MonthlyPlanScreen({ navigation, route }) {
         </View>
       ) : (
         <>
+          {/* Income Card */}
           <View
             style={[
               styles.card,
@@ -804,108 +812,18 @@ export default function MonthlyPlanScreen({ navigation, route }) {
               },
             ]}
           >
-            <Text
-              style={[
-                styles.sectionTitle,
-                {
-                  color: colors.text,
-                },
-              ]}
-            >
-              Income
-            </Text>
-
-            {isEditing
-              ? draftIncomeSources.map((source) => (
-                  <View key={source.id} style={styles.editRow}>
-                    <TextInput
-                      style={[
-                        styles.nameInput,
-                        {
-                          color: colors.text,
-                          borderColor: colors.primary,
-                        },
-                      ]}
-                      placeholder="Income source"
-                      placeholderTextColor="#999"
-                      value={source.name}
-                      onChangeText={(value) =>
-                        updateIncomeSource(source.id, "name", value)
-                      }
-                    />
-
-                    <TextInput
-                      style={[
-                        styles.amountInput,
-                        {
-                          color: colors.text,
-                          borderColor: colors.primary,
-                        },
-                      ]}
-                      placeholder="Amount"
-                      placeholderTextColor="#999"
-                      keyboardType="decimal-pad"
-                      value={source.amount}
-                      onChangeText={(value) =>
-                        updateIncomeSource(source.id, "amount", value)
-                      }
-                    />
-
-                    <TouchableOpacity
-                      style={styles.removeButton}
-                      onPress={() => removeIncomeSource(source.id)}
-                    >
-                      <Ionicons
-                        name="trash-outline"
-                        size={20}
-                        color="#D32F2F"
-                      />
-                    </TouchableOpacity>
-                  </View>
-                ))
-              : incomeSources.map((source) => (
-                  <View key={source.id} style={styles.row}>
-                    <Text style={[styles.label, { color: colors.text }]}>
-                      {source.name}
-                    </Text>
-
-                    <Text style={[styles.value, { color: colors.text }]}>
-                      {formatPaise(source.amountPaise)}
-                    </Text>
-                  </View>
-                ))}
-
-            {isEditing && (
-              <TouchableOpacity
-                style={styles.addButton}
-                onPress={addIncomeSource}
-              >
-                <Ionicons
-                  name="add-circle-outline"
-                  size={20}
-                  color={colors.primary}
-                />
-
-                <Text style={[styles.addButtonText, { color: colors.primary }]}>
-                  Add income source
-                </Text>
-              </TouchableOpacity>
-            )}
-
-            <View style={styles.divider} />
-
             <View style={styles.row}>
               <Text
                 style={[
-                  styles.totalLabel,
+                  styles.sectionTitle,
                   {
                     color: colors.text,
+                    marginBottom: 0,
                   },
                 ]}
               >
-                Total income
+                Income
               </Text>
-
               <Text
                 style={[
                   styles.totalValue,
@@ -917,8 +835,98 @@ export default function MonthlyPlanScreen({ navigation, route }) {
                 {formatPaise(displayedIncomePaise)}
               </Text>
             </View>
+
+            {isEditing ? (
+              <>
+                <View style={styles.divider} />
+                {draftIncomeSources.map((source) => (
+                  <View key={source.id} style={styles.editRow}>
+                    <TextInput
+                      style={[
+                        styles.nameInput,
+                        {
+                          color: colors.text,
+                          borderColor: colors.primary,
+                          backgroundColor: colors.background,
+                        },
+                      ]}
+                      placeholder="Income source"
+                      placeholderTextColor={colors.text + "55"}
+                      value={source.name}
+                      onChangeText={(value) =>
+                        updateIncomeSource(source.id, "name", value)
+                      }
+                    />
+                    <TextInput
+                      style={[
+                        styles.amountInput,
+                        {
+                          color: colors.text,
+                          borderColor: colors.primary,
+                          backgroundColor: colors.background,
+                        },
+                      ]}
+                      placeholder="Amount"
+                      placeholderTextColor={colors.text + "55"}
+                      keyboardType="decimal-pad"
+                      value={source.amount}
+                      onChangeText={(value) =>
+                        updateIncomeSource(source.id, "amount", value)
+                      }
+                    />
+                    <TouchableOpacity
+                      style={styles.removeButton}
+                      onPress={() => removeIncomeSource(source.id)}
+                    >
+                      <Ionicons
+                        name="trash-outline"
+                        size={20}
+                        color="#D32F2F"
+                      />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+                <TouchableOpacity
+                  style={styles.addButton}
+                  onPress={addIncomeSource}
+                >
+                  <Ionicons
+                    name="add-circle-outline"
+                    size={18}
+                    color={colors.primary}
+                  />
+                  <Text style={[styles.addButtonText, { color: colors.primary }]}>
+                    Add income source
+                  </Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                {incomeSources.length > 1 && (
+                  <>
+                    <View style={styles.divider} />
+                    {incomeSources.map((source) => (
+                      <View key={source.id} style={styles.row}>
+                        <Text style={[styles.label, { color: colors.text }]}>
+                          {source.name}
+                        </Text>
+                        <Text style={[styles.value, { color: colors.text }]}>
+                          {formatPaise(source.amountPaise)}
+                        </Text>
+                      </View>
+                    ))}
+                  </>
+                )}
+                {incomeSources.length === 1 && (
+                  <Text style={[styles.label, { color: colors.text, marginTop: 2 }]}>
+                    {incomeSources[0].name}
+                  </Text>
+                )}
+              </>
+            )}
           </View>
 
+          {/* Fixed Commitments Card */}
           <View
             style={[
               styles.card,
@@ -927,19 +935,33 @@ export default function MonthlyPlanScreen({ navigation, route }) {
               },
             ]}
           >
-            <Text
-              style={[
-                styles.sectionTitle,
-                {
-                  color: colors.text,
-                },
-              ]}
-            >
-              Fixed Commitments
-            </Text>
+            <View style={styles.row}>
+              <Text
+                style={[
+                  styles.sectionTitle,
+                  {
+                    color: colors.text,
+                    marginBottom: 0,
+                  },
+                ]}
+              >
+                Fixed Commitments
+              </Text>
+              <Text
+                style={[
+                  styles.totalValue,
+                  {
+                    color: colors.text,
+                  },
+                ]}
+              >
+                {formatPaise(displayedFixedPaise)}
+              </Text>
+            </View>
 
             {isEditing ? (
               <>
+                <View style={styles.divider} />
                 {draftFixedCommitments.map((commitment) => (
                   <View key={commitment.id} style={styles.editRow}>
                     <TextInput
@@ -948,33 +970,33 @@ export default function MonthlyPlanScreen({ navigation, route }) {
                         {
                           color: colors.text,
                           borderColor: colors.primary,
+                          backgroundColor: colors.background,
                         },
                       ]}
                       placeholder="Commitment"
-                      placeholderTextColor="#999"
+                      placeholderTextColor={colors.text + "55"}
                       value={commitment.name}
                       onChangeText={(value) =>
                         updateFixedCommitment(commitment.id, "name", value)
                       }
                     />
-
                     <TextInput
                       style={[
                         styles.amountInput,
                         {
                           color: colors.text,
                           borderColor: colors.primary,
+                          backgroundColor: colors.background,
                         },
                       ]}
                       placeholder="Amount"
-                      placeholderTextColor="#999"
+                      placeholderTextColor={colors.text + "55"}
                       keyboardType="decimal-pad"
                       value={commitment.amount}
                       onChangeText={(value) =>
                         updateFixedCommitment(commitment.id, "amount", value)
                       }
                     />
-
                     <TouchableOpacity
                       style={styles.removeButton}
                       onPress={() => removeFixedCommitment(commitment.id)}
@@ -987,17 +1009,15 @@ export default function MonthlyPlanScreen({ navigation, route }) {
                     </TouchableOpacity>
                   </View>
                 ))}
-
                 <TouchableOpacity
                   style={styles.addButton}
                   onPress={addFixedCommitment}
                 >
                   <Ionicons
                     name="add-circle-outline"
-                    size={20}
+                    size={18}
                     color={colors.primary}
                   />
-
                   <Text
                     style={[
                       styles.addButtonText,
@@ -1011,136 +1031,116 @@ export default function MonthlyPlanScreen({ navigation, route }) {
                 </TouchableOpacity>
               </>
             ) : fixedCommitments.length === 0 ? (
-              <Text style={[styles.emptyText, { color: colors.text }]}>
-                No fixed commitments
-              </Text>
+              <>
+                <View style={styles.divider} />
+                <Text style={[styles.emptyText, { color: colors.text }]}>
+                  No fixed commitments added
+                </Text>
+              </>
             ) : (
-              fixedCommitments.map((commitment, index) => {
-                const payment = getFixedCommitmentPaymentStatus(
-                  commitment,
-                  transactions,
-                  selectedYear,
-                  selectedMonthIndex,
-                );
+              <>
+                <View style={styles.divider} />
+                {fixedCommitments.map((commitment, index) => {
+                  const payment = getFixedCommitmentPaymentStatus(
+                    commitment,
+                    transactions,
+                    selectedYear,
+                    selectedMonthIndex,
+                  );
 
-                return (
-                  <View key={commitment.id} style={styles.commitmentItem}>
-                    <View style={styles.commitmentHeaderRow}>
-                      <Text style={[styles.label, { color: colors.text }]}>
-                        {commitment.name}
-                      </Text>
-
-                      <Text style={[styles.value, { color: colors.text }]}>
-                        {formatPaise(commitment.amountPaise)}
-                      </Text>
-                    </View>
-
-                    <View style={styles.paymentStatusContainer}>
-                      <View style={styles.paymentInfoCol}>
-                        <Text
-                          style={[
-                            styles.paymentStatusText,
-                            payment.status === "paid"
-                              ? styles.statusPaidText
-                              : payment.status === "partially_paid"
-                                ? styles.statusPartialText
-                                : styles.statusPendingText,
-                          ]}
-                        >
-                          {payment.status === "paid"
-                            ? "Paid ✓"
-                            : payment.status === "partially_paid"
-                              ? "Partially paid"
-                              : "Pending"}
+                  return (
+                    <View key={commitment.id} style={styles.commitmentItem}>
+                      <View style={styles.commitmentHeaderRow}>
+                        <Text style={[styles.label, { color: colors.text }]}>
+                          {commitment.name}
                         </Text>
-
-                        {payment.status === "partially_paid" ? (
-                          <Text
-                            style={[
-                              styles.paymentProgressText,
-                              { color: colors.text },
-                            ]}
-                          >
-                            Paid {formatPaise(payment.paidPaise)} of{" "}
-                            {formatPaise(payment.targetPaise)}
-                          </Text>
-                        ) : payment.status === "paid" ? (
-                          <Text
-                            style={[
-                              styles.paymentProgressText,
-                              { color: colors.text },
-                            ]}
-                          >
-                            Paid {formatPaise(payment.paidPaise)}
-                          </Text>
-                        ) : null}
+                        <Text style={[styles.value, { color: colors.text }]}>
+                          {formatPaise(commitment.amountPaise)}
+                        </Text>
                       </View>
 
-                      {!isFutureMonth &&
-                        (payment.status === "pending" ||
-                          payment.status === "partially_paid") && (
-                          <TouchableOpacity
+                      <View style={styles.paymentStatusContainer}>
+                        <View style={styles.paymentInfoCol}>
+                          <Text
                             style={[
-                              styles.paymentActionButton,
-                              {
-                                borderColor: colors.primary,
-                              },
+                              styles.paymentStatusText,
+                              payment.status === "paid"
+                                ? styles.statusPaidText
+                                : payment.status === "partially_paid"
+                                  ? styles.statusPartialText
+                                  : styles.statusPendingText,
                             ]}
-                            onPress={() =>
-                              handlePayFixedCommitment(commitment, payment)
-                            }
                           >
+                            {payment.status === "paid"
+                              ? "Paid \u2713"
+                              : payment.status === "partially_paid"
+                                ? "Partially paid"
+                                : "Pending"}
+                          </Text>
+
+                          {payment.status === "partially_paid" ? (
                             <Text
                               style={[
-                                styles.paymentActionButtonText,
-                                {
-                                  color: colors.primary,
-                                },
+                                styles.paymentProgressText,
+                                { color: colors.text },
                               ]}
                             >
-                              {payment.status === "partially_paid"
-                                ? "Pay remaining"
-                                : "Mark as paid"}
+                              Paid {formatPaise(payment.paidPaise)} of{" "}
+                              {formatPaise(payment.targetPaise)}
                             </Text>
-                          </TouchableOpacity>
-                        )}
+                          ) : payment.status === "paid" ? (
+                            <Text
+                              style={[
+                                styles.paymentProgressText,
+                                { color: colors.text },
+                              ]}
+                            >
+                              Paid {formatPaise(payment.paidPaise)}
+                            </Text>
+                          ) : null}
+                        </View>
+
+                        {!isFutureMonth &&
+                          (payment.status === "pending" ||
+                            payment.status === "partially_paid") && (
+                            <TouchableOpacity
+                              style={[
+                                styles.paymentActionButton,
+                                {
+                                  borderColor: colors.primary,
+                                },
+                              ]}
+                              onPress={() =>
+                                handlePayFixedCommitment(commitment, payment)
+                              }
+                            >
+                              <Text
+                                style={[
+                                  styles.paymentActionButtonText,
+                                  {
+                                    color: colors.primary,
+                                  },
+                                ]}
+                              >
+                                {payment.status === "partially_paid"
+                                  ? "Pay remaining"
+                                  : "Mark as paid"}
+                              </Text>
+                            </TouchableOpacity>
+                          )}
+                      </View>
+
+                      {index < fixedCommitments.length - 1 && (
+                        <View style={styles.commitmentDivider} />
+                      )}
                     </View>
-
-                    {index < fixedCommitments.length - 1 && (
-                      <View style={styles.commitmentDivider} />
-                    )}
-                  </View>
-                );
-              })
+                  );
+                })}
+              </>
             )}
-
-            <View style={styles.divider} />
-
-            <View style={styles.row}>
-              <Text
-                style={[
-                  styles.totalLabel,
-                  {
-                    color: colors.text,
-                  },
-                ]}
-              >
-                Total fixed
-              </Text>
-
-              <Text
-                style={[
-                  styles.totalValue,
-                  {
-                    color: colors.text,
-                  },
-                ]}
-              >
-                {formatPaise(displayedFixedPaise)}
-              </Text>
-            </View>
           </View>
 
+          {/* Savings & Spending Card */}
           <View
             style={[
               styles.card,
@@ -1149,11 +1149,21 @@ export default function MonthlyPlanScreen({ navigation, route }) {
               },
             ]}
           >
-            <View style={styles.row}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                Savings & Spending
-              </Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              Savings & Spending
+            </Text>
 
+            <View style={styles.row}>
+              <Text
+                style={[
+                  styles.label,
+                  {
+                    color: colors.text,
+                  },
+                ]}
+              >
+                After fixed commitments
+              </Text>
               <Text
                 style={[
                   styles.value,
@@ -1188,6 +1198,7 @@ export default function MonthlyPlanScreen({ navigation, route }) {
                     {
                       color: colors.text,
                       borderColor: colors.primary,
+                      backgroundColor: colors.background,
                     },
                   ]}
                   keyboardType="decimal-pad"
@@ -1210,28 +1221,29 @@ export default function MonthlyPlanScreen({ navigation, route }) {
 
             <View style={styles.divider} />
 
-            <View style={styles.row}>
+            <View style={styles.spendableHeroBlock}>
               <Text
-                style={[
-                  styles.totalLabel,
-                  {
-                    color: colors.text,
-                  },
-                ]}
+                style={[styles.spendableHeroLabel, { color: colors.text }]}
               >
                 Planned spendable
               </Text>
-
               <Text
                 style={[
                   styles.spendableValue,
                   {
                     color:
-                      displayedSpendablePaise >= 0 ? colors.primary : "#D32F2F",
+                      displayedSpendablePaise >= 0
+                        ? colors.primary
+                        : "#D32F2F",
                   },
                 ]}
               >
                 {formatPaise(displayedSpendablePaise)}
+              </Text>
+              <Text
+                style={[styles.spendableSubLabel, { color: colors.text }]}
+              >
+                Available for variable spending this month
               </Text>
             </View>
 
@@ -1257,6 +1269,7 @@ export default function MonthlyPlanScreen({ navigation, route }) {
           </View>
         </>
       )}
-    </ScrollView>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
