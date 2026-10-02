@@ -59,6 +59,8 @@ export default function MonthlyPlanScreen({ navigation, route }) {
 
   const [isLoadingPreviousPlan, setIsLoadingPreviousPlan] = useState(false);
 
+  const [hasAttemptedSave, setHasAttemptedSave] = useState(false);
+
   const [draftIncomeSources, setDraftIncomeSources] = useState([]);
 
   const [draftFixedCommitments, setDraftFixedCommitments] = useState([]);
@@ -96,6 +98,7 @@ export default function MonthlyPlanScreen({ navigation, route }) {
   };
 
   const changeMonth = (offset) => {
+    setHasAttemptedSave(false);
     setIsEditing(false);
     setSelectedMonthKey(shiftMonthKey(monthKey, offset));
   };
@@ -381,6 +384,7 @@ export default function MonthlyPlanScreen({ navigation, route }) {
 
     setDraftSavingsTarget((savingsTargetPaise / 100).toString());
 
+    setHasAttemptedSave(false);
     setIsEditing(true);
   };
 
@@ -401,13 +405,17 @@ export default function MonthlyPlanScreen({ navigation, route }) {
           {
             text: "Discard changes",
             style: "destructive",
-            onPress: () => setIsEditing(false),
+            onPress: () => {
+              setHasAttemptedSave(false);
+              setIsEditing(false);
+            },
           },
         ],
       );
       return;
     }
 
+    setHasAttemptedSave(false);
     setIsEditing(false);
   };
 
@@ -422,6 +430,7 @@ export default function MonthlyPlanScreen({ navigation, route }) {
 
     setDraftFixedCommitments([]);
     setDraftSavingsTarget("0");
+    setHasAttemptedSave(false);
     setIsEditing(true);
   };
 
@@ -680,6 +689,7 @@ export default function MonthlyPlanScreen({ navigation, route }) {
           : "0",
       );
 
+      setHasAttemptedSave(false);
       setIsEditing(true);
     } catch (error) {
       Alert.alert(
@@ -706,6 +716,7 @@ export default function MonthlyPlanScreen({ navigation, route }) {
     }
 
     if (draftIncomeSources.length === 0) {
+      setHasAttemptedSave(true);
       Alert.alert("Income required", "Add at least one income source.");
       return;
     }
@@ -724,6 +735,7 @@ export default function MonthlyPlanScreen({ navigation, route }) {
     );
 
     if (invalidIncome) {
+      setHasAttemptedSave(true);
       Alert.alert(
         "Check income",
         "Every income source needs a name and an amount greater than zero.",
@@ -747,6 +759,7 @@ export default function MonthlyPlanScreen({ navigation, route }) {
     );
 
     if (invalidFixed) {
+      setHasAttemptedSave(true);
       Alert.alert(
         "Check fixed commitments",
         "Every fixed commitment needs a name and an amount greater than zero.",
@@ -757,10 +770,12 @@ export default function MonthlyPlanScreen({ navigation, route }) {
     const parsedSavingsTarget = parseMoneyInputToPaise(draftSavingsTarget);
 
     if (!Number.isInteger(parsedSavingsTarget) || parsedSavingsTarget < 0) {
+      setHasAttemptedSave(true);
       Alert.alert("Check savings", "Enter a valid savings amount.");
       return;
     }
 
+    setHasAttemptedSave(false);
     setIsSaving(true);
 
     try {
@@ -785,6 +800,7 @@ export default function MonthlyPlanScreen({ navigation, route }) {
         fixedCommitments: normalizedFixedCommitments,
         savingsTargetPaise: parsedSavingsTarget,
       });
+      setHasAttemptedSave(false);
       setIsEditing(false);
     } catch (error) {
       Alert.alert(
@@ -860,7 +876,9 @@ export default function MonthlyPlanScreen({ navigation, route }) {
         <TouchableOpacity
           style={styles.backButton}
           onPress={handleBack}
+          accessibilityRole="button"
           accessibilityLabel="Back to dashboard"
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
@@ -876,6 +894,9 @@ export default function MonthlyPlanScreen({ navigation, route }) {
             style={styles.editButton}
             onPress={isEditing ? handleCancelEditing : handleStartEditing}
             disabled={isSaving}
+            accessibilityRole="button"
+            accessibilityLabel={isEditing ? "Cancel editing plan" : "Edit monthly plan"}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
             <Text style={[styles.editButtonText, { color: colors.primary }]}>
               {isEditing ? "Cancel" : "Edit"}
@@ -896,7 +917,9 @@ export default function MonthlyPlanScreen({ navigation, route }) {
         <TouchableOpacity
           style={styles.monthNavButton}
           onPress={() => handleMonthChange(-1)}
+          accessibilityRole="button"
           accessibilityLabel="Previous month"
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <Ionicons name="chevron-back" size={22} color={colors.primary} />
         </TouchableOpacity>
@@ -917,7 +940,9 @@ export default function MonthlyPlanScreen({ navigation, route }) {
         <TouchableOpacity
           style={styles.monthNavButton}
           onPress={() => handleMonthChange(1)}
+          accessibilityRole="button"
           accessibilityLabel="Next month"
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <Ionicons name="chevron-forward" size={22} color={colors.primary} />
         </TouchableOpacity>
@@ -1028,78 +1053,100 @@ export default function MonthlyPlanScreen({ navigation, route }) {
             {isEditing ? (
               <>
                 <View style={styles.divider} />
-                {draftIncomeSources.map((source) => (
-                  <View key={source.id} style={styles.editRow}>
-                    <TextInput
-                      style={[
-                        styles.nameInput,
-                        {
-                          color: colors.text,
-                          borderColor: colors.primary,
-                          backgroundColor: colors.background,
-                        },
-                      ]}
-                      placeholder="Income source"
-                      placeholderTextColor={colors.text + "66"}
-                      value={source.name}
-                      autoCapitalize="words"
-                      autoCorrect={false}
-                      editable={!isSaving}
-                      onChangeText={(value) =>
-                        updateIncomeSource(source.id, "name", value)
-                      }
-                    />
-                    <View
-                      style={[
-                        styles.amountInputWrapper,
-                        {
-                          borderColor: colors.primary,
-                          backgroundColor: colors.background,
-                        },
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.currencyPrefix,
-                          { color: colors.text },
-                        ]}
-                      >
-                        ₹
-                      </Text>
+                {draftIncomeSources.map((source) => {
+                  const isNameInvalid =
+                    hasAttemptedSave && !source.name.trim();
+                  const parsedAmount = parseMoneyInputToPaise(source.amount);
+                  const isAmountInvalid =
+                    hasAttemptedSave &&
+                    (!Number.isInteger(parsedAmount) || parsedAmount <= 0);
+
+                  return (
+                    <View key={source.id} style={styles.editRow}>
                       <TextInput
                         style={[
-                          styles.amountInput,
+                          styles.nameInput,
                           {
                             color: colors.text,
+                            borderColor: isNameInvalid
+                              ? colors.error
+                              : colors.primary,
+                            backgroundColor: colors.background,
                           },
                         ]}
-                        placeholder="Amount"
+                        placeholder="Income source"
                         placeholderTextColor={colors.text + "66"}
-                        keyboardType="decimal-pad"
-                        inputMode="decimal"
-                        value={source.amount}
+                        value={source.name}
+                        autoCapitalize="words"
+                        autoCorrect={false}
                         editable={!isSaving}
+                        accessibilityLabel="Income source name"
                         onChangeText={(value) =>
-                          updateIncomeSource(source.id, "amount", value)
+                          updateIncomeSource(source.id, "name", value)
                         }
                       />
+                      <View
+                        style={[
+                          styles.amountInputWrapper,
+                          {
+                            borderColor: isAmountInvalid
+                              ? colors.error
+                              : colors.primary,
+                            backgroundColor: colors.background,
+                          },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.currencyPrefix,
+                            { color: colors.text },
+                          ]}
+                        >
+                          ₹
+                        </Text>
+                        <TextInput
+                          style={[
+                            styles.amountInput,
+                            {
+                              color: colors.text,
+                            },
+                          ]}
+                          placeholder="Amount"
+                          placeholderTextColor={colors.text + "66"}
+                          keyboardType="decimal-pad"
+                          inputMode="decimal"
+                          value={source.amount}
+                          editable={!isSaving}
+                          accessibilityLabel="Income amount in rupees"
+                          onChangeText={(value) =>
+                            updateIncomeSource(source.id, "amount", value)
+                          }
+                        />
+                      </View>
+                      <TouchableOpacity
+                        style={[
+                          styles.removeButton,
+                          isSaving && styles.disabledButton,
+                        ]}
+                        onPress={() => removeIncomeSource(source.id)}
+                        disabled={isSaving}
+                        accessibilityRole="button"
+                        accessibilityLabel={
+                          source.name.trim()
+                            ? `Delete ${source.name.trim()}`
+                            : "Delete income source"
+                        }
+                        hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+                      >
+                        <Ionicons
+                          name="trash-outline"
+                          size={20}
+                          color="#D32F2F"
+                        />
+                      </TouchableOpacity>
                     </View>
-                    <TouchableOpacity
-                      style={[
-                        styles.removeButton,
-                        isSaving && styles.disabledButton,
-                      ]}
-                      onPress={() => removeIncomeSource(source.id)}
-                      disabled={isSaving}
-                    >
-                      <Ionicons
-                        name="trash-outline"
-                        size={20}
-                        color="#D32F2F"
-                      />
-                    </TouchableOpacity>
-                  </View>
-                ))}
+                  );
+                })}
                 <TouchableOpacity
                   style={[
                     styles.addButton,
@@ -1107,6 +1154,9 @@ export default function MonthlyPlanScreen({ navigation, route }) {
                   ]}
                   onPress={addIncomeSource}
                   disabled={isSaving}
+                  accessibilityRole="button"
+                  accessibilityLabel="Add income source"
+                  hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                 >
                   <Ionicons
                     name="add-circle-outline"
@@ -1180,78 +1230,100 @@ export default function MonthlyPlanScreen({ navigation, route }) {
             {isEditing ? (
               <>
                 <View style={styles.divider} />
-                {draftFixedCommitments.map((commitment) => (
-                  <View key={commitment.id} style={styles.editRow}>
-                    <TextInput
-                      style={[
-                        styles.nameInput,
-                        {
-                          color: colors.text,
-                          borderColor: colors.primary,
-                          backgroundColor: colors.background,
-                        },
-                      ]}
-                      placeholder="Commitment"
-                      placeholderTextColor={colors.text + "66"}
-                      value={commitment.name}
-                      autoCapitalize="words"
-                      autoCorrect={false}
-                      editable={!isSaving}
-                      onChangeText={(value) =>
-                        updateFixedCommitment(commitment.id, "name", value)
-                      }
-                    />
-                    <View
-                      style={[
-                        styles.amountInputWrapper,
-                        {
-                          borderColor: colors.primary,
-                          backgroundColor: colors.background,
-                        },
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.currencyPrefix,
-                          { color: colors.text },
-                        ]}
-                      >
-                        ₹
-                      </Text>
+                {draftFixedCommitments.map((commitment) => {
+                  const isNameInvalid =
+                    hasAttemptedSave && !commitment.name.trim();
+                  const parsedAmount = parseMoneyInputToPaise(commitment.amount);
+                  const isAmountInvalid =
+                    hasAttemptedSave &&
+                    (!Number.isInteger(parsedAmount) || parsedAmount <= 0);
+
+                  return (
+                    <View key={commitment.id} style={styles.editRow}>
                       <TextInput
                         style={[
-                          styles.amountInput,
+                          styles.nameInput,
                           {
                             color: colors.text,
+                            borderColor: isNameInvalid
+                              ? colors.error
+                              : colors.primary,
+                            backgroundColor: colors.background,
                           },
                         ]}
-                        placeholder="Amount"
+                        placeholder="Commitment"
                         placeholderTextColor={colors.text + "66"}
-                        keyboardType="decimal-pad"
-                        inputMode="decimal"
-                        value={commitment.amount}
+                        value={commitment.name}
+                        autoCapitalize="words"
+                        autoCorrect={false}
                         editable={!isSaving}
+                        accessibilityLabel="Commitment name"
                         onChangeText={(value) =>
-                          updateFixedCommitment(commitment.id, "amount", value)
+                          updateFixedCommitment(commitment.id, "name", value)
                         }
                       />
+                      <View
+                        style={[
+                          styles.amountInputWrapper,
+                          {
+                            borderColor: isAmountInvalid
+                              ? colors.error
+                              : colors.primary,
+                            backgroundColor: colors.background,
+                          },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.currencyPrefix,
+                            { color: colors.text },
+                          ]}
+                        >
+                          ₹
+                        </Text>
+                        <TextInput
+                          style={[
+                            styles.amountInput,
+                            {
+                              color: colors.text,
+                            },
+                          ]}
+                          placeholder="Amount"
+                          placeholderTextColor={colors.text + "66"}
+                          keyboardType="decimal-pad"
+                          inputMode="decimal"
+                          value={commitment.amount}
+                          editable={!isSaving}
+                          accessibilityLabel="Commitment amount in rupees"
+                          onChangeText={(value) =>
+                            updateFixedCommitment(commitment.id, "amount", value)
+                          }
+                        />
+                      </View>
+                      <TouchableOpacity
+                        style={[
+                          styles.removeButton,
+                          isSaving && styles.disabledButton,
+                        ]}
+                        onPress={() => removeFixedCommitment(commitment.id)}
+                        disabled={isSaving}
+                        accessibilityRole="button"
+                        accessibilityLabel={
+                          commitment.name.trim()
+                            ? `Delete ${commitment.name.trim()}`
+                            : "Delete fixed commitment"
+                        }
+                        hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+                      >
+                        <Ionicons
+                          name="trash-outline"
+                          size={20}
+                          color="#D32F2F"
+                        />
+                      </TouchableOpacity>
                     </View>
-                    <TouchableOpacity
-                      style={[
-                        styles.removeButton,
-                        isSaving && styles.disabledButton,
-                      ]}
-                      onPress={() => removeFixedCommitment(commitment.id)}
-                      disabled={isSaving}
-                    >
-                      <Ionicons
-                        name="trash-outline"
-                        size={20}
-                        color="#D32F2F"
-                      />
-                    </TouchableOpacity>
-                  </View>
-                ))}
+                  );
+                })}
                 <TouchableOpacity
                   style={[
                     styles.addButton,
@@ -1259,6 +1331,9 @@ export default function MonthlyPlanScreen({ navigation, route }) {
                   ]}
                   onPress={addFixedCommitment}
                   disabled={isSaving}
+                  accessibilityRole="button"
+                  accessibilityLabel="Add fixed commitment"
+                  hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                 >
                   <Ionicons
                     name="add-circle-outline"
@@ -1452,39 +1527,52 @@ export default function MonthlyPlanScreen({ navigation, route }) {
               </View>
 
               {isEditing ? (
-                <View
-                  style={[
-                    styles.savingsInputWrapper,
-                    {
-                      borderColor: colors.primary,
-                      backgroundColor: colors.background,
-                    },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.currencyPrefix,
-                      { color: colors.text },
-                    ]}
-                  >
-                    ₹
-                  </Text>
-                  <TextInput
-                    style={[
-                      styles.savingsInput,
-                      {
-                        color: colors.text,
-                      },
-                    ]}
-                    placeholder="0"
-                    placeholderTextColor={colors.text + "66"}
-                    keyboardType="decimal-pad"
-                    inputMode="decimal"
-                    value={draftSavingsTarget}
-                    editable={!isSaving}
-                    onChangeText={handleSavingsChange}
-                  />
-                </View>
+                (() => {
+                  const parsedSavings =
+                    parseMoneyInputToPaise(draftSavingsTarget);
+                  const isSavingsInvalid =
+                    hasAttemptedSave &&
+                    (!Number.isInteger(parsedSavings) || parsedSavings < 0);
+
+                  return (
+                    <View
+                      style={[
+                        styles.savingsInputWrapper,
+                        {
+                          borderColor: isSavingsInvalid
+                            ? colors.error
+                            : colors.primary,
+                          backgroundColor: colors.background,
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.currencyPrefix,
+                          { color: colors.text },
+                        ]}
+                      >
+                        ₹
+                      </Text>
+                      <TextInput
+                        style={[
+                          styles.savingsInput,
+                          {
+                            color: colors.text,
+                          },
+                        ]}
+                        placeholder="0"
+                        placeholderTextColor={colors.text + "66"}
+                        keyboardType="decimal-pad"
+                        inputMode="decimal"
+                        value={draftSavingsTarget}
+                        editable={!isSaving}
+                        accessibilityLabel="Savings target in rupees"
+                        onChangeText={handleSavingsChange}
+                      />
+                    </View>
+                  );
+                })()
               ) : (
                 <Text
                   style={[
