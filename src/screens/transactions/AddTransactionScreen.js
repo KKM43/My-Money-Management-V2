@@ -11,7 +11,6 @@ import {
   ActivityIndicator,
   Modal,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import {
   addDoc,
@@ -23,7 +22,6 @@ import {
   deleteField,
 } from "firebase/firestore";
 import { db, auth } from "../../services/firebaseConfig";
-import { LightTheme } from "../../theme/theme";
 import styles from "./AddTransactionScreen.styles";
 import { useTheme } from "../../theme/ThemeContext";
 import { getMonthKeyFromDate } from "../../utils/month";
@@ -407,513 +405,860 @@ export default function AddTransactionScreen({ navigation, route }) {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.background }]}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
-      <LinearGradient
-        colors={[colors.primary, colors.secondary]}
-        style={styles.gradient}
+      <ScrollView
+        contentContainerStyle={styles.scrollContainer}
+        showsVerticalScrollIndicator={false}
       >
-        <ScrollView
-          contentContainerStyle={styles.scrollContainer}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Header Section */}
-          <View style={styles.headerSection}>
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => navigation.goBack()}
-            >
-              <Ionicons name="arrow-back" size={24} color="white" />
-            </TouchableOpacity>
-            <Text style={styles.title}>
-              {isEditing
-                ? "Edit Transaction"
-                : type === "expense"
-                  ? "Add Expense"
-                  : type === "income"
-                    ? "Add Income"
-                    : "Add Transfer"}
-            </Text>
-            <View style={styles.placeholder} />
-          </View>
+        {/* Header Section */}
+        <View style={styles.headerSection}>
+          <TouchableOpacity
+            style={[
+              styles.backButton,
+              {
+                backgroundColor: isDark
+                  ? "rgba(255, 255, 255, 0.08)"
+                  : "rgba(0, 0, 0, 0.05)",
+              },
+            ]}
+            onPress={() => navigation.goBack()}
+            accessibilityLabel="Go back"
+            accessibilityRole="button"
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Ionicons name="arrow-back" size={22} color={colors.text} />
+          </TouchableOpacity>
+          <Text style={[styles.title, { color: colors.text }]}>
+            {isEditing
+              ? "Edit Transaction"
+              : type === "expense"
+                ? "Add Expense"
+                : type === "income"
+                  ? "Add Income"
+                  : "Add Transfer"}
+          </Text>
+          <View style={styles.placeholder} />
+        </View>
 
-          {/* Main Form Card */}
-          <View style={[styles.formCard, { backgroundColor: colors.surface }]}>
-            {/* Transaction Type Toggle */}
-            <View
+        {/* Transaction Type Toggle (Segmented Control) */}
+        <View
+          style={[
+            styles.typeToggleContainer,
+            {
+              backgroundColor: isDark
+                ? "rgba(255, 255, 255, 0.04)"
+                : "#F1F5F9",
+              borderColor: isDark
+                ? "rgba(255, 255, 255, 0.08)"
+                : "#E2E8F0",
+            },
+          ]}
+        >
+          <TouchableOpacity
+            style={[
+              styles.typeButton,
+              type === "expense" && [
+                styles.typeButtonActive,
+                {
+                  backgroundColor: isDark
+                    ? "rgba(239, 68, 68, 0.2)"
+                    : "#FEE2E2",
+                  borderColor: isDark
+                    ? "rgba(239, 68, 68, 0.35)"
+                    : "#FECACA",
+                },
+              ],
+            ]}
+            onPress={() => setType("expense")}
+            accessibilityRole="button"
+            accessibilityLabel="Expense"
+            accessibilityState={{ selected: type === "expense" }}
+          >
+            <Ionicons
+              name={
+                type === "expense"
+                  ? "remove-circle"
+                  : "remove-circle-outline"
+              }
+              size={18}
+              color={
+                type === "expense"
+                  ? isDark
+                    ? "#F87171"
+                    : "#DC2626"
+                  : isDark
+                    ? "#94A3B8"
+                    : "#64748B"
+              }
+            />
+            <Text
               style={[
-                styles.typeToggleContainer,
-                { backgroundColor: isDark ? "#252525" : "#F8F9FA" },
+                styles.typeButtonText,
+                {
+                  color:
+                    type === "expense"
+                      ? isDark
+                        ? "#F87171"
+                        : "#DC2626"
+                      : isDark
+                        ? "#94A3B8"
+                        : "#64748B",
+                  fontWeight: type === "expense" ? "700" : "600",
+                },
               ]}
             >
-              <TouchableOpacity
-                style={[
-                  styles.typeButton,
-                  { backgroundColor: isDark ? "#252525" : "transparent" },
-                  type === "expense" && styles.typeButtonActive,
-                  type === "expense" && styles.expenseButton,
-                ]}
-                onPress={() => setType("expense")}
-              >
-                <Ionicons
-                  name="remove-circle"
-                  size={20}
-                  color={type === "expense" ? "white" : "#FF6B6B"}
-                />
-                <Text
-                  style={[
-                    styles.typeButtonText,
-                    { color: colors.text },
-                    type === "expense" && styles.typeButtonTextActive,
-                  ]}
-                >
-                  Expense
-                </Text>
-              </TouchableOpacity>
+              Expense
+            </Text>
+          </TouchableOpacity>
 
-              <TouchableOpacity
-                style={[
-                  styles.typeButton,
-                  { backgroundColor: isDark ? "#252525" : "transparent" },
-                  type === "income" && styles.typeButtonActive,
-                  type === "income" && styles.incomeButton,
-                ]}
-                onPress={() => setType("income")}
-              >
-                <Ionicons
-                  name="add-circle"
-                  size={20}
-                  color={type === "income" ? "white" : "#4ECDC4"}
-                />
-                <Text
-                  style={[
-                    styles.typeButtonText,
-                    { color: colors.text },
-                    type === "income" && styles.typeButtonTextActive,
-                  ]}
-                >
-                  Income
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.typeButton,
-                  { backgroundColor: isDark ? "#252525" : "transparent" },
-                  type === "transfer" && styles.typeButtonActive,
-                  type === "transfer" && styles.transferButton,
-                ]}
-                onPress={() => setType("transfer")}
-              >
-                <Ionicons
-                  name="swap-horizontal"
-                  size={20}
-                  color={type === "transfer" ? "white" : "#4D96FF"}
-                />
-                <Text
-                  style={[
-                    styles.typeButtonText,
-                    { color: colors.text },
-                    type === "transfer" && styles.typeButtonTextActive,
-                  ]}
-                >
-                  Transfer
-                </Text>
-              </TouchableOpacity>
-            </View>
+          <TouchableOpacity
+            style={[
+              styles.typeButton,
+              type === "income" && [
+                styles.typeButtonActive,
+                {
+                  backgroundColor: isDark
+                    ? "rgba(34, 197, 94, 0.2)"
+                    : "#DCFCE7",
+                  borderColor: isDark
+                    ? "rgba(34, 197, 94, 0.35)"
+                    : "#BBF7D0",
+                },
+              ],
+            ]}
+            onPress={() => setType("income")}
+            accessibilityRole="button"
+            accessibilityLabel="Income"
+            accessibilityState={{ selected: type === "income" }}
+          >
+            <Ionicons
+              name={
+                type === "income"
+                  ? "add-circle"
+                  : "add-circle-outline"
+              }
+              size={18}
+              color={
+                type === "income"
+                  ? isDark
+                    ? "#4ADE80"
+                    : "#16A34A"
+                  : isDark
+                    ? "#94A3B8"
+                    : "#64748B"
+              }
+            />
+            <Text
+              style={[
+                styles.typeButtonText,
+                {
+                  color:
+                    type === "income"
+                      ? isDark
+                        ? "#4ADE80"
+                        : "#16A34A"
+                      : isDark
+                        ? "#94A3B8"
+                        : "#64748B",
+                  fontWeight: type === "income" ? "700" : "600",
+                },
+              ]}
+            >
+              Income
+            </Text>
+          </TouchableOpacity>
 
-            {/* Amount Input */}
+          <TouchableOpacity
+            style={[
+              styles.typeButton,
+              type === "transfer" && [
+                styles.typeButtonActive,
+                {
+                  backgroundColor: isDark
+                    ? "rgba(59, 130, 246, 0.2)"
+                    : "#DBEAFE",
+                  borderColor: isDark
+                    ? "rgba(59, 130, 246, 0.35)"
+                    : "#BFDBFE",
+                },
+              ],
+            ]}
+            onPress={() => setType("transfer")}
+            accessibilityRole="button"
+            accessibilityLabel="Transfer"
+            accessibilityState={{ selected: type === "transfer" }}
+          >
+            <Ionicons
+              name="swap-horizontal"
+              size={18}
+              color={
+                type === "transfer"
+                  ? isDark
+                    ? "#60A5FA"
+                    : "#2563EB"
+                  : isDark
+                    ? "#94A3B8"
+                    : "#64748B"
+              }
+            />
+            <Text
+              style={[
+                styles.typeButtonText,
+                {
+                  color:
+                    type === "transfer"
+                      ? isDark
+                        ? "#60A5FA"
+                        : "#2563EB"
+                      : isDark
+                        ? "#94A3B8"
+                        : "#64748B",
+                  fontWeight: type === "transfer" ? "700" : "600",
+                },
+              ]}
+            >
+              Transfer
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Amount Section Card */}
+        <View
+          style={[
+            styles.sectionCard,
+            {
+              backgroundColor: colors.surface,
+              borderColor: isDark
+                ? "rgba(255, 255, 255, 0.08)"
+                : "#E2E8F0",
+            },
+          ]}
+        >
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+            Amount
+          </Text>
+          <View
+            style={[
+              styles.inputContainer,
+              {
+                backgroundColor: isDark
+                  ? "rgba(255, 255, 255, 0.04)"
+                  : "#F8FAFC",
+                borderColor: isDark
+                  ? "rgba(255, 255, 255, 0.08)"
+                  : "#E2E8F0",
+                marginBottom: 0,
+              },
+            ]}
+          >
+            <Ionicons
+              name="cash"
+              size={20}
+              color={colors.primary}
+              style={styles.inputIcon}
+            />
+            <TextInput
+              style={[styles.amountInput, { color: colors.text }]}
+              placeholder="0.00"
+              placeholderTextColor="#999"
+              keyboardType="numeric"
+              value={amount}
+              onChangeText={handleAmountChange}
+            />
+            <Text style={[styles.currencySymbol, { color: colors.primary }]}>₹</Text>
+          </View>
+        </View>
+
+        {/* Account Section Card */}
+        <View
+          style={[
+            styles.sectionCard,
+            {
+              backgroundColor: colors.surface,
+              borderColor: isDark
+                ? "rgba(255, 255, 255, 0.08)"
+                : "#E2E8F0",
+            },
+          ]}
+        >
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+            {type === "transfer"
+              ? "Transfer Between Accounts"
+              : "Select Account"}
+          </Text>
+          {selectableAccounts.length === 0 ? (
             <View
               style={[
-                styles.inputContainer,
-                { backgroundColor: isDark ? "#252525" : "#F8F9FA" },
+                styles.noAccountCard,
+                {
+                  backgroundColor: isDark
+                    ? "rgba(255, 255, 255, 0.04)"
+                    : "#F8FAFC",
+                  borderColor: isDark
+                    ? "rgba(255, 255, 255, 0.08)"
+                    : "#E2E8F0",
+                },
               ]}
             >
               <Ionicons
-                name="cash"
-                size={20}
-                color={LightTheme.colors.primary}
-                style={styles.inputIcon}
+                name="wallet-outline"
+                size={24}
+                color={colors.primary}
               />
-              <TextInput
-                style={[styles.amountInput, { color: colors.text }]}
-                placeholder="0.00"
-                placeholderTextColor="#999"
-                keyboardType="numeric"
-                value={amount}
-                onChangeText={handleAmountChange}
-              />
-              <Text style={styles.currencySymbol}>₹</Text>
-            </View>
-
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              {type === "transfer"
-                ? "Transfer Between Accounts"
-                : "Select Account"}
-            </Text>
-            {selectableAccounts.length === 0 ? (
-              <View
+              <Text style={[styles.accountHint, { color: colors.text }]}>
+                Create an active account before adding a new transaction.
+              </Text>
+              <TouchableOpacity
                 style={[
-                  styles.noAccountCard,
-                  {
-                    backgroundColor: isDark ? "#252525" : "#F8F9FA",
-                    borderColor: isDark ? "#444" : "#E9ECEF",
-                  },
+                  styles.createAccountButton,
+                  { backgroundColor: colors.primary },
+                ]}
+                onPress={() => navigation.navigate("Accounts")}
+              >
+                <Text style={styles.createAccountButtonText}>
+                  Create account
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ) : type === "transfer" ? (
+            <>
+              <Text
+                style={[
+                  styles.accountLabel,
+                  { color: isDark ? "#CBD5E1" : "#475569" },
                 ]}
               >
-                <Ionicons
-                  name="wallet-outline"
-                  size={24}
-                  color={LightTheme.colors.primary}
-                />
-                <Text style={[styles.accountHint, { color: colors.text }]}>
-                  Create an active account before adding a new transaction.
-                </Text>
-                <TouchableOpacity
-                  style={styles.createAccountButton}
-                  onPress={() => navigation.navigate("Accounts")}
-                >
-                  <Text style={styles.createAccountButtonText}>
-                    Create account
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            ) : type === "transfer" ? (
-              <>
-                <Text style={[styles.accountLabel, { color: colors.text }]}>
-                  From account
-                </Text>
-                <View style={styles.accountsGrid}>
-                  {selectableAccounts.map((account) => (
-                    <TouchableOpacity
-                      key={`from-${account.id}`}
-                      style={[
-                        styles.accountCard,
-                        {
-                          backgroundColor: isDark ? "#252525" : "#F8F9FA",
-                          borderColor: isDark ? "#444" : "#E9ECEF",
-                        },
-                        fromAccountId === account.id &&
-                          styles.selectedAccountCard,
-                      ]}
-                      onPress={() => setFromAccountId(account.id)}
-                    >
-                      <Text
-                        style={[
-                          styles.accountName,
-                          fromAccountId === account.id &&
-                            styles.selectedAccountText,
-                        ]}
-                        numberOfLines={1}
-                      >
-                        {account.name}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-                <Text style={[styles.accountLabel, { color: colors.text }]}>
-                  To account
-                </Text>
-                <View style={styles.accountsGrid}>
-                  {selectableAccounts.map((account) => (
-                    <TouchableOpacity
-                      key={`to-${account.id}`}
-                      style={[
-                        styles.accountCard,
-                        {
-                          backgroundColor: isDark ? "#252525" : "#F8F9FA",
-                          borderColor: isDark ? "#444" : "#E9ECEF",
-                        },
-                        toAccountId === account.id &&
-                          styles.selectedAccountCard,
-                      ]}
-                      onPress={() => setToAccountId(account.id)}
-                    >
-                      <Text
-                        style={[
-                          styles.accountName,
-                          toAccountId === account.id &&
-                            styles.selectedAccountText,
-                        ]}
-                        numberOfLines={1}
-                      >
-                        {account.name}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </>
-            ) : (
+                From account
+              </Text>
               <View style={styles.accountsGrid}>
                 {selectableAccounts.map((account) => (
                   <TouchableOpacity
-                    key={account.id}
+                    key={`from-${account.id}`}
                     style={[
                       styles.accountCard,
                       {
-                        backgroundColor: isDark ? "#252525" : "#F8F9FA",
-                        borderColor: isDark ? "#444" : "#E9ECEF",
+                        backgroundColor: isDark
+                          ? "rgba(255, 255, 255, 0.04)"
+                          : "#F8FAFC",
+                        borderColor: isDark
+                          ? "rgba(255, 255, 255, 0.08)"
+                          : "#E2E8F0",
                       },
-                      selectedAccountId === account.id &&
+                      fromAccountId === account.id && [
                         styles.selectedAccountCard,
+                        {
+                          backgroundColor: colors.primary,
+                          borderColor: colors.primary,
+                        },
+                      ],
                     ]}
-                    onPress={() => setSelectedAccountId(account.id)}
+                    onPress={() => setFromAccountId(account.id)}
                   >
-                    <Ionicons
-                      name="wallet-outline"
-                      size={18}
-                      color={
-                        selectedAccountId === account.id
-                          ? "white"
-                          : LightTheme.colors.primary
-                      }
-                    />
                     <Text
                       style={[
                         styles.accountName,
-                        selectedAccountId === account.id &&
+                        { color: colors.text },
+                        fromAccountId === account.id &&
                           styles.selectedAccountText,
                       ]}
                       numberOfLines={1}
                     >
                       {account.name}
                     </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <Text
+                style={[
+                  styles.accountLabel,
+                  { color: isDark ? "#CBD5E1" : "#475569" },
+                ]}
+              >
+                To account
+              </Text>
+              <View style={[styles.accountsGrid, { marginBottom: 0 }]}>
+                {selectableAccounts.map((account) => (
+                  <TouchableOpacity
+                    key={`to-${account.id}`}
+                    style={[
+                      styles.accountCard,
+                      {
+                        backgroundColor: isDark
+                          ? "rgba(255, 255, 255, 0.04)"
+                          : "#F8FAFC",
+                        borderColor: isDark
+                          ? "rgba(255, 255, 255, 0.08)"
+                          : "#E2E8F0",
+                      },
+                      toAccountId === account.id && [
+                        styles.selectedAccountCard,
+                        {
+                          backgroundColor: colors.primary,
+                          borderColor: colors.primary,
+                        },
+                      ],
+                    ]}
+                    onPress={() => setToAccountId(account.id)}
+                  >
                     <Text
                       style={[
-                        styles.accountType,
-                        selectedAccountId === account.id &&
+                        styles.accountName,
+                        { color: colors.text },
+                        toAccountId === account.id &&
                           styles.selectedAccountText,
                       ]}
+                      numberOfLines={1}
                     >
-                      {ACCOUNT_TYPE_LABELS[account.type] || "Account"}
+                      {account.name}
                     </Text>
                   </TouchableOpacity>
                 ))}
               </View>
-            )}
-
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              Transaction Date
-            </Text>
-
-            <TouchableOpacity
-              style={[
-                styles.dateSelector,
-                {
-                  backgroundColor: isDark ? "#252525" : "#F8F9FA",
-                  borderColor: isDark ? "#444" : "#E9ECEF",
-                },
-              ]}
-              onPress={() => setShowDatePicker(true)}
-            >
-              <Ionicons
-                name="calendar-outline"
-                size={20}
-                color={LightTheme.colors.primary}
-              />
-              <Text style={[styles.dateSelectorText, { color: colors.text }]}>
-                {formatDateForDisplay(selectedDate)}
-              </Text>
-              <Ionicons name="chevron-down-outline" size={20} color="#666" />
-            </TouchableOpacity>
-
-            <Modal
-              visible={showDatePicker}
-              transparent
-              animationType="fade"
-              onRequestClose={() => setShowDatePicker(false)}
-            >
-              <View style={styles.dateModalOverlay}>
-                <View
-                  style={[
-                    styles.dateModal,
-                    { backgroundColor: colors.surface },
-                  ]}
-                >
-                  <View style={styles.dateModalHeader}>
-                    <Text
-                      style={[styles.dateModalTitle, { color: colors.text }]}
-                    >
-                      Select transaction date
-                    </Text>
-                    <TouchableOpacity
-                      onPress={() => setShowDatePicker(false)}
-                      accessibilityLabel="Close date selector"
-                    >
-                      <Ionicons name="close" size={24} color={colors.text} />
-                    </TouchableOpacity>
-                  </View>
-                  <Text
-                    style={[styles.dateModalValue, { color: colors.primary }]}
-                  >
-                    {formatDateForDisplay(selectedDate)}
-                  </Text>
-                  <View style={styles.dateAdjustRow}>
-                    <TouchableOpacity
-                      style={styles.dateAdjustButton}
-                      onPress={() => adjustSelectedDate(-1)}
-                      accessibilityLabel="Previous day"
-                    >
-                      <Ionicons name="chevron-back" size={22} color="white" />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.todayButton}
-                      onPress={() => setSelectedDate(new Date())}
-                    >
-                      <Text style={styles.todayButtonText}>Today</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.dateAdjustButton}
-                      onPress={() => adjustSelectedDate(1)}
-                      accessibilityLabel="Next day"
-                    >
-                      <Ionicons
-                        name="chevron-forward"
-                        size={22}
-                        color="white"
-                      />
-                    </TouchableOpacity>
-                  </View>
-                  <TouchableOpacity
-                    style={styles.dateDoneButton}
-                    onPress={() => setShowDatePicker(false)}
-                  >
-                    <Text style={styles.dateDoneButtonText}>Use this date</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </Modal>
-
-            {type !== "transfer" && (
-              <>
-                {/* Category Selection */}
-                <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                  Select Category
-                </Text>
+            </>
+          ) : (
+            <View style={[styles.accountsGrid, { marginBottom: 0 }]}>
+              {selectableAccounts.map((account) => (
                 <TouchableOpacity
+                  key={account.id}
                   style={[
-                    styles.categorySelector,
+                    styles.accountCard,
                     {
-                      backgroundColor: isDark ? "#252525" : "#F8F9FA",
-                      borderColor: isDark ? "#444" : "#E9ECEF",
+                      backgroundColor: isDark
+                        ? "rgba(255, 255, 255, 0.04)"
+                        : "#F8FAFC",
+                      borderColor: isDark
+                        ? "rgba(255, 255, 255, 0.08)"
+                        : "#E2E8F0",
                     },
+                    selectedAccountId === account.id && [
+                      styles.selectedAccountCard,
+                      {
+                        backgroundColor: colors.primary,
+                        borderColor: colors.primary,
+                      },
+                    ],
                   ]}
-                  onPress={() => setShowCategoryPicker(true)}
+                  onPress={() => setSelectedAccountId(account.id)}
                 >
                   <Ionicons
-                    name="pricetag-outline"
-                    size={20}
-                    color={colors.primary}
+                    name="wallet-outline"
+                    size={18}
+                    color={
+                      selectedAccountId === account.id
+                        ? "white"
+                        : colors.primary
+                    }
                   />
                   <Text
                     style={[
-                      styles.categorySelectorText,
+                      styles.accountName,
                       { color: colors.text },
+                      selectedAccountId === account.id &&
+                        styles.selectedAccountText,
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {account.name}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.accountType,
+                      { color: isDark ? "#94A3B8" : "#64748B" },
+                      selectedAccountId === account.id &&
+                        styles.selectedAccountText,
                     ]}
                   >
-                    {category || "Choose a category"}
+                    {ACCOUNT_TYPE_LABELS[account.type] || "Account"}
                   </Text>
-                  <Ionicons name="chevron-down" size={20} color={colors.text} />
                 </TouchableOpacity>
-              </>
-            )}
+              ))}
+            </View>
+          )}
+        </View>
 
-            {type === "expense" && fixedCommitments.length > 0 && (
-              <>
+        {/* Transaction Details Section Card */}
+        <View
+          style={[
+            styles.sectionCard,
+            {
+              backgroundColor: colors.surface,
+              borderColor: isDark
+                ? "rgba(255, 255, 255, 0.08)"
+                : "#E2E8F0",
+            },
+          ]}
+        >
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+            Transaction Date
+          </Text>
+
+          <TouchableOpacity
+            style={[
+              styles.dateSelector,
+              {
+                backgroundColor: isDark
+                  ? "rgba(255, 255, 255, 0.04)"
+                  : "#F8FAFC",
+                borderColor: isDark
+                  ? "rgba(255, 255, 255, 0.08)"
+                  : "#E2E8F0",
+                marginBottom:
+                  type !== "transfer" ||
+                  (type === "expense" && fixedCommitments.length > 0)
+                    ? 16
+                    : 0,
+              },
+            ]}
+            onPress={() => setShowDatePicker(true)}
+          >
+            <Ionicons
+              name="calendar-outline"
+              size={20}
+              color={colors.primary}
+            />
+            <Text
+              style={[styles.dateSelectorText, { color: colors.text }]}
+            >
+              {formatDateForDisplay(selectedDate)}
+            </Text>
+            <Ionicons
+              name="chevron-down-outline"
+              size={20}
+              color={isDark ? "#94A3B8" : "#64748B"}
+            />
+          </TouchableOpacity>
+
+          <Modal
+            visible={showDatePicker}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setShowDatePicker(false)}
+          >
+            <View style={styles.dateModalOverlay}>
+              <View
+                style={[
+                  styles.dateModal,
+                  { backgroundColor: colors.surface },
+                ]}
+              >
+                <View style={styles.dateModalHeader}>
+                  <Text
+                    style={[styles.dateModalTitle, { color: colors.text }]}
+                  >
+                    Select transaction date
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => setShowDatePicker(false)}
+                    accessibilityLabel="Close date selector"
+                  >
+                    <Ionicons name="close" size={24} color={colors.text} />
+                  </TouchableOpacity>
+                </View>
+                <Text
+                  style={[styles.dateModalValue, { color: colors.primary }]}
+                >
+                  {formatDateForDisplay(selectedDate)}
+                </Text>
+                <View style={styles.dateAdjustRow}>
+                  <TouchableOpacity
+                    style={[
+                      styles.dateAdjustButton,
+                      { backgroundColor: colors.primary },
+                    ]}
+                    onPress={() => adjustSelectedDate(-1)}
+                    accessibilityLabel="Previous day"
+                  >
+                    <Ionicons name="chevron-back" size={22} color="white" />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.todayButton,
+                      { borderColor: colors.primary },
+                    ]}
+                    onPress={() => setSelectedDate(new Date())}
+                  >
+                    <Text
+                      style={[
+                        styles.todayButtonText,
+                        { color: colors.primary },
+                      ]}
+                    >
+                      Today
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.dateAdjustButton,
+                      { backgroundColor: colors.primary },
+                    ]}
+                    onPress={() => adjustSelectedDate(1)}
+                    accessibilityLabel="Next day"
+                  >
+                    <Ionicons
+                      name="chevron-forward"
+                      size={22}
+                      color="white"
+                    />
+                  </TouchableOpacity>
+                </View>
+                <TouchableOpacity
+                  style={[
+                    styles.dateDoneButton,
+                    { backgroundColor: colors.primary },
+                  ]}
+                  onPress={() => setShowDatePicker(false)}
+                >
+                  <Text style={styles.dateDoneButtonText}>Use this date</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </Modal>
+
+          {type !== "transfer" && (
+            <>
+              {/* Category Selection */}
+              <Text
+                style={[
+                  styles.sectionTitle,
+                  { color: colors.text, marginTop: 14 },
+                ]}
+              >
+                Select Category
+              </Text>
+              <TouchableOpacity
+                style={[
+                  styles.categorySelector,
+                  {
+                    backgroundColor: isDark
+                      ? "rgba(255, 255, 255, 0.04)"
+                      : "#F8FAFC",
+                    borderColor: isDark
+                      ? "rgba(255, 255, 255, 0.08)"
+                      : "#E2E8F0",
+                    marginBottom:
+                      (type === "expense" && fixedCommitments.length > 0) ||
+                      isOther
+                        ? 16
+                        : 0,
+                  },
+                ]}
+                onPress={() => setShowCategoryPicker(true)}
+              >
+                <Ionicons
+                  name="pricetag-outline"
+                  size={20}
+                  color={colors.primary}
+                />
                 <Text
                   style={[
-                    styles.sectionTitle,
+                    styles.categorySelectorText,
+                    { color: colors.text },
+                  ]}
+                >
+                  {category || "Choose a category"}
+                </Text>
+                <Ionicons
+                  name="chevron-down"
+                  size={20}
+                  color={isDark ? "#94A3B8" : "#64748B"}
+                />
+              </TouchableOpacity>
+            </>
+          )}
+
+          {/* Custom Category Input */}
+          {isOther && (
+            <View
+              style={[
+                styles.inputContainer,
+                {
+                  backgroundColor: isDark
+                    ? "rgba(255, 255, 255, 0.04)"
+                    : "#F8FAFC",
+                  borderColor: isDark
+                    ? "rgba(255, 255, 255, 0.08)"
+                    : "#E2E8F0",
+                  marginTop: 12,
+                  marginBottom:
+                    type === "expense" && fixedCommitments.length > 0
+                      ? 16
+                      : 0,
+                },
+              ]}
+            >
+              <Ionicons
+                name="create"
+                size={20}
+                color={colors.primary}
+                style={styles.inputIcon}
+              />
+              <TextInput
+                style={[styles.input, { color: colors.text }]}
+                placeholder="Enter custom category"
+                placeholderTextColor="#999"
+                value={category}
+                onChangeText={setCategory}
+              />
+            </View>
+          )}
+
+          {type === "expense" && fixedCommitments.length > 0 && (
+            <>
+              <Text
+                style={[
+                  styles.sectionTitle,
+                  {
+                    color: colors.text,
+                    marginTop: 14,
+                  },
+                ]}
+              >
+                Fixed Commitment
+              </Text>
+
+              <TouchableOpacity
+                style={[
+                  styles.categorySelector,
+                  {
+                    backgroundColor: isDark
+                      ? "rgba(255, 255, 255, 0.04)"
+                      : "#F8FAFC",
+                    borderColor: isDark
+                      ? "rgba(255, 255, 255, 0.08)"
+                      : "#E2E8F0",
+                    marginBottom: 0,
+                  },
+                ]}
+                onPress={() => setShowFixedCommitmentPicker(true)}
+              >
+                <Ionicons
+                  name="repeat-outline"
+                  size={20}
+                  color={colors.primary}
+                />
+
+                <Text
+                  style={[
+                    styles.categorySelectorText,
                     {
                       color: colors.text,
                     },
                   ]}
                 >
-                  Fixed Commitment
+                  {selectedFixedCommitment
+                    ? selectedFixedCommitment.name
+                    : "Not a fixed commitment"}
                 </Text>
 
-                <TouchableOpacity
-                  style={[
-                    styles.categorySelector,
-                    {
-                      backgroundColor: isDark ? "#252525" : "#F8F9FA",
-                      borderColor: isDark ? "#444" : "#E9ECEF",
-                    },
-                  ]}
-                  onPress={() => setShowFixedCommitmentPicker(true)}
-                >
-                  <Ionicons
-                    name="repeat-outline"
-                    size={20}
-                    color={colors.primary}
-                  />
+                <Ionicons
+                  name="chevron-down"
+                  size={20}
+                  color={isDark ? "#94A3B8" : "#64748B"}
+                />
+              </TouchableOpacity>
+            </>
+          )}
 
+          <Modal
+            visible={showFixedCommitmentPicker}
+            transparent
+            animationType="slide"
+            onRequestClose={() => setShowFixedCommitmentPicker(false)}
+          >
+            <View style={styles.categoryModalOverlay}>
+              <View
+                style={[
+                  styles.categoryModal,
+                  {
+                    backgroundColor: colors.surface,
+                  },
+                ]}
+              >
+                <View style={styles.dateModalHeader}>
                   <Text
                     style={[
-                      styles.categorySelectorText,
+                      styles.dateModalTitle,
                       {
                         color: colors.text,
                       },
                     ]}
                   >
-                    {selectedFixedCommitment
-                      ? selectedFixedCommitment.name
-                      : "Not a fixed commitment"}
+                    Choose fixed commitment
                   </Text>
 
-                  <Ionicons name="chevron-down" size={20} color={colors.text} />
-                </TouchableOpacity>
-              </>
-            )}
+                  <TouchableOpacity
+                    onPress={() => setShowFixedCommitmentPicker(false)}
+                    accessibilityLabel="Close fixed commitment selector"
+                  >
+                    <Ionicons name="close" size={24} color={colors.text} />
+                  </TouchableOpacity>
+                </View>
 
-            <Modal
-              visible={showFixedCommitmentPicker}
-              transparent
-              animationType="slide"
-              onRequestClose={() => setShowFixedCommitmentPicker(false)}
-            >
-              <View style={styles.categoryModalOverlay}>
-                <View
-                  style={[
-                    styles.categoryModal,
-                    {
-                      backgroundColor: colors.surface,
-                    },
-                  ]}
-                >
-                  <View style={styles.dateModalHeader}>
+                <ScrollView showsVerticalScrollIndicator={false}>
+                  <TouchableOpacity
+                    style={[
+                      styles.categorySelector,
+                      {
+                        backgroundColor: isDark
+                          ? "rgba(255, 255, 255, 0.04)"
+                          : "#F8FAFC",
+                        borderColor: isDark
+                          ? "rgba(255, 255, 255, 0.08)"
+                          : "#E2E8F0",
+                      },
+                    ]}
+                    onPress={() => {
+                      setSelectedFixedCommitmentId("");
+                      setShowFixedCommitmentPicker(false);
+                    }}
+                  >
                     <Text
                       style={[
-                        styles.dateModalTitle,
+                        styles.categorySelectorText,
                         {
                           color: colors.text,
                         },
                       ]}
                     >
-                      Choose fixed commitment
+                      Not a fixed commitment
                     </Text>
+                  </TouchableOpacity>
 
+                  {fixedCommitments.map((commitment) => (
                     <TouchableOpacity
-                      onPress={() => setShowFixedCommitmentPicker(false)}
-                      accessibilityLabel="Close fixed commitment selector"
-                    >
-                      <Ionicons name="close" size={24} color={colors.text} />
-                    </TouchableOpacity>
-                  </View>
-
-                  <ScrollView showsVerticalScrollIndicator={false}>
-                    <TouchableOpacity
+                      key={commitment.id}
                       style={[
                         styles.categorySelector,
                         {
-                          backgroundColor: isDark ? "#252525" : "#F8F9FA",
-                          borderColor: isDark ? "#444" : "#E9ECEF",
+                          backgroundColor:
+                            selectedFixedCommitmentId === commitment.id
+                              ? isDark
+                                ? "rgba(59, 130, 246, 0.2)"
+                                : "#E3F2FD"
+                              : isDark
+                                ? "rgba(255, 255, 255, 0.04)"
+                                : "#F8FAFC",
+                          borderColor:
+                            selectedFixedCommitmentId === commitment.id
+                              ? colors.primary
+                              : isDark
+                                ? "rgba(255, 255, 255, 0.08)"
+                                : "#E2E8F0",
                         },
                       ]}
                       onPress={() => {
-                        setSelectedFixedCommitmentId("");
+                        setSelectedFixedCommitmentId(commitment.id);
                         setShowFixedCommitmentPicker(false);
                       }}
                     >
+                      <Ionicons
+                        name="receipt-outline"
+                        size={20}
+                        color={colors.primary}
+                      />
+
                       <Text
                         style={[
                           styles.categorySelectorText,
@@ -922,227 +1267,189 @@ export default function AddTransactionScreen({ navigation, route }) {
                           },
                         ]}
                       >
-                        Not a fixed commitment
+                        {commitment.name}
                       </Text>
-                    </TouchableOpacity>
 
-                    {fixedCommitments.map((commitment) => (
-                      <TouchableOpacity
-                        key={commitment.id}
-                        style={[
-                          styles.categorySelector,
-                          {
-                            backgroundColor:
-                              selectedFixedCommitmentId === commitment.id
-                                ? isDark
-                                  ? "#17365D"
-                                  : "#E3F2FD"
-                                : isDark
-                                  ? "#252525"
-                                  : "#F8F9FA",
-
-                            borderColor:
-                              selectedFixedCommitmentId === commitment.id
-                                ? colors.primary
-                                : isDark
-                                  ? "#444"
-                                  : "#E9ECEF",
-                          },
-                        ]}
-                        onPress={() => {
-                          setSelectedFixedCommitmentId(commitment.id);
-
-                          setShowFixedCommitmentPicker(false);
-                        }}
-                      >
+                      {selectedFixedCommitmentId === commitment.id && (
                         <Ionicons
-                          name="receipt-outline"
+                          name="checkmark-circle"
                           size={20}
                           color={colors.primary}
                         />
-
-                        <Text
-                          style={[
-                            styles.categorySelectorText,
-                            {
-                              color: colors.text,
-                            },
-                          ]}
-                        >
-                          {commitment.name}
-                        </Text>
-
-                        {selectedFixedCommitmentId === commitment.id && (
-                          <Ionicons
-                            name="checkmark-circle"
-                            size={20}
-                            color={colors.primary}
-                          />
-                        )}
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                </View>
-              </View>
-            </Modal>
-
-            <Modal
-              visible={showCategoryPicker}
-              transparent
-              animationType="slide"
-              onRequestClose={() => setShowCategoryPicker(false)}
-            >
-              <View style={styles.categoryModalOverlay}>
-                <View
-                  style={[
-                    styles.categoryModal,
-                    { backgroundColor: colors.surface },
-                  ]}
-                >
-                  <View style={styles.dateModalHeader}>
-                    <Text
-                      style={[styles.dateModalTitle, { color: colors.text }]}
-                    >
-                      Choose category
-                    </Text>
-                    <TouchableOpacity
-                      onPress={() => setShowCategoryPicker(false)}
-                      accessibilityLabel="Close category selector"
-                    >
-                      <Ionicons name="close" size={24} color={colors.text} />
+                      )}
                     </TouchableOpacity>
-                  </View>
-                  <ScrollView showsVerticalScrollIndicator={false}>
-                    <View style={styles.categoriesGrid}>
-                      {currentCategories.map((item, index) => (
-                        <TouchableOpacity
-                          key={index}
-                          style={[
-                            styles.categoryCard,
-                            {
-                              backgroundColor:
-                                category === item.name
-                                  ? isDark
-                                    ? "#17365D"
-                                    : "#E3F2FD"
-                                  : isDark
-                                    ? "#252525"
-                                    : "#F8F9FA",
-                              borderColor: item.color,
-                            },
-                          ]}
-                          onPress={() => {
-                            handleCategorySelect(item);
-                            setShowCategoryPicker(false);
-                          }}
-                        >
-                          <View
-                            style={[
-                              styles.categoryIcon,
-                              { backgroundColor: item.color },
-                            ]}
-                          >
-                            <Ionicons
-                              name={item.icon}
-                              size={18}
-                              color="white"
-                            />
-                          </View>
-                          <Text
-                            style={[
-                              styles.categoryName,
-                              { color: colors.text },
-                            ]}
-                          >
-                            {item.name}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  </ScrollView>
-                </View>
+                  ))}
+                </ScrollView>
               </View>
-            </Modal>
+            </View>
+          </Modal>
 
-            {/* Custom Category Input */}
-            {isOther && (
+          <Modal
+            visible={showCategoryPicker}
+            transparent
+            animationType="slide"
+            onRequestClose={() => setShowCategoryPicker(false)}
+          >
+            <View style={styles.categoryModalOverlay}>
               <View
                 style={[
-                  styles.inputContainer,
-                  { backgroundColor: isDark ? "#252525" : "#F8F9FA" },
+                  styles.categoryModal,
+                  { backgroundColor: colors.surface },
                 ]}
               >
-                <Ionicons
-                  name="create"
-                  size={20}
-                  color={LightTheme.colors.primary}
-                  style={styles.inputIcon}
-                />
-                <TextInput
-                  style={[styles.input, { color: colors.text }]}
-                  placeholder="Enter custom category"
-                  placeholderTextColor="#999"
-                  value={category}
-                  onChangeText={setCategory}
-                />
-              </View>
-            )}
-
-            {/* Note Input */}
-            <View
-              style={[
-                styles.inputContainer,
-                { backgroundColor: isDark ? "#252525" : "#F8F9FA" },
-              ]}
-            >
-              <Ionicons
-                name="document-text"
-                size={20}
-                color={LightTheme.colors.primary}
-                style={styles.inputIcon}
-              />
-              <TextInput
-                style={[styles.input, styles.noteInput, { color: colors.text }]}
-                placeholder="Add a note (optional)"
-                placeholderTextColor="#999"
-                value={note}
-                onChangeText={setNote}
-                multiline
-                numberOfLines={3}
-              />
-            </View>
-
-            {/* Save Button */}
-            <TouchableOpacity
-              style={[
-                styles.saveButton,
-                isLoading && styles.saveButtonDisabled,
-              ]}
-              onPress={handleAdd}
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <ActivityIndicator color="white" size="small" />
-              ) : (
-                <>
-                  <Ionicons name="checkmark-circle" size={20} color="white" />
-                  <Text style={styles.saveButtonText}>
-                    {isLoading
-                      ? "Saving..."
-                      : isEditing
-                        ? "Update Transaction"
-                        : type === "expense"
-                          ? "Save Expense"
-                          : type === "income"
-                            ? "Save Income"
-                            : "Save Transfer"}
+                <View style={styles.dateModalHeader}>
+                  <Text
+                    style={[styles.dateModalTitle, { color: colors.text }]}
+                  >
+                    Choose category
                   </Text>
-                </>
-              )}
-            </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => setShowCategoryPicker(false)}
+                    accessibilityLabel="Close category selector"
+                  >
+                    <Ionicons name="close" size={24} color={colors.text} />
+                  </TouchableOpacity>
+                </View>
+                <ScrollView showsVerticalScrollIndicator={false}>
+                  <View style={styles.categoriesGrid}>
+                    {currentCategories.map((item, index) => (
+                      <TouchableOpacity
+                        key={index}
+                        style={[
+                          styles.categoryCard,
+                          {
+                            backgroundColor:
+                              category === item.name
+                                ? isDark
+                                  ? "rgba(59, 130, 246, 0.2)"
+                                  : "#E3F2FD"
+                                : isDark
+                                  ? "rgba(255, 255, 255, 0.04)"
+                                  : "#F8FAFC",
+                            borderColor: item.color,
+                          },
+                        ]}
+                        onPress={() => {
+                          handleCategorySelect(item);
+                          setShowCategoryPicker(false);
+                        }}
+                      >
+                        <View
+                          style={[
+                            styles.categoryIcon,
+                            { backgroundColor: item.color },
+                          ]}
+                        >
+                          <Ionicons
+                            name={item.icon}
+                            size={18}
+                            color="white"
+                          />
+                        </View>
+                        <Text
+                          style={[
+                            styles.categoryName,
+                            { color: colors.text },
+                          ]}
+                        >
+                          {item.name}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </ScrollView>
+              </View>
+            </View>
+          </Modal>
+        </View>
+
+        {/* Note Section Card */}
+        <View
+          style={[
+            styles.sectionCard,
+            {
+              backgroundColor: colors.surface,
+              borderColor: isDark
+                ? "rgba(255, 255, 255, 0.08)"
+                : "#E2E8F0",
+            },
+          ]}
+        >
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+            Note
+          </Text>
+          <View
+            style={[
+              styles.inputContainer,
+              {
+                backgroundColor: isDark
+                  ? "rgba(255, 255, 255, 0.04)"
+                  : "#F8FAFC",
+                borderColor: isDark
+                  ? "rgba(255, 255, 255, 0.08)"
+                  : "#E2E8F0",
+                marginBottom: 0,
+              },
+            ]}
+          >
+            <Ionicons
+              name="document-text"
+              size={20}
+              color={colors.primary}
+              style={styles.inputIcon}
+            />
+            <TextInput
+              style={[styles.input, styles.noteInput, { color: colors.text }]}
+              placeholder="Add a note (optional)"
+              placeholderTextColor="#999"
+              value={note}
+              onChangeText={setNote}
+              multiline
+              numberOfLines={3}
+            />
           </View>
-        </ScrollView>
-      </LinearGradient>
+        </View>
+
+        {/* Save Button */}
+        <TouchableOpacity
+          style={[
+            styles.saveButton,
+            { backgroundColor: colors.primary },
+            isLoading && styles.saveButtonDisabled,
+          ]}
+          onPress={handleAdd}
+          disabled={isLoading}
+          accessibilityRole="button"
+          accessibilityLabel={
+            isEditing
+              ? "Update Transaction"
+              : type === "expense"
+                ? "Save Expense"
+                : type === "income"
+                  ? "Save Income"
+                  : "Save Transfer"
+          }
+        >
+          {isLoading ? (
+            <ActivityIndicator color="white" size="small" />
+          ) : (
+            <>
+              <Ionicons name="checkmark-circle" size={20} color="white" />
+              <Text style={styles.saveButtonText}>
+                {isLoading
+                  ? "Saving..."
+                  : isEditing
+                    ? "Update Transaction"
+                    : type === "expense"
+                      ? "Save Expense"
+                      : type === "income"
+                        ? "Save Income"
+                        : "Save Transfer"}
+              </Text>
+            </>
+          )}
+        </TouchableOpacity>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
