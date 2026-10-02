@@ -4,7 +4,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   content: {
     padding: 20,
-    paddingBottom: 48,
+    paddingBottom: 56,
   },
 
   // ── Top bar ────────────────────────────────────────────────────────────────
@@ -12,44 +12,46 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 24,
+    marginBottom: 28,
   },
   title: {
     fontSize: 20,
     fontWeight: "700",
+    letterSpacing: -0.3,
   },
-  headerSpacer: { width: 24 },
+  headerSpacer: { width: 32 },
 
   // ── User identity card ─────────────────────────────────────────────────────
-  card: {
-    borderRadius: 16,
-    padding: 16,
+  identityCard: {
+    borderRadius: 20,
+    padding: 24,
     marginBottom: 8,
+    alignItems: "center",
   },
   avatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     justifyContent: "center",
     alignItems: "center",
-    alignSelf: "center",
-    marginBottom: 12,
+    marginBottom: 14,
   },
   avatarInitial: {
-    fontSize: 26,
+    fontSize: 28,
     fontWeight: "700",
     color: "white",
   },
   userName: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: "700",
     textAlign: "center",
-    marginBottom: 4,
+    marginBottom: 5,
+    letterSpacing: -0.2,
   },
   userEmail: {
     fontSize: 13,
     textAlign: "center",
-    opacity: 0.6,
+    opacity: 0.55,
   },
 
   // ── Section labels ─────────────────────────────────────────────────────────
@@ -57,23 +59,32 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "700",
     textTransform: "uppercase",
-    letterSpacing: 0.9,
-    opacity: 0.5,
-    marginTop: 20,
+    letterSpacing: 1.1,
+    opacity: 0.45,
+    marginTop: 24,
     marginBottom: 8,
-    marginLeft: 4,
+    marginLeft: 2,
+  },
+
+  // ── Generic card ───────────────────────────────────────────────────────────
+  card: {
+    borderRadius: 18,
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    marginBottom: 8,
   },
 
   // ── Appearance / theme selector ────────────────────────────────────────────
   themeRow: {
     flexDirection: "row",
     gap: 8,
+    paddingVertical: 10,
   },
   themeOption: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 12,
+    paddingVertical: 13,
     paddingHorizontal: 4,
     borderRadius: 12,
     gap: 6,
@@ -83,49 +94,77 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
-  // ── Account row ────────────────────────────────────────────────────────────
-  accountRow: {
+  // ── Settings rows (Account, etc.) ──────────────────────────────────────────
+  settingsRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    paddingVertical: 2,
+    paddingVertical: 14,
+    gap: 14,
   },
-  accountRowText: {
-    fontSize: 16,
+  settingsRowIconContainer: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  settingsRowLabel: {
+    flex: 1,
+    fontSize: 15,
     fontWeight: "600",
   },
 
   // ── About rows ─────────────────────────────────────────────────────────────
+  aboutCard: {
+    borderRadius: 18,
+    paddingHorizontal: 16,
+    paddingVertical: 4,
+    marginBottom: 8,
+  },
   aboutRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 7,
+    paddingVertical: 13,
+  },
+  aboutRowLeft: {
+    flex: 1,
   },
   aboutLabel: {
-    fontSize: 14,
-    opacity: 0.65,
+    fontSize: 15,
+    fontWeight: "600",
+  },
+  aboutSubLabel: {
+    fontSize: 12,
+    opacity: 0.5,
+    marginTop: 2,
   },
   aboutValue: {
     fontSize: 14,
-    fontWeight: "600",
+    fontWeight: "500",
+    opacity: 0.55,
   },
   aboutDivider: {
     height: 1,
-    marginVertical: 2,
+    opacity: 0.08,
   },
 
   // ── Danger zone / reset ────────────────────────────────────────────────────
-  dangerTitle: {
-    fontSize: 16,
-    fontWeight: "700",
+  dangerCard: {
+    borderRadius: 18,
+    padding: 16,
     marginBottom: 8,
   },
+  dangerTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    marginBottom: 6,
+  },
   description: {
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 14,
-    opacity: 0.75,
+    fontSize: 13,
+    lineHeight: 19,
+    marginBottom: 16,
+    opacity: 0.7,
   },
   input: {
     borderWidth: 1,
@@ -137,13 +176,13 @@ const styles = StyleSheet.create({
   deleteButton: {
     alignItems: "center",
     borderRadius: 10,
-    padding: 15,
+    paddingVertical: 14,
   },
-  disabledButton: { opacity: 0.6 },
+  disabledButton: { opacity: 0.5 },
   deleteButtonText: {
     color: "white",
     fontWeight: "700",
-    fontSize: 15,
+    fontSize: 14,
   },
 });
 

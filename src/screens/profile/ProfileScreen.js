@@ -142,15 +142,21 @@ export default function ProfileScreen({ navigation }) {
         </View>
 
         {/* ── User identity card ────────────────────────────────────────────── */}
-        <View style={[styles.card, { backgroundColor: colors.surface }]}>
+        <View style={[styles.identityCard, { backgroundColor: colors.surface }]}>
           <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
             <Text style={styles.avatarInitial}>{initial}</Text>
           </View>
-          <Text style={[styles.userName, { color: colors.text }]}>
+          <Text
+            style={[styles.userName, { color: colors.text }]}
+            numberOfLines={1}
+          >
             {headerName}
           </Text>
           {email ? (
-            <Text style={[styles.userEmail, { color: colors.text }]}>
+            <Text
+              style={[styles.userEmail, { color: colors.text }]}
+              numberOfLines={1}
+            >
               {email}
             </Text>
           ) : null}
@@ -203,14 +209,29 @@ export default function ProfileScreen({ navigation }) {
         </Text>
         <View style={[styles.card, { backgroundColor: colors.surface }]}>
           <TouchableOpacity
-            style={styles.accountRow}
+            style={styles.settingsRow}
             onPress={handleSignOut}
             accessibilityLabel="Sign out"
           >
-            <Ionicons name="log-out-outline" size={20} color={colors.error} />
-            <Text style={[styles.accountRowText, { color: colors.error }]}>
+            <View
+              style={[
+                styles.settingsRowIconContainer,
+                { backgroundColor: colors.background },
+              ]}
+            >
+              <Ionicons name="log-out-outline" size={18} color={colors.error} />
+            </View>
+            <Text
+              style={[styles.settingsRowLabel, { color: colors.error }]}
+            >
               Sign Out
             </Text>
+            <Ionicons
+              name="chevron-forward"
+              size={16}
+              color={colors.error}
+              style={{ opacity: 0.5 }}
+            />
           </TouchableOpacity>
         </View>
 
@@ -218,18 +239,18 @@ export default function ProfileScreen({ navigation }) {
         <Text style={[styles.sectionLabel, { color: colors.text }]}>
           About
         </Text>
-        <View style={[styles.card, { backgroundColor: colors.surface }]}>
+        <View style={[styles.aboutCard, { backgroundColor: colors.surface }]}>
           <View style={styles.aboutRow}>
-            <Text style={[styles.aboutLabel, { color: colors.text }]}>
-              App
-            </Text>
-            <Text style={[styles.aboutValue, { color: colors.text }]}>
-              My Money
-            </Text>
+            <View style={styles.aboutRowLeft}>
+              <Text style={[styles.aboutLabel, { color: colors.text }]}>
+                My Money
+              </Text>
+              <Text style={[styles.aboutSubLabel, { color: colors.text }]}>
+                Personal money manager
+              </Text>
+            </View>
           </View>
-          <View
-            style={[styles.aboutDivider, { backgroundColor: colors.background }]}
-          />
+          <View style={[styles.aboutDivider, { backgroundColor: colors.text }]} />
           <View style={styles.aboutRow}>
             <Text style={[styles.aboutLabel, { color: colors.text }]}>
               Version
@@ -244,12 +265,12 @@ export default function ProfileScreen({ navigation }) {
         <Text style={[styles.sectionLabel, { color: colors.text }]}>
           Data & Privacy
         </Text>
-        <View style={[styles.card, { backgroundColor: colors.surface }]}>
+        <View style={[styles.dangerCard, { backgroundColor: colors.surface }]}>
           <Text style={[styles.dangerTitle, { color: colors.error }]}>
             Reset Financial Data
           </Text>
           <Text style={[styles.description, { color: colors.text }]}>
-            Permanently delete all accounts, transactions, monthly plans,
+            Permanently deletes your accounts, transactions, monthly plans,
             budgets, and history. Your sign-in account will remain active.
           </Text>
           <TextInput

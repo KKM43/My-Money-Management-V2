@@ -785,41 +785,75 @@ export default function DashboardScreen({ navigation, route }) {
       >
         <View style={styles.drawerOverlay}>
           <View style={[styles.drawer, { backgroundColor: colors.surface }]}>
-            <View style={styles.drawerHeader}>
-              <View>
-                <Text style={[styles.drawerTitle, { color: colors.text }]}>
-                  My Money
-                </Text>
-                <Text style={[styles.drawerSubtitle, { color: colors.text }]}>
-                  Manage your finances
-                </Text>
+            <View style={styles.drawerNavSection}>
+              <View style={styles.drawerHeader}>
+                <View>
+                  <Text style={[styles.drawerTitle, { color: colors.text }]}>
+                    My Money
+                  </Text>
+                  <Text
+                    style={[styles.drawerSubtitle, { color: colors.text }]}
+                  >
+                    Manage your finances
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={[
+                    styles.drawerCloseButton,
+                    { backgroundColor: colors.background },
+                  ]}
+                  onPress={() => setShowDrawer(false)}
+                  accessibilityLabel="Close navigation menu"
+                >
+                  <Ionicons name="close" size={20} color={colors.text} />
+                </TouchableOpacity>
               </View>
-              <TouchableOpacity
-                onPress={() => setShowDrawer(false)}
-                accessibilityLabel="Close navigation menu"
-              >
-                <Ionicons name="close" size={24} color={colors.text} />
-              </TouchableOpacity>
+
+              <View
+                style={[
+                  styles.drawerDivider,
+                  { backgroundColor: colors.text },
+                ]}
+              />
+
+              {[
+                ["calendar-outline", "Monthly Plan", "MonthlyPlan"],
+                ["wallet-outline", "Accounts", "Accounts"],
+                ["person-outline", "Profile", "Profile"],
+              ].map(([icon, label, routeName]) => (
+                <TouchableOpacity
+                  key={routeName}
+                  style={[
+                    styles.drawerItem,
+                    { backgroundColor: "transparent" },
+                  ]}
+                  onPress={() => {
+                    setShowDrawer(false);
+                    navigation.navigate(routeName);
+                  }}
+                >
+                  <View
+                    style={[
+                      styles.drawerIconContainer,
+                      { backgroundColor: colors.background },
+                    ]}
+                  >
+                    <Ionicons name={icon} size={19} color={colors.primary} />
+                  </View>
+                  <Text
+                    style={[styles.drawerItemText, { color: colors.text }]}
+                  >
+                    {label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
             </View>
-            {[
-              ["calendar-outline", "Monthly Plan", "MonthlyPlan"],
-              ["wallet-outline", "Accounts", "Accounts"],
-              ["person-outline", "Profile", "Profile"],
-            ].map(([icon, label, routeName]) => (
-              <TouchableOpacity
-                key={routeName}
-                style={styles.drawerItem}
-                onPress={() => {
-                  setShowDrawer(false);
-                  navigation.navigate(routeName);
-                }}
-              >
-                <Ionicons name={icon} size={21} color={colors.primary} />
-                <Text style={[styles.drawerItemText, { color: colors.text }]}>
-                  {label}
-                </Text>
-              </TouchableOpacity>
-            ))}
+
+            <View style={styles.drawerFooter}>
+              <Text style={[styles.drawerFooterText, { color: colors.text }]}>
+                My Money · Personal Finance
+              </Text>
+            </View>
           </View>
           <TouchableOpacity
             style={styles.drawerBackdrop}
