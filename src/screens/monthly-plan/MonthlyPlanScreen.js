@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -691,6 +692,8 @@ export default function MonthlyPlanScreen({ navigation, route }) {
   };
 
   const handleSavePlan = async () => {
+    Keyboard.dismiss();
+
     if (isSaving || !isPlanDirty) {
       return;
     }
@@ -1037,31 +1040,50 @@ export default function MonthlyPlanScreen({ navigation, route }) {
                         },
                       ]}
                       placeholder="Income source"
-                      placeholderTextColor={colors.text + "55"}
+                      placeholderTextColor={colors.text + "66"}
                       value={source.name}
+                      autoCapitalize="words"
+                      autoCorrect={false}
                       editable={!isSaving}
                       onChangeText={(value) =>
                         updateIncomeSource(source.id, "name", value)
                       }
                     />
-                    <TextInput
+                    <View
                       style={[
-                        styles.amountInput,
+                        styles.amountInputWrapper,
                         {
-                          color: colors.text,
                           borderColor: colors.primary,
                           backgroundColor: colors.background,
                         },
                       ]}
-                      placeholder="Amount"
-                      placeholderTextColor={colors.text + "55"}
-                      keyboardType="decimal-pad"
-                      value={source.amount}
-                      editable={!isSaving}
-                      onChangeText={(value) =>
-                        updateIncomeSource(source.id, "amount", value)
-                      }
-                    />
+                    >
+                      <Text
+                        style={[
+                          styles.currencyPrefix,
+                          { color: colors.text },
+                        ]}
+                      >
+                        ₹
+                      </Text>
+                      <TextInput
+                        style={[
+                          styles.amountInput,
+                          {
+                            color: colors.text,
+                          },
+                        ]}
+                        placeholder="Amount"
+                        placeholderTextColor={colors.text + "66"}
+                        keyboardType="decimal-pad"
+                        inputMode="decimal"
+                        value={source.amount}
+                        editable={!isSaving}
+                        onChangeText={(value) =>
+                          updateIncomeSource(source.id, "amount", value)
+                        }
+                      />
+                    </View>
                     <TouchableOpacity
                       style={[
                         styles.removeButton,
@@ -1170,31 +1192,50 @@ export default function MonthlyPlanScreen({ navigation, route }) {
                         },
                       ]}
                       placeholder="Commitment"
-                      placeholderTextColor={colors.text + "55"}
+                      placeholderTextColor={colors.text + "66"}
                       value={commitment.name}
+                      autoCapitalize="words"
+                      autoCorrect={false}
                       editable={!isSaving}
                       onChangeText={(value) =>
                         updateFixedCommitment(commitment.id, "name", value)
                       }
                     />
-                    <TextInput
+                    <View
                       style={[
-                        styles.amountInput,
+                        styles.amountInputWrapper,
                         {
-                          color: colors.text,
                           borderColor: colors.primary,
                           backgroundColor: colors.background,
                         },
                       ]}
-                      placeholder="Amount"
-                      placeholderTextColor={colors.text + "55"}
-                      keyboardType="decimal-pad"
-                      value={commitment.amount}
-                      editable={!isSaving}
-                      onChangeText={(value) =>
-                        updateFixedCommitment(commitment.id, "amount", value)
-                      }
-                    />
+                    >
+                      <Text
+                        style={[
+                          styles.currencyPrefix,
+                          { color: colors.text },
+                        ]}
+                      >
+                        ₹
+                      </Text>
+                      <TextInput
+                        style={[
+                          styles.amountInput,
+                          {
+                            color: colors.text,
+                          },
+                        ]}
+                        placeholder="Amount"
+                        placeholderTextColor={colors.text + "66"}
+                        keyboardType="decimal-pad"
+                        inputMode="decimal"
+                        value={commitment.amount}
+                        editable={!isSaving}
+                        onChangeText={(value) =>
+                          updateFixedCommitment(commitment.id, "amount", value)
+                        }
+                      />
+                    </View>
                     <TouchableOpacity
                       style={[
                         styles.removeButton,
@@ -1386,32 +1427,64 @@ export default function MonthlyPlanScreen({ navigation, route }) {
             </View>
 
             <View style={styles.row}>
-              <Text
-                style={[
-                  styles.label,
-                  {
-                    color: colors.text,
-                  },
-                ]}
-              >
-                Savings target
-              </Text>
-
-              {isEditing ? (
-                <TextInput
+              <View style={styles.savingsLabelCol}>
+                <Text
                   style={[
-                    styles.savingsInput,
+                    styles.label,
                     {
                       color: colors.text,
+                      marginRight: 0,
+                    },
+                  ]}
+                >
+                  Savings target
+                </Text>
+                <Text
+                  style={[
+                    styles.savingsHelperText,
+                    {
+                      color: colors.text,
+                    },
+                  ]}
+                >
+                  Set aside before variable spending
+                </Text>
+              </View>
+
+              {isEditing ? (
+                <View
+                  style={[
+                    styles.savingsInputWrapper,
+                    {
                       borderColor: colors.primary,
                       backgroundColor: colors.background,
                     },
                   ]}
-                  keyboardType="decimal-pad"
-                  value={draftSavingsTarget}
-                  editable={!isSaving}
-                  onChangeText={handleSavingsChange}
-                />
+                >
+                  <Text
+                    style={[
+                      styles.currencyPrefix,
+                      { color: colors.text },
+                    ]}
+                  >
+                    ₹
+                  </Text>
+                  <TextInput
+                    style={[
+                      styles.savingsInput,
+                      {
+                        color: colors.text,
+                      },
+                    ]}
+                    placeholder="0"
+                    placeholderTextColor={colors.text + "66"}
+                    keyboardType="decimal-pad"
+                    inputMode="decimal"
+                    value={draftSavingsTarget}
+                    editable={!isSaving}
+                    onChangeText={handleSavingsChange}
+                  />
+                </View>
               ) : (
                 <Text
                   style={[

@@ -198,12 +198,24 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
     fontSize: 14,
   },
-  amountInput: {
-    width: 100,
+  amountInputWrapper: {
+    width: 114,
+    flexDirection: "row",
+    alignItems: "center",
     borderWidth: 1,
     borderRadius: 10,
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
+  },
+  currencyPrefix: {
+    fontSize: 13,
+    fontWeight: "600",
+    opacity: 0.65,
+    marginRight: 2,
+  },
+  amountInput: {
+    flex: 1,
     paddingVertical: 9,
+    paddingHorizontal: 0,
     fontSize: 14,
     textAlign: "right",
   },
@@ -225,12 +237,27 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "600",
   },
-  savingsInput: {
-    width: 110,
+  savingsLabelCol: {
+    flex: 1,
+    marginRight: 10,
+  },
+  savingsHelperText: {
+    fontSize: 11,
+    opacity: 0.5,
+    marginTop: 2,
+  },
+  savingsInputWrapper: {
+    width: 114,
+    flexDirection: "row",
+    alignItems: "center",
     borderWidth: 1,
     borderRadius: 10,
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
+  },
+  savingsInput: {
+    flex: 1,
     paddingVertical: 8,
+    paddingHorizontal: 0,
     textAlign: "right",
     fontSize: 14,
   },
