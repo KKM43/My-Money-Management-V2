@@ -57,6 +57,7 @@ export function ThemeProvider({ children }) {
       isDark,
       themeMode,
       cycleThemeMode,
+      setThemeMode: changeThemeMode,
     }),
     [isDark, themeMode],
   );
