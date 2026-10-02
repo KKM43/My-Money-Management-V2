@@ -1,38 +1,43 @@
 import React, { useState } from "react";
-import { 
-  View, 
-  TextInput, 
-  Text, 
-  StyleSheet, 
-  Alert, 
-  TouchableOpacity, 
+import {
+  View,
+  TextInput,
+  Text,
+  StyleSheet,
+  Alert,
+  TouchableOpacity,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Dimensions
+  Dimensions,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../../services/firebaseConfig";
-import { LightTheme } from "../../theme/theme";
+import { useTheme } from "../../theme/ThemeContext";
 import WalletIcon from "../../components/common/WalletIcon";
 
-const { width, height } = Dimensions.get('window');
+const { width, height } = Dimensions.get("window");
 
 export default function LoginScreen({ navigation }) {
+  const { colors, isDark } = useTheme();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  const gradientColors = isDark
+    ? ["#1E3A8A", "#065F46"]
+    : [colors.primary, colors.secondary];
 
   const handleLogin = async () => {
     if (!email || !password) {
       Alert.alert("Error", "Please fill in all fields");
       return;
     }
-    
+
     setIsLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
@@ -45,23 +50,23 @@ export default function LoginScreen({ navigation }) {
   };
 
   return (
-    <KeyboardAvoidingView 
-      style={styles.container} 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <LinearGradient
-        colors={[LightTheme.colors.primary, LightTheme.colors.secondary]}
+        colors={gradientColors}
         style={styles.gradient}
       >
-        <ScrollView 
+        <ScrollView
           contentContainerStyle={styles.scrollContainer}
           showsVerticalScrollIndicator={false}
         >
           {/* Header Section */}
           <View style={styles.headerSection}>
-            <WalletIcon 
-              size={60} 
-              color="white" 
+            <WalletIcon
+              size={60}
+              color="white"
               backgroundColor="rgba(255, 255, 255, 0.2)"
               style={styles.logoContainer}
             />
@@ -70,13 +75,30 @@ export default function LoginScreen({ navigation }) {
           </View>
 
           {/* Login Form Card */}
-          <View style={styles.formCard}>
-            <View style={styles.inputContainer}>
-              <Ionicons name="mail-outline" size={20} color={LightTheme.colors.primary} style={styles.inputIcon} />
+          <View
+            style={[
+              styles.formCard,
+              isDark && {
+                backgroundColor: colors.surface,
+                borderColor: "rgba(255, 255, 255, 0.1)",
+                borderWidth: 1,
+              },
+            ]}
+          >
+            <View
+              style={[
+                styles.inputContainer,
+                isDark && {
+                  backgroundColor: "#2A2A2A",
+                  borderColor: "rgba(255, 255, 255, 0.12)",
+                },
+              ]}
+            >
+              <Ionicons name="mail-outline" size={20} color={colors.primary} style={styles.inputIcon} />
               <TextInput
-                style={styles.input}
+                style={[styles.input, isDark && { color: colors.text }]}
                 placeholder="Email"
-                placeholderTextColor="#999"
+                placeholderTextColor={isDark ? "rgba(255, 255, 255, 0.45)" : "#999"}
                 onChangeText={setEmail}
                 value={email}
                 keyboardType="email-address"
@@ -85,33 +107,45 @@ export default function LoginScreen({ navigation }) {
               />
             </View>
 
-            <View style={styles.inputContainer}>
-              <Ionicons name="lock-closed-outline" size={20} color={LightTheme.colors.primary} style={styles.inputIcon} />
+            <View
+              style={[
+                styles.inputContainer,
+                isDark && {
+                  backgroundColor: "#2A2A2A",
+                  borderColor: "rgba(255, 255, 255, 0.12)",
+                },
+              ]}
+            >
+              <Ionicons name="lock-closed-outline" size={20} color={colors.primary} style={styles.inputIcon} />
               <TextInput
-                style={styles.input}
+                style={[styles.input, isDark && { color: colors.text }]}
                 placeholder="Password"
-                placeholderTextColor="#999"
+                placeholderTextColor={isDark ? "rgba(255, 255, 255, 0.45)" : "#999"}
                 secureTextEntry={!showPassword}
                 onChangeText={setPassword}
                 value={password}
                 autoCapitalize="none"
                 autoCorrect={false}
               />
-              <TouchableOpacity 
+              <TouchableOpacity
                 onPress={() => setShowPassword(!showPassword)}
                 style={styles.eyeIcon}
               >
-                <Ionicons 
-                  name={showPassword ? "eye-off-outline" : "eye-outline"} 
-                  size={20} 
-                  color="#999" 
+                <Ionicons
+                  name={showPassword ? "eye-off-outline" : "eye-outline"}
+                  size={20}
+                  color={isDark ? "rgba(255, 255, 255, 0.55)" : "#999"}
                 />
               </TouchableOpacity>
             </View>
 
             {/* Login Button */}
-            <TouchableOpacity 
-              style={[styles.loginButton, isLoading && styles.loginButtonDisabled]} 
+            <TouchableOpacity
+              style={[
+                styles.loginButton,
+                { backgroundColor: colors.primary },
+                isLoading && (isDark ? styles.loginButtonDisabledDark : styles.loginButtonDisabled),
+              ]}
               onPress={handleLogin}
               disabled={isLoading}
             >
@@ -124,9 +158,9 @@ export default function LoginScreen({ navigation }) {
 
             {/* Sign Up Link */}
             <View style={styles.signupContainer}>
-              <Text style={styles.signupText}>Don't have an account? </Text>
+              <Text style={[styles.signupText, isDark && { color: "#A0AEC0" }]}>Don't have an account? </Text>
               <TouchableOpacity onPress={() => navigation.navigate("Signup")}>
-                <Text style={styles.signupLink}>Sign Up</Text>
+                <Text style={[styles.signupLink, { color: colors.primary }]}>Sign Up</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -145,12 +179,12 @@ const styles = StyleSheet.create({
   },
   scrollContainer: {
     flexGrow: 1,
-    justifyContent: 'center',
+    justifyContent: "center",
     paddingHorizontal: 20,
     paddingVertical: 40,
   },
   headerSection: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 40,
   },
   logoContainer: {
@@ -158,21 +192,21 @@ const styles = StyleSheet.create({
   },
   welcomeText: {
     fontSize: 32,
-    fontWeight: 'bold',
-    color: 'white',
+    fontWeight: "bold",
+    color: "white",
     marginBottom: 8,
-    textAlign: 'center',
+    textAlign: "center",
   },
   subtitleText: {
     fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.8)',
-    textAlign: 'center',
+    color: "rgba(255, 255, 255, 0.8)",
+    textAlign: "center",
   },
   formCard: {
-    backgroundColor: 'white',
+    backgroundColor: "white",
     borderRadius: 20,
     padding: 30,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: 10,
@@ -182,14 +216,14 @@ const styles = StyleSheet.create({
     elevation: 15,
   },
   inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F8F9FA',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F8F9FA",
     borderRadius: 12,
     marginBottom: 20,
     paddingHorizontal: 15,
     borderWidth: 1,
-    borderColor: '#E9ECEF',
+    borderColor: "#E9ECEF",
   },
   inputIcon: {
     marginRight: 12,
@@ -198,18 +232,18 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 15,
     fontSize: 16,
-    color: LightTheme.colors.text,
+    color: "#222",
   },
   eyeIcon: {
     padding: 5,
   },
   loginButton: {
-    backgroundColor: LightTheme.colors.primary,
+    backgroundColor: "#4D96FF",
     borderRadius: 12,
     paddingVertical: 16,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 10,
-    shadowColor: LightTheme.colors.primary,
+    shadowColor: "#4D96FF",
     shadowOffset: {
       width: 0,
       height: 4,
@@ -219,28 +253,33 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   loginButtonDisabled: {
-    backgroundColor: '#B0BEC5',
+    backgroundColor: "#B0BEC5",
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  loginButtonDisabledDark: {
+    backgroundColor: "#374151",
     shadowOpacity: 0,
     elevation: 0,
   },
   loginButtonText: {
-    color: 'white',
+    color: "white",
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   signupContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
     marginTop: 25,
   },
   signupText: {
     fontSize: 16,
-    color: '#666',
+    color: "#666",
   },
   signupLink: {
     fontSize: 16,
-    color: LightTheme.colors.primary,
-    fontWeight: 'bold',
+    color: "#4D96FF",
+    fontWeight: "bold",
   },
 });
