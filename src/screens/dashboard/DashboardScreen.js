@@ -271,13 +271,19 @@ export default function DashboardScreen({ navigation, route }) {
     setCurrentYear(now.getFullYear());
   };
 
+  // Progress bar: fraction of plannedSpendable that has been spent
+  const spentFraction =
+    plannedSpendablePaise > 0
+      ? Math.min(variableSpentPaise / plannedSpendablePaise, 1)
+      : 0;
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* ?? Header ??????????????????????????????????????????????????? */}
       <LinearGradient
         colors={[colors.primary, colors.secondary]}
         style={styles.headerGradient}
       >
-        {/* Header Section */}
         <View style={styles.headerSection}>
           <View style={styles.headerTop}>
             <View style={styles.headerLeft}>
@@ -290,7 +296,7 @@ export default function DashboardScreen({ navigation, route }) {
                 onPress={() => setShowDrawer(true)}
                 accessibilityLabel="Open navigation menu"
               >
-                <Ionicons name="menu-outline" size={28} color="white" />
+                <Ionicons name="menu-outline" size={26} color="white" />
               </TouchableOpacity>
             </View>
           </View>
@@ -301,7 +307,7 @@ export default function DashboardScreen({ navigation, route }) {
               style={styles.monthNavButton}
               onPress={() => navigateMonth("prev")}
             >
-              <Ionicons name="chevron-back" size={20} color="white" />
+              <Ionicons name="chevron-back" size={18} color="white" />
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -310,8 +316,8 @@ export default function DashboardScreen({ navigation, route }) {
             >
               <Ionicons
                 name="calendar-outline"
-                size={16}
-                color="rgba(255, 255, 255, 0.8)"
+                size={14}
+                color="rgba(255,255,255,0.8)"
               />
               <Text style={styles.monthDisplayText}>{selectedMonthLabel}</Text>
             </TouchableOpacity>
@@ -320,124 +326,191 @@ export default function DashboardScreen({ navigation, route }) {
               style={styles.monthNavButton}
               onPress={() => navigateMonth("next")}
             >
-              <Ionicons name="chevron-forward" size={20} color="white" />
+              <Ionicons name="chevron-forward" size={18} color="white" />
             </TouchableOpacity>
           </View>
+        </View>
+      </LinearGradient>
 
-          {/* Lean V2 Money Status */}
-          {isPlanLoading ? (
-            <View
-              style={[styles.leanHeroCard, { backgroundColor: colors.surface }]}
-            >
-              <Text style={[styles.leanLoadingText, { color: colors.text }]}>
-                Loading your monthly plan...
-              </Text>
-            </View>
-          ) : monthlyPlan ? (
-            <View
-              style={[styles.leanHeroCard, { backgroundColor: colors.surface }]}
-            >
-              <Text style={[styles.leanHeroLabel, { color: colors.text }]}>
-                Remaining to Spend
-              </Text>
+      {/* ?? Scrollable Body ?????????????????????????????????????????? */}
+      <ScrollView
+        style={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
+        {/* ?? Hero Card ???????????????????????????????????????????????? */}
+        {isPlanLoading ? (
+          <View style={[styles.leanHeroCard, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.leanLoadingText, { color: colors.text }]}>
+              Loading your monthly plan...
+            </Text>
+          </View>
+        ) : monthlyPlan ? (
+          <View style={[styles.leanHeroCard, { backgroundColor: colors.surface }]}>
+            {/* Primary: Safe to Spend / Day (current month) OR Remaining (other) */}
+            {isCurrentMonthSelected ? (
+              <>
+                <Text style={[styles.heroLabel, { color: colors.text }]}>
+                  Safe to spend today
+                </Text>
+                <Text
+                  style={[
+                    styles.heroPrimaryAmount,
+                    {
+                      color:
+                        safeToSpendPerDayPaise >= 0
+                          ? colors.primary
+                          : "#D32F2F",
+                    },
+                  ]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                >
+                  {formatPaise(safeToSpendPerDayPaise)}
+                </Text>
 
-              <Text
-                style={[
-                  styles.leanHeroAmount,
-                  {
-                    color:
-                      remainingSpendablePaise >= 0 ? colors.primary : "#D32F2F",
-                  },
-                ]}
-              >
-                {formatPaise(remainingSpendablePaise)}
-              </Text>
-
-              <View style={styles.leanHeroDivider} />
-
-              <View style={styles.leanSafeRow}>
-                <View style={styles.leanSafeValueContainer}>
-                  <Text style={[styles.leanSafeLabel, { color: colors.text }]}>
-                    {isCurrentMonthSelected
-                      ? "Safe to Spend / Day"
-                      : "Planned Spendable"}
-                  </Text>
-
+                {/* Secondary row */}
+                <View style={styles.heroSecondaryRow}>
                   <Text
                     style={[
-                      styles.leanSafeAmount,
+                      styles.heroRemainingText,
                       {
                         color:
-                          isCurrentMonthSelected && safeToSpendPerDayPaise < 0
-                            ? "#D32F2F"
-                            : colors.text,
+                          remainingSpendablePaise >= 0
+                            ? colors.text
+                            : "#D32F2F",
                       },
                     ]}
                   >
-                    {isCurrentMonthSelected
-                      ? formatPaise(safeToSpendPerDayPaise)
-                      : formatPaise(plannedSpendablePaise)}
+                    {formatPaise(remainingSpendablePaise)} left this month
                   </Text>
-                </View>
-
-                {isCurrentMonthSelected && (
-                  <View style={styles.daysBadge}>
+                  <View style={styles.heroDaysBadge}>
                     <Ionicons
-                      name="calendar-outline"
-                      size={16}
+                      name="time-outline"
+                      size={13}
                       color={colors.primary}
                     />
-
                     <Text
-                      style={[styles.daysBadgeText, { color: colors.text }]}
+                      style={[styles.heroDaysText, { color: colors.primary }]}
                     >
                       {daysRemaining}{" "}
                       {daysRemaining === 1 ? "day left" : "days left"}
                     </Text>
                   </View>
+                </View>
+
+                {/* Progress bar */}
+                {plannedSpendablePaise > 0 && (
+                  <>
+                    <View style={styles.heroProgressTrack}>
+                      <View
+                        style={[
+                          styles.heroProgressBar,
+                          {
+                            width: `${Math.round(spentFraction * 100)}%`,
+                            backgroundColor:
+                              spentFraction >= 1 ? "#D32F2F" : colors.primary,
+                          },
+                        ]}
+                      />
+                    </View>
+                    <Text
+                      style={[styles.heroProgressLabel, { color: colors.text }]}
+                    >
+                      {formatPaise(variableSpentPaise)} spent of{" "}
+                      {formatPaise(plannedSpendablePaise)}
+                    </Text>
+                  </>
                 )}
-              </View>
-            </View>
-          ) : (
-            <View
-              style={[styles.leanHeroCard, { backgroundColor: colors.surface }]}
+              </>
+            ) : (
+              /* Past / future month: show Remaining to Spend as hero */
+              <>
+                <Text style={[styles.heroLabel, { color: colors.text }]}>
+                  Planned spendable
+                </Text>
+                <Text
+                  style={[
+                    styles.heroPrimaryAmount,
+                    {
+                      color:
+                        plannedSpendablePaise >= 0
+                          ? colors.primary
+                          : "#D32F2F",
+                    },
+                  ]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                >
+                  {formatPaise(plannedSpendablePaise)}
+                </Text>
+
+                <View style={styles.heroSecondaryRow}>
+                  <Text
+                    style={[
+                      styles.heroRemainingText,
+                      {
+                        color:
+                          remainingSpendablePaise >= 0
+                            ? colors.text
+                            : "#D32F2F",
+                      },
+                    ]}
+                  >
+                    {formatPaise(remainingSpendablePaise)} remaining
+                  </Text>
+                </View>
+
+                {plannedSpendablePaise > 0 && (
+                  <>
+                    <View style={styles.heroProgressTrack}>
+                      <View
+                        style={[
+                          styles.heroProgressBar,
+                          {
+                            width: `${Math.round(spentFraction * 100)}%`,
+                            backgroundColor:
+                              spentFraction >= 1 ? "#D32F2F" : colors.primary,
+                          },
+                        ]}
+                      />
+                    </View>
+                    <Text
+                      style={[styles.heroProgressLabel, { color: colors.text }]}
+                    >
+                      {formatPaise(variableSpentPaise)} spent of{" "}
+                      {formatPaise(plannedSpendablePaise)}
+                    </Text>
+                  </>
+                )}
+              </>
+            )}
+          </View>
+        ) : (
+          <View style={[styles.leanHeroCard, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.noPlanTitle, { color: colors.text }]}>
+              No monthly plan
+            </Text>
+            <Text style={[styles.noPlanText, { color: colors.text }]}>
+              No monthly plan for {selectedMonthLabel}.
+            </Text>
+            <TouchableOpacity
+              style={[styles.noPlanButton, { backgroundColor: colors.primary }]}
+              onPress={() =>
+                navigation.navigate("MonthlyPlan", {
+                  monthKey: selectedMonthKey,
+                })
+              }
             >
-              <Text style={[styles.noPlanTitle, { color: colors.text }]}>
-                No monthly plan
-              </Text>
+              <Ionicons name="add-circle-outline" size={18} color="white" />
+              <Text style={styles.noPlanButtonText}>Set Up This Month</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
-              <Text style={[styles.noPlanText, { color: colors.text }]}>
-                No monthly plan for {selectedMonthLabel}.
-              </Text>
-              <TouchableOpacity
-                style={[
-                  styles.noPlanButton,
-                  {
-                    backgroundColor: colors.primary,
-                  },
-                ]}
-                onPress={() =>
-                  navigation.navigate("MonthlyPlan", {
-                    monthKey: selectedMonthKey,
-                  })
-                }
-              >
-                <Ionicons name="add-circle-outline" size={20} color="white" />
-
-                <Text style={styles.noPlanButtonText}>Set Up This Month</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </View>
-      </LinearGradient>
-
-      <ScrollView
-        style={styles.contentContainer}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-      >
-        {/* Lean V2 Plan Summary */}
+        {/* ?? Your Plan Card ??????????????????????????????????????????? */}
         {!isPlanLoading && monthlyPlan && (
           <View
             style={[
@@ -447,17 +520,17 @@ export default function DashboardScreen({ navigation, route }) {
           >
             <View style={styles.planSummaryHeader}>
               <View>
-                <Text style={[styles.planSummaryTitle, { color: colors.text }]}>
+                <Text
+                  style={[styles.planSummaryTitle, { color: colors.text }]}
+                >
                   Your Plan
                 </Text>
-
                 <Text
                   style={[styles.planSummarySubtitle, { color: colors.text }]}
                 >
                   {selectedMonthLabel}
                 </Text>
               </View>
-
               <TouchableOpacity
                 style={styles.planEditButton}
                 onPress={() =>
@@ -469,7 +542,7 @@ export default function DashboardScreen({ navigation, route }) {
               >
                 <Ionicons
                   name="create-outline"
-                  size={22}
+                  size={20}
                   color={colors.primary}
                 />
               </TouchableOpacity>
@@ -479,7 +552,6 @@ export default function DashboardScreen({ navigation, route }) {
               <Text style={[styles.planLabel, { color: colors.text }]}>
                 Income
               </Text>
-
               <Text style={[styles.planValue, { color: colors.text }]}>
                 {formatPaise(plannedIncomePaise)}
               </Text>
@@ -489,7 +561,6 @@ export default function DashboardScreen({ navigation, route }) {
               <Text style={[styles.planLabel, { color: colors.text }]}>
                 Fixed commitments
               </Text>
-
               <Text style={[styles.planValue, { color: colors.text }]}>
                 {formatPaise(plannedFixedPaise)}
               </Text>
@@ -499,19 +570,17 @@ export default function DashboardScreen({ navigation, route }) {
               <Text style={[styles.planLabel, { color: colors.text }]}>
                 Savings target
               </Text>
-
               <Text style={[styles.planValue, { color: colors.text }]}>
                 {formatPaise(savingsTargetPaise)}
               </Text>
             </View>
 
-            <View style={styles.planDivider} />
+            <View style={[styles.planDivider, { backgroundColor: colors.text }]} />
 
             <View style={styles.planRow}>
               <Text style={[styles.planLabel, { color: colors.text }]}>
-                Planned spendable
+                Spendable
               </Text>
-
               <Text
                 style={[
                   styles.planValueStrong,
@@ -524,72 +593,33 @@ export default function DashboardScreen({ navigation, route }) {
                 {formatPaise(plannedSpendablePaise)}
               </Text>
             </View>
-
-            <View style={styles.planRow}>
-              <Text style={[styles.planLabel, { color: colors.text }]}>
-                Spent so far
-              </Text>
-
-              <Text style={[styles.planValue, { color: colors.text }]}>
-                {formatPaise(variableSpentPaise)}
-              </Text>
-            </View>
-
-            <View style={styles.planRow}>
-              <Text style={[styles.planLabel, { color: colors.text }]}>
-                Remaining
-              </Text>
-
-              <Text
-                style={[
-                  styles.planValueStrong,
-                  {
-                    color:
-                      remainingSpendablePaise >= 0 ? colors.primary : "#D32F2F",
-                  },
-                ]}
-              >
-                {formatPaise(remainingSpendablePaise)}
-              </Text>
-            </View>
-
-            {isCurrentMonthSelected && (
-              <View style={styles.planRow}>
-                <Text style={[styles.planLabel, { color: colors.text }]}>
-                  Days remaining
-                </Text>
-
-                <Text style={[styles.planValue, { color: colors.text }]}>
-                  {daysRemaining}
-                </Text>
-              </View>
-            )}
           </View>
         )}
 
-        {/* Spending Summary */}
-        <View
-          style={[styles.spendingCard, { backgroundColor: colors.surface }]}
-        >
+        {/* ?? Spending Summary ????????????????????????????????????????? */}
+        <View style={[styles.spendingCard, { backgroundColor: colors.surface }]}>
           <View style={styles.spendingHeader}>
             <View>
               <Text style={[styles.spendingTitle, { color: colors.text }]}>
-                Spending Summary
+                Spending this month
               </Text>
-              <Text style={[styles.spendingSubtitle, { color: colors.text }]}>
-                Top categories this month
+              <Text
+                style={[styles.spendingSubtitle, { color: colors.text }]}
+              >
+                Top categories
               </Text>
             </View>
             <Ionicons
               name="pie-chart-outline"
-              size={22}
+              size={20}
               color={colors.primary}
             />
           </View>
+
           {spendingCategories.length === 0 ? (
             <View style={styles.spendingEmptyState}>
               <Text style={[styles.spendingEmptyText, { color: colors.text }]}>
-                No category spending yet
+                No expenses recorded yet
               </Text>
             </View>
           ) : (
@@ -601,7 +631,9 @@ export default function DashboardScreen({ navigation, route }) {
                   >
                     {category}
                   </Text>
-                  <Text style={[styles.spendingAmount, { color: colors.text }]}>
+                  <Text
+                    style={[styles.spendingAmount, { color: colors.text }]}
+                  >
                     {formatPaise(Math.round(amount * 100))}
                   </Text>
                 </View>
@@ -624,7 +656,7 @@ export default function DashboardScreen({ navigation, route }) {
           )}
         </View>
 
-        {/* Primary Action */}
+        {/* ?? Add Expense ?????????????????????????????????????????????? */}
         <View style={styles.quickActions}>
           <TouchableOpacity
             style={styles.quickActionButton}
@@ -638,111 +670,99 @@ export default function DashboardScreen({ navigation, route }) {
             <LinearGradient
               colors={[colors.primary, colors.secondary]}
               style={styles.quickActionGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
             >
-              <Ionicons name="remove-circle-outline" size={24} color="white" />
-
+              <Ionicons name="add-circle-outline" size={22} color="white" />
               <Text style={styles.quickActionText}>Add Expense</Text>
             </LinearGradient>
           </TouchableOpacity>
         </View>
 
-        <View
-          style={[styles.searchContainer, { backgroundColor: colors.surface }]}
-        >
-          <Ionicons
-            name="search-outline"
-            size={20}
-            color="#666"
-            style={styles.searchIcon}
-          />
-          <TextInput
-            style={[styles.searchInput, { color: colors.text }]}
-            placeholder="Search category or note"
-            placeholderTextColor="#999"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            autoCapitalize="none"
-          />
-          {searchQuery || selectedFilter !== "all" ? (
-            <TouchableOpacity
-              style={styles.clearSearchButton}
-              onPress={clearSearchAndFilters}
-            >
-              <Ionicons name="close-circle" size={20} color="#999" />
-            </TouchableOpacity>
-          ) : null}
-        </View>
+        {/* ?? Recent Transactions ?????????????????????????????????????? */}
+        <View style={styles.transactionsContainer}>
+          <View style={styles.txSectionHeader}>
+            <Text style={[styles.transactionsTitle, { color: colors.text }]}>
+              Recent Transactions ({filteredTransactions.length})
+            </Text>
+          </View>
 
-        {/* Filter Tabs */}
-        <View
-          style={[styles.filterContainer, { backgroundColor: colors.surface }]}
-        >
-          <TouchableOpacity
+          {/* Search */}
+          <View
             style={[
-              styles.filterTab,
-              selectedFilter === "all" && styles.filterTabActive,
+              styles.searchContainer,
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.text + "30",
+              },
             ]}
-            onPress={() => setSelectedFilter("all")}
           >
-            <Text
-              style={[
-                styles.filterText,
-                { color: colors.text },
-                selectedFilter === "all" && styles.filterTextActive,
-              ]}
-            >
-              All
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.filterTab,
-              selectedFilter === "income" && styles.filterTabActive,
-            ]}
-            onPress={() => setSelectedFilter("income")}
-          >
-            <Text
-              style={[
-                styles.filterText,
-                { color: colors.text },
-                selectedFilter === "income" && styles.filterTextActive,
-              ]}
-            >
-              Income
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.filterTab,
-              selectedFilter === "expense" && styles.filterTabActive,
-            ]}
-            onPress={() => setSelectedFilter("expense")}
-          >
-            <Text
-              style={[
-                styles.filterText,
-                { color: colors.text },
-                selectedFilter === "expense" && styles.filterTextActive,
-              ]}
-            >
-              Expenses
-            </Text>
-          </TouchableOpacity>
-        </View>
+            <Ionicons
+              name="search-outline"
+              size={18}
+              color={colors.text + "80"}
+              style={styles.searchIcon}
+            />
+            <TextInput
+              style={[styles.searchInput, { color: colors.text }]}
+              placeholder="Search category or note"
+              placeholderTextColor={colors.text + "55"}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              autoCapitalize="none"
+            />
+            {searchQuery || selectedFilter !== "all" ? (
+              <TouchableOpacity
+                style={styles.clearSearchButton}
+                onPress={clearSearchAndFilters}
+              >
+                <Ionicons
+                  name="close-circle"
+                  size={18}
+                  color={colors.text + "80"}
+                />
+              </TouchableOpacity>
+            ) : null}
+          </View>
 
-        {/* Transactions List */}
-        <View
-          style={[
-            styles.transactionsContainer,
-            { backgroundColor: colors.surface },
-          ]}
-        >
-          <Text style={[styles.transactionsTitle, { color: colors.text }]}>
-            Recent Transactions ({filteredTransactions.length})
-          </Text>
+          {/* Filter Tabs */}
+          <View
+            style={[
+              styles.filterContainer,
+              { backgroundColor: colors.surface + "CC" },
+            ]}
+          >
+            {[
+              { key: "all", label: "All" },
+              { key: "income", label: "Income" },
+              { key: "expense", label: "Expenses" },
+            ].map(({ key, label }) => (
+              <TouchableOpacity
+                key={key}
+                style={[
+                  styles.filterTab,
+                  selectedFilter === key && styles.filterTabActive,
+                  selectedFilter === key && { backgroundColor: colors.primary },
+                ]}
+                onPress={() => setSelectedFilter(key)}
+              >
+                <Text
+                  style={[
+                    styles.filterText,
+                    { color: colors.text + "99" },
+                    selectedFilter === key && styles.filterTextActive,
+                  ]}
+                >
+                  {label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* Transaction list */}
           {filteredTransactions.length === 0 ? (
             <View style={styles.emptyState}>
-              <Ionicons name="receipt-outline" size={64} color="#ccc" />
+              <Ionicons name="receipt-outline" size={52} color={colors.text + "40"} />
               <Text style={[styles.emptyText, { color: colors.text }]}>
                 No transactions found
               </Text>
@@ -777,6 +797,8 @@ export default function DashboardScreen({ navigation, route }) {
           )}
         </View>
       </ScrollView>
+
+      {/* ?? Sidebar / Drawer ????????????????????????????????????????? */}
       <Modal
         visible={showDrawer}
         transparent
@@ -851,7 +873,7 @@ export default function DashboardScreen({ navigation, route }) {
 
             <View style={styles.drawerFooter}>
               <Text style={[styles.drawerFooterText, { color: colors.text }]}>
-                My Money · Personal Finance
+                My Money ? Personal Finance
               </Text>
             </View>
           </View>
