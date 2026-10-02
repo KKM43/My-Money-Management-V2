@@ -3,6 +3,8 @@ import {
   ActivityIndicator,
   Animated,
   Alert,
+  Keyboard,
+  KeyboardAvoidingView,
   Modal,
   PanResponder,
   Platform,
@@ -269,9 +271,11 @@ export default function AccountsScreen({ navigation }) {
   const [openingBalance, setOpeningBalance] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isCreateFormVisible, setIsCreateFormVisible] = useState(false);
+  const [hasAttemptedCreate, setHasAttemptedCreate] = useState(false);
   const [editingAccountId, setEditingAccountId] = useState(null);
   const [editName, setEditName] = useState("");
   const [editType, setEditType] = useState("bank");
+  const [hasAttemptedEdit, setHasAttemptedEdit] = useState(false);
 
   useEffect(() => {
     const userId = auth.currentUser?.uid;
@@ -331,6 +335,9 @@ export default function AccountsScreen({ navigation }) {
   }, []);
 
   const handleCreateAccount = async () => {
+    Keyboard.dismiss();
+    setHasAttemptedCreate(true);
+
     const trimmedName = name.trim();
     const openingBalancePaise = parseOpeningBalance(openingBalance, type);
 
@@ -358,6 +365,7 @@ export default function AccountsScreen({ navigation }) {
 
       setName("");
       setOpeningBalance("");
+      setHasAttemptedCreate(false);
       setIsCreateFormVisible(false);
       Alert.alert("Success", "Account created successfully");
     } catch (error) {
@@ -379,14 +387,19 @@ export default function AccountsScreen({ navigation }) {
     setEditingAccountId(account.id);
     setEditName(account.name);
     setEditType(account.type);
+    setHasAttemptedEdit(false);
   };
 
   const cancelEditing = () => {
     setEditingAccountId(null);
     setEditName("");
+    setHasAttemptedEdit(false);
   };
 
   const handleUpdateAccount = async () => {
+    Keyboard.dismiss();
+    setHasAttemptedEdit(true);
+
     const trimmedName = editName.trim();
 
     if (!trimmedName) {
@@ -463,396 +476,501 @@ export default function AccountsScreen({ navigation }) {
     editingAccountId && accountHasTransactions(editingAccountId);
   const showCreateForm = accounts.length === 0 || isCreateFormVisible;
 
+  const isNameInvalid = hasAttemptedCreate && !name.trim();
+  const isOpeningBalanceInvalid =
+    hasAttemptedCreate &&
+    Boolean(openingBalance.trim()) &&
+    parseOpeningBalance(openingBalance, type) === null;
+  const isEditNameInvalid = hasAttemptedEdit && !editName.trim();
+
   return (
     <SafeAreaView
       style={[styles.safeArea, { backgroundColor: colors.background }]}
     >
-      <ScrollView
-        contentContainerStyle={styles.container}
-        showsVerticalScrollIndicator={false}
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoiding}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-            accessibilityRole="button"
-            accessibilityLabel="Go back"
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Ionicons name="arrow-back" size={24} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={[styles.title, { color: colors.text }]}>Accounts</Text>
-          {accounts.length > 0 ? (
+        <ScrollView
+          contentContainerStyle={styles.container}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.header}>
             <TouchableOpacity
-              style={styles.headerActionButton}
-              onPress={() => setIsCreateFormVisible((prev) => !prev)}
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
               accessibilityRole="button"
-              accessibilityLabel={showCreateForm ? "Cancel add account" : "Add account"}
+              accessibilityLabel="Go back"
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              {showCreateForm ? (
-                <Text style={[styles.headerCancelText, { color: colors.primary }]}>
-                  Cancel
-                </Text>
-              ) : (
-                <View style={styles.addAccountButtonContent}>
-                  <Ionicons name="add" size={18} color={colors.primary} />
-                  <Text style={[styles.headerAddText, { color: colors.primary }]}>
-                    Add
-                  </Text>
-                </View>
-              )}
+              <Ionicons name="arrow-back" size={24} color={colors.text} />
             </TouchableOpacity>
-          ) : (
-            <View style={styles.headerSpacer} />
-          )}
-        </View>
+            <Text style={[styles.title, { color: colors.text }]}>Accounts</Text>
+            {accounts.length > 0 ? (
+              <TouchableOpacity
+                style={styles.headerActionButton}
+                onPress={() => {
+                  setHasAttemptedCreate(false);
+                  setIsCreateFormVisible((prev) => !prev);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={showCreateForm ? "Cancel add account" : "Add account"}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                {showCreateForm ? (
+                  <Text style={[styles.headerCancelText, { color: colors.primary }]}>
+                    Cancel
+                  </Text>
+                ) : (
+                  <View style={styles.addAccountButtonContent}>
+                    <Ionicons name="add" size={18} color={colors.primary} />
+                    <Text style={[styles.headerAddText, { color: colors.primary }]}>
+                      Add
+                    </Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            ) : (
+              <View style={styles.headerSpacer} />
+            )}
+          </View>
 
-        {editingAccountId && (
-          <View
-            style={[
-              styles.editCard,
-              {
-                backgroundColor: colors.surface,
-                borderColor: isDark
-                  ? "rgba(255, 255, 255, 0.08)"
-                  : "rgba(0, 0, 0, 0.06)",
-              },
-            ]}
-          >
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              Edit account
-            </Text>
-            <TextInput
+          {editingAccountId && (
+            <View
               style={[
-                styles.input,
+                styles.editCard,
                 {
-                  color: colors.text,
-                  borderColor: isDark ? "rgba(255, 255, 255, 0.12)" : "#E0E0E0",
+                  backgroundColor: colors.surface,
+                  borderColor: isDark
+                    ? "rgba(255, 255, 255, 0.08)"
+                    : "rgba(0, 0, 0, 0.06)",
                 },
               ]}
-              value={editName}
-              onChangeText={setEditName}
-              placeholder="Account name"
-              placeholderTextColor="#999"
-            />
-            <View style={styles.typeGrid}>
-              {ACCOUNT_TYPES.map((accountType) => (
-                <TouchableOpacity
-                  key={accountType.value}
+            >
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                Edit account
+              </Text>
+              <View style={styles.inputGroup}>
+                <TextInput
                   style={[
-                    styles.typeButton,
+                    styles.input,
                     {
-                      borderColor:
-                        editType === accountType.value
-                          ? colors.primary
-                          : isDark
-                            ? "rgba(255, 255, 255, 0.12)"
-                            : "#E0E0E0",
-                      backgroundColor:
-                        editType === accountType.value
-                          ? colors.primary
-                          : isDark
-                            ? "rgba(255, 255, 255, 0.04)"
-                            : "transparent",
-                    },
-                    editType === accountType.value && styles.typeButtonActive,
-                    isEditingAccountTypeLocked && styles.typeButtonDisabled,
-                  ]}
-                  onPress={() => setEditType(accountType.value)}
-                  disabled={Boolean(isEditingAccountTypeLocked)}
-                  accessibilityRole="button"
-                  accessibilityLabel={accountType.label}
-                  accessibilityState={{ selected: editType === accountType.value }}
-                >
-                  <Ionicons
-                    name={accountType.icon}
-                    size={18}
-                    color={
-                      editType === accountType.value
-                        ? "white"
+                      color: colors.text,
+                      borderColor: isEditNameInvalid
+                        ? colors.error
                         : isDark
-                          ? "#D0D0D0"
-                          : colors.text
-                    }
-                  />
+                          ? "rgba(255, 255, 255, 0.12)"
+                          : "#E0E0E0",
+                    },
+                  ]}
+                  value={editName}
+                  onChangeText={setEditName}
+                  placeholder="Account name"
+                  placeholderTextColor="#999"
+                  editable={!isSaving}
+                  accessibilityLabel="Account name"
+                />
+                {isEditNameInvalid && (
+                  <Text style={[styles.inlineErrorText, { color: colors.error }]}>
+                    Please enter an account name
+                  </Text>
+                )}
+              </View>
+
+              <View style={styles.typeGrid}>
+                {ACCOUNT_TYPES.map((accountType) => (
+                  <TouchableOpacity
+                    key={accountType.value}
+                    style={[
+                      styles.typeButton,
+                      {
+                        borderColor:
+                          editType === accountType.value
+                            ? colors.primary
+                            : isDark
+                              ? "rgba(255, 255, 255, 0.12)"
+                              : "#E0E0E0",
+                        backgroundColor:
+                          editType === accountType.value
+                            ? colors.primary
+                            : isDark
+                              ? "rgba(255, 255, 255, 0.04)"
+                              : "transparent",
+                      },
+                      editType === accountType.value && styles.typeButtonActive,
+                      isEditingAccountTypeLocked && styles.typeButtonDisabled,
+                    ]}
+                    onPress={() => setEditType(accountType.value)}
+                    disabled={Boolean(isEditingAccountTypeLocked) || isSaving}
+                    accessibilityRole="button"
+                    accessibilityLabel={accountType.label}
+                    accessibilityState={{ selected: editType === accountType.value }}
+                  >
+                    <Ionicons
+                      name={accountType.icon}
+                      size={18}
+                      color={
+                        editType === accountType.value
+                          ? "white"
+                          : isDark
+                            ? "#D0D0D0"
+                            : colors.text
+                      }
+                    />
+                    <Text
+                      style={[
+                        styles.typeButtonText,
+                        {
+                          color:
+                            editType === accountType.value
+                              ? "white"
+                              : isDark
+                                ? "#D0D0D0"
+                                : "#555",
+                        },
+                        editType === accountType.value &&
+                          styles.typeButtonTextActive,
+                      ]}
+                    >
+                      {accountType.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {isEditingAccountTypeLocked && (
+                <Text
+                  style={[
+                    styles.typeLockedText,
+                    { color: isDark ? "#A0A0A0" : "#666666" },
+                  ]}
+                >
+                  Account type cannot be changed because this account already has
+                  transactions.
+                </Text>
+              )}
+
+              <View style={styles.editActions}>
+                <TouchableOpacity
+                  style={[
+                    styles.cancelButton,
+                    {
+                      borderColor: isDark
+                        ? "rgba(255, 255, 255, 0.15)"
+                        : "#D0D0D0",
+                    },
+                  ]}
+                  onPress={cancelEditing}
+                  disabled={isSaving}
+                  accessibilityRole="button"
+                  accessibilityLabel="Cancel edit"
+                >
                   <Text
                     style={[
-                      styles.typeButtonText,
-                      {
-                        color:
-                          editType === accountType.value
-                            ? "white"
-                            : isDark
-                              ? "#D0D0D0"
-                              : "#555",
-                      },
-                      editType === accountType.value &&
-                        styles.typeButtonTextActive,
+                      styles.cancelButtonText,
+                      { color: isDark ? "#D0D0D0" : "#666666" },
                     ]}
                   >
-                    {accountType.label}
+                    Cancel
                   </Text>
                 </TouchableOpacity>
-              ))}
+                <TouchableOpacity
+                  style={[styles.saveButton, { flex: 1, backgroundColor: colors.primary }]}
+                  onPress={handleUpdateAccount}
+                  disabled={isSaving}
+                  accessibilityRole="button"
+                  accessibilityLabel="Save changes"
+                >
+                  {isSaving ? (
+                    <ActivityIndicator color="white" />
+                  ) : (
+                    <Text style={styles.saveButtonText}>Save changes</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
             </View>
+          )}
 
-            {isEditingAccountTypeLocked && (
+          {accounts.length > 0 && (
+            <>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                Your accounts
+              </Text>
+              {accounts.map((account) => {
+                const accountType = ACCOUNT_TYPES.find(
+                  (item) => item.value === account.type,
+                );
+                const signedBalancePaise = calculateAccountBalancePaise(
+                  account,
+                  transactions,
+                );
+                const balancePaise = getAccountDisplayAmountPaise(
+                  account,
+                  signedBalancePaise,
+                );
+
+                return (
+                  <SwipeableAccountRow
+                    key={account.id}
+                    account={account}
+                    accountType={accountType}
+                    balancePaise={balancePaise}
+                    colors={colors}
+                    isDark={isDark}
+                    onOpen={() =>
+                      navigation.navigate("AccountActivity", { account })
+                    }
+                    onEdit={() => startEditing(account)}
+                    onArchive={() => toggleArchive(account)}
+                  />
+                );
+              })}
+            </>
+          )}
+
+          {accounts.length === 0 && (
+            <View style={styles.emptyContainer}>
+              <Text style={[styles.emptyTitle, { color: colors.text }]}>
+                No accounts yet
+              </Text>
               <Text
                 style={[
-                  styles.typeLockedText,
+                  styles.emptySubtitle,
                   { color: isDark ? "#A0A0A0" : "#666666" },
                 ]}
               >
-                Account type cannot be changed because this account already has
-                transactions.
+                Create your first account to start tracking balances.
               </Text>
-            )}
+            </View>
+          )}
 
-            <View style={styles.editActions}>
-              <TouchableOpacity
-                style={[
-                  styles.cancelButton,
-                  {
-                    borderColor: isDark
-                      ? "rgba(255, 255, 255, 0.15)"
-                      : "#D0D0D0",
-                  },
-                ]}
-                onPress={cancelEditing}
-                accessibilityRole="button"
-                accessibilityLabel="Cancel edit"
-              >
+          {showCreateForm && (
+            <View
+              style={[
+                styles.card,
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: isDark
+                    ? "rgba(255, 255, 255, 0.08)"
+                    : "rgba(0, 0, 0, 0.06)",
+                },
+              ]}
+            >
+              <View style={styles.formCardHeader}>
                 <Text
                   style={[
-                    styles.cancelButtonText,
-                    { color: isDark ? "#D0D0D0" : "#666666" },
+                    styles.sectionTitle,
+                    { color: colors.text, marginBottom: 0 },
                   ]}
                 >
-                  Cancel
+                  Create account
                 </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.saveButton, { flex: 1, backgroundColor: colors.primary }]}
-                onPress={handleUpdateAccount}
-                disabled={isSaving}
-                accessibilityRole="button"
-                accessibilityLabel="Save changes"
-              >
-                <Text style={styles.saveButtonText}>Save changes</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
+                {accounts.length > 0 && (
+                  <TouchableOpacity
+                    onPress={() => {
+                      setHasAttemptedCreate(false);
+                      setIsCreateFormVisible(false);
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel="Close create account form"
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Ionicons
+                      name="close"
+                      size={20}
+                      color={isDark ? "#A0A0A0" : "#666666"}
+                    />
+                  </TouchableOpacity>
+                )}
+              </View>
 
-        {accounts.length > 0 && (
-          <>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              Your accounts
-            </Text>
-            {accounts.map((account) => {
-              const accountType = ACCOUNT_TYPES.find(
-                (item) => item.value === account.type,
-              );
-              const signedBalancePaise = calculateAccountBalancePaise(
-                account,
-                transactions,
-              );
-              const balancePaise = getAccountDisplayAmountPaise(
-                account,
-                signedBalancePaise,
-              );
-
-              return (
-                <SwipeableAccountRow
-                  key={account.id}
-                  account={account}
-                  accountType={accountType}
-                  balancePaise={balancePaise}
-                  colors={colors}
-                  isDark={isDark}
-                  onOpen={() =>
-                    navigation.navigate("AccountActivity", { account })
-                  }
-                  onEdit={() => startEditing(account)}
-                  onArchive={() => toggleArchive(account)}
+              <View style={styles.inputGroup}>
+                <TextInput
+                  style={[
+                    styles.input,
+                    {
+                      color: colors.text,
+                      borderColor: isNameInvalid
+                        ? colors.error
+                        : isDark
+                          ? "rgba(255, 255, 255, 0.12)"
+                          : "#E0E0E0",
+                    },
+                  ]}
+                  placeholder="Account name"
+                  placeholderTextColor="#999"
+                  value={name}
+                  onChangeText={setName}
+                  editable={!isSaving}
+                  accessibilityLabel="Account name"
                 />
-              );
-            })}
-          </>
-        )}
+                {isNameInvalid && (
+                  <Text style={[styles.inlineErrorText, { color: colors.error }]}>
+                    Please enter an account name
+                  </Text>
+                )}
+              </View>
 
-        {accounts.length === 0 && (
-          <View style={styles.emptyContainer}>
-            <Text style={[styles.emptyTitle, { color: colors.text }]}>
-              No accounts yet
-            </Text>
-            <Text
-              style={[
-                styles.emptySubtitle,
-                { color: isDark ? "#A0A0A0" : "#666666" },
-              ]}
-            >
-              Create your first account to start tracking balances.
-            </Text>
-          </View>
-        )}
-
-        {showCreateForm && (
-          <View
-            style={[
-              styles.card,
-              {
-                backgroundColor: colors.surface,
-                borderColor: isDark
-                  ? "rgba(255, 255, 255, 0.08)"
-                  : "rgba(0, 0, 0, 0.06)",
-              },
-            ]}
-          >
-            <View style={styles.formCardHeader}>
               <Text
                 style={[
-                  styles.sectionTitle,
-                  { color: colors.text, marginBottom: 0 },
+                  styles.label,
+                  { color: isDark ? "#A0A0A0" : "#666666" },
                 ]}
               >
-                Create account
+                Account type
               </Text>
-              {accounts.length > 0 && (
-                <TouchableOpacity
-                  onPress={() => setIsCreateFormVisible(false)}
-                  accessibilityRole="button"
-                  accessibilityLabel="Close create account form"
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                >
-                  <Ionicons
-                    name="close"
-                    size={20}
-                    color={isDark ? "#A0A0A0" : "#666666"}
-                  />
-                </TouchableOpacity>
-              )}
-            </View>
 
-            <TextInput
-              style={[
-                styles.input,
-                {
-                  color: colors.text,
-                  borderColor: isDark ? "rgba(255, 255, 255, 0.12)" : "#E0E0E0",
-                },
-              ]}
-              placeholder="Account name"
-              placeholderTextColor="#999"
-              value={name}
-              onChangeText={setName}
-            />
-
-            <Text
-              style={[
-                styles.label,
-                { color: isDark ? "#A0A0A0" : "#666666" },
-              ]}
-            >
-              Account type
-            </Text>
-
-            <View style={styles.typeGrid}>
-              {ACCOUNT_TYPES.map((accountType) => (
-                <TouchableOpacity
-                  key={accountType.value}
-                  style={[
-                    styles.typeButton,
-                    {
-                      borderColor:
+              <View style={styles.typeGrid}>
+                {ACCOUNT_TYPES.map((accountType) => (
+                  <TouchableOpacity
+                    key={accountType.value}
+                    style={[
+                      styles.typeButton,
+                      {
+                        borderColor:
+                          type === accountType.value
+                            ? colors.primary
+                            : isDark
+                              ? "rgba(255, 255, 255, 0.12)"
+                              : "#E0E0E0",
+                        backgroundColor:
+                          type === accountType.value
+                            ? colors.primary
+                            : isDark
+                              ? "rgba(255, 255, 255, 0.04)"
+                              : "transparent",
+                      },
+                      type === accountType.value && styles.typeButtonActive,
+                    ]}
+                    onPress={() => setType(accountType.value)}
+                    disabled={isSaving}
+                    accessibilityRole="button"
+                    accessibilityLabel={accountType.label}
+                    accessibilityState={{ selected: type === accountType.value }}
+                  >
+                    <Ionicons
+                      name={accountType.icon}
+                      size={18}
+                      color={
                         type === accountType.value
-                          ? colors.primary
+                          ? "white"
                           : isDark
-                            ? "rgba(255, 255, 255, 0.12)"
-                            : "#E0E0E0",
-                      backgroundColor:
-                        type === accountType.value
-                          ? colors.primary
-                          : isDark
-                            ? "rgba(255, 255, 255, 0.04)"
-                            : "transparent",
-                    },
-                    type === accountType.value && styles.typeButtonActive,
-                  ]}
-                  onPress={() => setType(accountType.value)}
-                  accessibilityRole="button"
-                  accessibilityLabel={accountType.label}
-                  accessibilityState={{ selected: type === accountType.value }}
-                >
-                  <Ionicons
-                    name={accountType.icon}
-                    size={18}
-                    color={
-                      type === accountType.value
-                        ? "white"
-                        : isDark
-                          ? "#D0D0D0"
-                          : colors.text
-                    }
-                  />
+                            ? "#D0D0D0"
+                            : colors.text
+                      }
+                    />
+                    <Text
+                      style={[
+                        styles.typeButtonText,
+                        {
+                          color:
+                            type === accountType.value
+                              ? "white"
+                              : isDark
+                                ? "#D0D0D0"
+                                : "#555",
+                        },
+                        type === accountType.value && styles.typeButtonTextActive,
+                      ]}
+                    >
+                      {accountType.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <View style={styles.inputGroup}>
+                <View style={styles.labelRow}>
                   <Text
                     style={[
-                      styles.typeButtonText,
-                      {
-                        color:
-                          type === accountType.value
-                            ? "white"
-                            : isDark
-                              ? "#D0D0D0"
-                              : "#555",
-                      },
-                      type === accountType.value && styles.typeButtonTextActive,
+                      styles.label,
+                      { color: isDark ? "#A0A0A0" : "#666666", marginBottom: 0 },
                     ]}
                   >
-                    {accountType.label}
+                    {type === "creditCard"
+                      ? "Current outstanding"
+                      : "Opening balance"}
                   </Text>
-                </TouchableOpacity>
-              ))}
+                  <Text
+                    style={[
+                      styles.optionalLabel,
+                      { color: isDark ? "#888888" : "#888888" },
+                    ]}
+                  >
+                    Optional
+                  </Text>
+                </View>
+                <Text
+                  style={[
+                    styles.helperText,
+                    { color: isDark ? "#808080" : "#777777" },
+                  ]}
+                >
+                  {type === "creditCard"
+                    ? "Amount currently owed on this card"
+                    : "Starting amount already in this account"}
+                </Text>
+                <View
+                  style={[
+                    styles.moneyInputContainer,
+                    {
+                      borderColor: isOpeningBalanceInvalid
+                        ? colors.error
+                        : isDark
+                          ? "rgba(255, 255, 255, 0.12)"
+                          : "#E0E0E0",
+                      backgroundColor: isDark
+                        ? "rgba(255, 255, 255, 0.03)"
+                        : "transparent",
+                    },
+                  ]}
+                >
+                  <Text style={[styles.currencyPrefix, { color: colors.primary }]}>
+                    ₹
+                  </Text>
+                  <TextInput
+                    style={[styles.moneyInput, { color: colors.text }]}
+                    placeholder="0.00"
+                    placeholderTextColor="#999"
+                    keyboardType="decimal-pad"
+                    inputMode="decimal"
+                    value={openingBalance}
+                    onChangeText={(value) =>
+                      setOpeningBalance(value.replace(/[^0-9.]/g, ""))
+                    }
+                    editable={!isSaving}
+                    accessibilityLabel={
+                      type === "creditCard"
+                        ? "Current credit card outstanding in rupees"
+                        : "Opening account balance in rupees"
+                    }
+                  />
+                </View>
+                {isOpeningBalanceInvalid && (
+                  <Text style={[styles.inlineErrorText, { color: colors.error }]}>
+                    Enter a valid amount
+                  </Text>
+                )}
+              </View>
+
+              <TouchableOpacity
+                style={[styles.saveButton, { backgroundColor: colors.primary }]}
+                onPress={handleCreateAccount}
+                disabled={isSaving}
+                accessibilityRole="button"
+                accessibilityLabel="Create account"
+              >
+                {isSaving ? (
+                  <ActivityIndicator color="white" />
+                ) : (
+                  <Text style={styles.saveButtonText}>Create account</Text>
+                )}
+              </TouchableOpacity>
             </View>
-
-            <TextInput
-              style={[
-                styles.input,
-                {
-                  color: colors.text,
-                  borderColor: isDark ? "rgba(255, 255, 255, 0.12)" : "#E0E0E0",
-                },
-              ]}
-              placeholder={
-                type === "creditCard"
-                  ? "Current outstanding (optional)"
-                  : "Opening balance (optional)"
-              }
-              placeholderTextColor="#999"
-              keyboardType="numeric"
-              value={openingBalance}
-              onChangeText={(value) =>
-                setOpeningBalance(value.replace(/[^0-9.]/g, ""))
-              }
-            />
-
-            <TouchableOpacity
-              style={[styles.saveButton, { backgroundColor: colors.primary }]}
-              onPress={handleCreateAccount}
-              disabled={isSaving}
-              accessibilityRole="button"
-              accessibilityLabel="Create account"
-            >
-              {isSaving ? (
-                <ActivityIndicator color="white" />
-              ) : (
-                <Text style={styles.saveButtonText}>Create account</Text>
-              )}
-            </TouchableOpacity>
-          </View>
-        )}
-      </ScrollView>
+          )}
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -861,11 +979,14 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
   },
+  keyboardAvoiding: {
+    flex: 1,
+  },
   container: {
     flexGrow: 1,
     paddingHorizontal: 16,
     paddingTop: Platform.OS === "android" ? 16 : 8,
-    paddingBottom: 40,
+    paddingBottom: 60,
   },
   header: {
     flexDirection: "row",
@@ -942,9 +1063,26 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     marginBottom: 12,
   },
+  inputGroup: {
+    marginBottom: 14,
+  },
+  labelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 3,
+  },
   label: {
     fontSize: 13,
     fontWeight: "600",
+    marginBottom: 8,
+  },
+  optionalLabel: {
+    fontSize: 12,
+    fontWeight: "500",
+  },
+  helperText: {
+    fontSize: 12,
     marginBottom: 8,
   },
   input: {
@@ -953,7 +1091,29 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 15,
-    marginBottom: 14,
+  },
+  moneyInputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+  },
+  currencyPrefix: {
+    fontSize: 18,
+    fontWeight: "700",
+    marginRight: 8,
+  },
+  moneyInput: {
+    flex: 1,
+    paddingVertical: 12,
+    fontSize: 15,
+  },
+  inlineErrorText: {
+    fontSize: 12,
+    marginTop: 4,
+    marginLeft: 2,
+    fontWeight: "500",
   },
   typeGrid: {
     flexDirection: "row",
