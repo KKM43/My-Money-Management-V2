@@ -29,6 +29,7 @@ import {
   formatPaise,
   getAmountPaise,
   getDaysRemainingInMonth,
+  getTransactionDateKey,
   isTransactionInMonth,
   isVariableExpenseTransaction,
 } from "../../utils/finance";
@@ -39,11 +40,170 @@ import {
   shiftMonthKey,
 } from "../../utils/month";
 
+const SORT_OPTIONS = [
+  {
+    key: "latest",
+    label: "Latest",
+    icon: "time-outline",
+    description: "Newest transaction date first",
+  },
+  {
+    key: "oldest",
+    label: "Oldest",
+    icon: "hourglass-outline",
+    description: "Oldest transaction date first",
+  },
+  {
+    key: "highest",
+    label: "Highest Amount",
+    icon: "arrow-up-circle-outline",
+    description: "Largest monetary amount first",
+  },
+  {
+    key: "lowest",
+    label: "Lowest Amount",
+    icon: "arrow-down-circle-outline",
+    description: "Smallest monetary amount first",
+  },
+];
+
+const getSortableTransactionDateKey = (transaction) => {
+  if (!transaction) return "";
+
+  const canonicalKey = getTransactionDateKey(transaction);
+  if (canonicalKey) {
+    return canonicalKey;
+  }
+
+  const rawDate = transaction.occurredOn || transaction.date;
+  if (!rawDate) return "";
+
+  if (typeof rawDate?.toDate === "function") {
+    try {
+      const parsed = rawDate.toDate();
+      if (parsed instanceof Date && !isNaN(parsed.getTime())) {
+        return `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, "0")}-${String(parsed.getDate()).padStart(2, "0")}`;
+      }
+    } catch (_) {}
+  }
+
+  if (typeof rawDate?.seconds === "number") {
+    const parsed = new Date(rawDate.seconds * 1000);
+    if (!isNaN(parsed.getTime())) {
+      return `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, "0")}-${String(parsed.getDate()).padStart(2, "0")}`;
+    }
+  }
+
+  return "";
+};
+
+const getTransactionCreatedMillis = (tx) => {
+  if (!tx || !tx.createdAt) return 0;
+  const c = tx.createdAt;
+
+  if (typeof c?.toMillis === "function") {
+    try {
+      return c.toMillis();
+    } catch (_) {}
+  }
+
+  if (typeof c?.toDate === "function") {
+    try {
+      const d = c.toDate();
+      if (d instanceof Date && !isNaN(d.getTime())) return d.getTime();
+    } catch (_) {}
+  }
+
+  if (typeof c?.seconds === "number") {
+    return c.seconds * 1000 + Math.floor((c.nanoseconds || 0) / 1000000);
+  }
+
+  if (c instanceof Date && !isNaN(c.getTime())) {
+    return c.getTime();
+  }
+
+  if (typeof c === "number" && !isNaN(c)) {
+    return c;
+  }
+
+  if (typeof c === "string") {
+    const parsed = new Date(c).getTime();
+    if (!isNaN(parsed)) return parsed;
+  }
+
+  return 0;
+};
+
+const sortTransactions = (items, sortMode) => {
+  return [...items].sort((a, b) => {
+    if (sortMode === "highest") {
+      const diff = getAmountPaise(b) - getAmountPaise(a);
+      if (diff !== 0) return diff;
+      const dateA = getSortableTransactionDateKey(a);
+      const dateB = getSortableTransactionDateKey(b);
+      if (dateA && !dateB) return -1;
+      if (!dateA && dateB) return 1;
+      if (dateA && dateB) {
+        const dateDiff = dateB.localeCompare(dateA);
+        if (dateDiff !== 0) return dateDiff;
+      }
+      return getTransactionCreatedMillis(b) - getTransactionCreatedMillis(a);
+    }
+
+    if (sortMode === "lowest") {
+      const diff = getAmountPaise(a) - getAmountPaise(b);
+      if (diff !== 0) return diff;
+      const dateA = getSortableTransactionDateKey(a);
+      const dateB = getSortableTransactionDateKey(b);
+      if (dateA && !dateB) return -1;
+      if (!dateA && dateB) return 1;
+      if (dateA && dateB) {
+        const dateDiff = dateB.localeCompare(dateA);
+        if (dateDiff !== 0) return dateDiff;
+      }
+      return getTransactionCreatedMillis(b) - getTransactionCreatedMillis(a);
+    }
+
+    const dateA = getSortableTransactionDateKey(a);
+    const dateB = getSortableTransactionDateKey(b);
+
+    if (sortMode === "oldest") {
+      if (dateA && !dateB) return -1;
+      if (!dateA && dateB) return 1;
+      if (dateA && dateB) {
+        const dateDiff = dateA.localeCompare(dateB);
+        if (dateDiff !== 0) return dateDiff;
+      }
+      const createdA = getTransactionCreatedMillis(a);
+      const createdB = getTransactionCreatedMillis(b);
+      if (createdA && !createdB) return -1;
+      if (!createdA && createdB) return 1;
+      return createdA - createdB;
+    }
+
+    // Default: "latest"
+    if (dateA && !dateB) return -1;
+    if (!dateA && dateB) return 1;
+    if (dateA && dateB) {
+      const dateDiff = dateB.localeCompare(dateA);
+      if (dateDiff !== 0) return dateDiff;
+    }
+    const createdA = getTransactionCreatedMillis(a);
+    const createdB = getTransactionCreatedMillis(b);
+    if (createdA && !createdB) return -1;
+    if (!createdA && createdB) return 1;
+    return createdB - createdA;
+  });
+};
+
 export default function DashboardScreen({ navigation, route }) {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const [transactions, setTransactions] = useState([]);
   const [monthlyPlan, setMonthlyPlan] = useState(null);
   const [isPlanLoading, setIsPlanLoading] = useState(true);
+
+  const [sortBy, setSortBy] = useState("latest"); // latest, oldest, highest, lowest
+  const [showSortModal, setShowSortModal] = useState(false);
 
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
@@ -178,6 +338,10 @@ export default function DashboardScreen({ navigation, route }) {
 
     return matchesType && matchesSearch;
   });
+
+  const sortedTransactions = sortTransactions(filteredTransactions, sortBy);
+  const activeSortOption =
+    SORT_OPTIONS.find((option) => option.key === sortBy) || SORT_OPTIONS[0];
 
   const incomeSources = Array.isArray(monthlyPlan?.incomeSources)
     ? monthlyPlan.incomeSources
@@ -685,6 +849,40 @@ export default function DashboardScreen({ navigation, route }) {
             <Text style={[styles.transactionsTitle, { color: colors.text }]}>
               Recent Transactions ({filteredTransactions.length})
             </Text>
+            <TouchableOpacity
+              style={[
+                styles.sortButton,
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: isDark
+                    ? "rgba(255, 255, 255, 0.12)"
+                    : "rgba(0, 0, 0, 0.08)",
+                },
+              ]}
+              onPress={() => setShowSortModal(true)}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={`Sort transactions. Currently sorted by ${activeSortOption.label}`}
+            >
+              <Ionicons
+                name="swap-vertical-outline"
+                size={14}
+                color={colors.primary}
+                style={styles.sortButtonIcon}
+              />
+              <Text
+                style={[styles.sortButtonText, { color: colors.text }]}
+                numberOfLines={1}
+              >
+                {activeSortOption.label}
+              </Text>
+              <Ionicons
+                name="chevron-down"
+                size={12}
+                color={colors.text + "80"}
+                style={styles.sortChevronIcon}
+              />
+            </TouchableOpacity>
           </View>
 
           {/* Search */}
@@ -774,7 +972,7 @@ export default function DashboardScreen({ navigation, route }) {
             </View>
           ) : (
             <FlatList
-              data={filteredTransactions}
+              data={sortedTransactions}
               keyExtractor={(item) => item.id}
               renderItem={({ item }) => (
                 <TransactionItem
@@ -797,6 +995,140 @@ export default function DashboardScreen({ navigation, route }) {
           )}
         </View>
       </ScrollView>
+
+      {/* ── Sort Options Modal ─────────────────────────────────────── */}
+      <Modal
+        visible={showSortModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowSortModal(false)}
+      >
+        <TouchableOpacity
+          style={styles.sortModalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowSortModal(false)}
+        >
+          <View
+            style={[
+              styles.sortModalSheet,
+              { backgroundColor: colors.surface },
+            ]}
+            onStartShouldSetResponder={() => true}
+          >
+            <View style={styles.sortModalHeader}>
+              <View style={styles.sortModalTitleContainer}>
+                <Ionicons
+                  name="swap-vertical"
+                  size={18}
+                  color={colors.primary}
+                  style={{ marginRight: 8 }}
+                />
+                <Text style={[styles.sortModalTitle, { color: colors.text }]}>
+                  Sort Transactions
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={[
+                  styles.sortModalCloseButton,
+                  { backgroundColor: colors.background },
+                ]}
+                onPress={() => setShowSortModal(false)}
+                accessibilityLabel="Close sort options"
+              >
+                <Ionicons name="close" size={18} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.sortOptionsList}>
+              {SORT_OPTIONS.map((option) => {
+                const isSelected = sortBy === option.key;
+                return (
+                  <TouchableOpacity
+                    key={option.key}
+                    style={[
+                      styles.sortOptionItem,
+                      {
+                        backgroundColor: isSelected
+                          ? colors.primary + "12"
+                          : "transparent",
+                        borderColor: isSelected
+                          ? colors.primary
+                          : isDark
+                            ? "rgba(255, 255, 255, 0.08)"
+                            : "rgba(0, 0, 0, 0.06)",
+                      },
+                    ]}
+                    onPress={() => {
+                      setSortBy(option.key);
+                      setShowSortModal(false);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.sortOptionLeft}>
+                      <View
+                        style={[
+                          styles.sortOptionIconContainer,
+                          {
+                            backgroundColor: isSelected
+                              ? colors.primary
+                              : colors.background,
+                          },
+                        ]}
+                      >
+                        <Ionicons
+                          name={option.icon}
+                          size={18}
+                          color={isSelected ? "#FFFFFF" : colors.text + "99"}
+                        />
+                      </View>
+                      <View style={styles.sortOptionTextContainer}>
+                        <Text
+                          style={[
+                            styles.sortOptionLabel,
+                            {
+                              color: isSelected ? colors.primary : colors.text,
+                              fontWeight: isSelected ? "700" : "600",
+                            },
+                          ]}
+                        >
+                          {option.label}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.sortOptionDescription,
+                            { color: colors.text + "80" },
+                          ]}
+                        >
+                          {option.description}
+                        </Text>
+                      </View>
+                    </View>
+                    <View
+                      style={[
+                        styles.sortRadioCircle,
+                        {
+                          borderColor: isSelected
+                            ? colors.primary
+                            : colors.text + "40",
+                        },
+                      ]}
+                    >
+                      {isSelected && (
+                        <View
+                          style={[
+                            styles.sortRadioInner,
+                            { backgroundColor: colors.primary },
+                          ]}
+                        />
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       {/* ?? Sidebar / Drawer ????????????????????????????????????????? */}
       <Modal

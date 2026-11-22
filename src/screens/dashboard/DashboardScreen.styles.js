@@ -387,7 +387,7 @@ const styles = StyleSheet.create({
   // ??? Transactions Section ?????????????????????????????????????????????????
   txSectionHeader: {
     flexDirection: "row",
-    alignItems: "baseline",
+    alignItems: "center",
     justifyContent: "space-between",
     marginBottom: 10,
     marginTop: 4,
@@ -396,6 +396,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
     color: LightTheme.colors.text,
+    flexShrink: 1,
   },
   transactionsContainer: {
     marginBottom: 24,
@@ -536,6 +537,114 @@ const styles = StyleSheet.create({
   drawerFooterText: {
     fontSize: 11,
     opacity: 0.5,
+  },
+
+  // ── Sort Control & Modal ─────────────────────────────────────────────────
+  sortButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+    borderWidth: 1,
+    marginLeft: 8,
+  },
+  sortButtonIcon: {
+    marginRight: 4,
+  },
+  sortButtonText: {
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  sortChevronIcon: {
+    marginLeft: 3,
+  },
+  sortModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    justifyContent: "flex-end",
+  },
+  sortModalSheet: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingTop: 20,
+    paddingBottom: 34,
+    paddingHorizontal: 20,
+    elevation: 24,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+  },
+  sortModalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  sortModalTitleContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  sortModalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+  },
+  sortModalCloseButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  sortOptionsList: {
+    gap: 10,
+  },
+  sortOptionItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  sortOptionLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  sortOptionIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+  sortOptionTextContainer: {
+    flex: 1,
+  },
+  sortOptionLabel: {
+    fontSize: 14,
+    marginBottom: 2,
+  },
+  sortOptionDescription: {
+    fontSize: 12,
+  },
+  sortRadioCircle: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    justifyContent: "center",
+    alignItems: "center",
+    marginLeft: 10,
+  },
+  sortRadioInner: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
   },
 });
 
