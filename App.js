@@ -1,31 +1,201 @@
-import React from "react";
+import React, { useEffect, useRef, useState } from "react";
+import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import * as SplashScreen from "expo-splash-screen";
+import { onAuthStateChanged } from "firebase/auth";
+import { doc, onSnapshot } from "firebase/firestore";
 
-import LoginScreen from "./screens/LoginScreen";
-import SignupScreen from "./screens/SignupScreen";
-import DashboardScreen from "./screens/DashboardScreen";
-import AddTransactionScreen from "./screens/AddTransactionScreen";
-import BudgetSettingsScreen from "./screens/BudgetSettingsScreen";
+// Prevent native splash screen from hiding before initialization + minimum duration
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
+import LoginScreen from "./src/screens/auth/LoginScreen";
+import SignupScreen from "./src/screens/auth/SignupScreen";
+import DashboardScreen from "./src/screens/dashboard/DashboardScreen";
+import AddTransactionScreen from "./src/screens/transactions/AddTransactionScreen";
+import BudgetSettingsScreen from "./src/screens/legacy/BudgetSettingsScreen";
+import AccountsScreen from "./src/screens/accounts/AccountsScreen";
+import AccountActivityScreen from "./src/screens/accounts/AccountActivityScreen";
+import ProfileScreen from "./src/screens/profile/ProfileScreen";
+import AnalyticsScreen from "./src/screens/analytics/AnalyticsScreen";
+import SavingsGoalsScreen from "./src/screens/savings/SavingsGoalsScreen";
+import LeanV2OnboardingScreen from "./src/screens/onboarding/LeanV2OnboardingScreen";
+import MonthlyPlanScreen from "./src/screens/monthly-plan/MonthlyPlanScreen";
+import { auth, db } from "./src/services/firebaseConfig";
+import { ThemeProvider } from "./src/theme/ThemeContext";
 
 const Stack = createNativeStackNavigator();
 
 export default function App() {
+  const [user, setUser] = useState(null);
+  const [isOnboardingComplete, setIsOnboardingComplete] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const appStartTimeRef = useRef(Date.now());
+  const splashHiddenRef = useRef(false);
+
+  useEffect(() => {
+    if (isLoading) return;
+
+    const hideSplash = async () => {
+      if (splashHiddenRef.current) return;
+      splashHiddenRef.current = true;
+      try {
+        await SplashScreen.hideAsync();
+      } catch (error) {
+        // Ignore if already hidden or failed
+      }
+    };
+
+    const elapsed = Date.now() - appStartTimeRef.current;
+    const remainingTime = Math.max(0, 1500 - elapsed);
+
+    const timer = setTimeout(hideSplash, remainingTime);
+
+    return () => clearTimeout(timer);
+  }, [isLoading]);
+
+  // Safety fallback: ensure splash is eventually hidden even if initialization fails/hangs
+  useEffect(() => {
+    const safetyTimer = setTimeout(async () => {
+      if (!splashHiddenRef.current) {
+        splashHiddenRef.current = true;
+        try {
+          await SplashScreen.hideAsync();
+        } catch (error) {}
+      }
+    }, 8000);
+
+    return () => clearTimeout(safetyTimer);
+  }, []);
+
+  useEffect(() => {
+    let unsubscribeUserDocument = null;
+
+    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
+      if (unsubscribeUserDocument) {
+        unsubscribeUserDocument();
+        unsubscribeUserDocument = null;
+      }
+
+      setUser(currentUser);
+
+      if (!currentUser) {
+        setIsOnboardingComplete(false);
+        setIsLoading(false);
+        return;
+      }
+
+      setIsLoading(true);
+
+      unsubscribeUserDocument = onSnapshot(
+        doc(db, "users", currentUser.uid),
+        (snapshot) => {
+          const userData = snapshot.exists() ? snapshot.data() : null;
+
+          setIsOnboardingComplete(userData?.leanV2OnboardingComplete === true);
+
+          setIsLoading(false);
+        },
+        (error) => {
+          console.error("Error loading Lean V2 user profile:", error);
+
+          setIsOnboardingComplete(false);
+          setIsLoading(false);
+        },
+      );
+    });
+
+    return () => {
+      unsubscribeAuth();
+
+      if (unsubscribeUserDocument) {
+        unsubscribeUserDocument();
+      }
+    };
+  }, []);
+
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#2563EB" />
+      </View>
+    );
+  }
+
   return (
-    <NavigationContainer>
-      <Stack.Navigator 
-        initialRouteName="Login"
-        screenOptions={{
-          headerShown: false
-        }}
-      >
-        <Stack.Screen name="Login" component={LoginScreen} />
-        <Stack.Screen name="Signup" component={SignupScreen} />
-        <Stack.Screen name="Dashboard" component={DashboardScreen} />
-        <Stack.Screen name="AddTransaction" component={AddTransactionScreen} />
-        <Stack.Screen name="BudgetSettings" component={BudgetSettingsScreen} />
-      </Stack.Navigator>
-    </NavigationContainer>
+    <ThemeProvider>
+      <NavigationContainer>
+        <Stack.Navigator
+          key={
+            user
+              ? isOnboardingComplete
+                ? "authenticated"
+                : "onboarding"
+              : "unauthenticated"
+          }
+          screenOptions={{ headerShown: false }}
+        >
+          {user ? (
+            isOnboardingComplete ? (
+              <>
+                <Stack.Screen name="Dashboard" component={DashboardScreen} />
+
+                <Stack.Screen
+                  name="AddTransaction"
+                  component={AddTransactionScreen}
+                />
+
+                <Stack.Screen
+                  name="MonthlyPlan"
+                  component={MonthlyPlanScreen}
+                  options={{
+                    headerShown: false,
+                  }}
+                />
+
+                <Stack.Screen name="Analytics" component={AnalyticsScreen} />
+
+                <Stack.Screen
+                  name="SavingsGoals"
+                  component={SavingsGoalsScreen}
+                />
+
+                <Stack.Screen
+                  name="BudgetSettings"
+                  component={BudgetSettingsScreen}
+                />
+
+                <Stack.Screen name="Accounts" component={AccountsScreen} />
+
+                <Stack.Screen
+                  name="AccountActivity"
+                  component={AccountActivityScreen}
+                />
+
+                <Stack.Screen name="Profile" component={ProfileScreen} />
+              </>
+            ) : (
+              <Stack.Screen
+                name="LeanV2Onboarding"
+                component={LeanV2OnboardingScreen}
+              />
+            )
+          ) : (
+            <>
+              <Stack.Screen name="Login" component={LoginScreen} />
+              <Stack.Screen name="Signup" component={SignupScreen} />
+            </>
+          )}
+        </Stack.Navigator>
+      </NavigationContainer>
+    </ThemeProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+});
