@@ -711,7 +711,7 @@ export default function AddTransactionScreen({ navigation, route }) {
                   : "#BFDBFE",
               },
             ]}
-            accessibilityRole="region"
+            accessible={true}
             accessibilityLabel={`Paying fixed commitment ${selectedFixedCommitment.name}`}
           >
             <View style={styles.fixedContextBadgeRow}>
